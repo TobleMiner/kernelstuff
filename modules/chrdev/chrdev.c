@@ -1,4 +1,4 @@
-#include "chardev.h"
+#include "chrdev.h"
 
 #define DEVICE_NAME "testchar"
 #define CLASS_NAME "test"
