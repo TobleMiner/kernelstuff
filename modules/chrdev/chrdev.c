@@ -83,6 +83,21 @@ static int dev_open(struct inode* inodep, struct file *filep)
 	return 0;
 }
 
+static ssize_t testchr_set_message(char* buffer, size_t len)
+{
+	msg_buff_alloc(len);
+	message_len = 0;
+	if(message == NULL)
+	{
+		printk(KERN_INFO "Testchar: failed to allocate memory");
+		return -ENOMEM;
+	}
+	memcpy(message, buffer, len);
+	return 0;
+}
+
+EXPORT_SYMBOL(testchr_set_message);
+
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
 {
 	if(message_len == 0)
@@ -95,21 +110,27 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 	int error_count;
 	error_count = copy_to_user(buffer, read_ptr, len);
 	read_ptr += bytes_read;
-	if(error_count == 0)
+	if(error_count > 0)
 	{
-		printk(KERN_INFO "Testchar: Copied %zu bytes to userspace\n", bytes_read);
-		return message_len;
+		printk(KERN_INFO "Testchar: Failed to copy %zu bytes to userspace", bytes_read);
+		return -EFAULT;
 	}
-	printk(KERN_INFO "Testchar: Failed to copy %zu bytes to userspace", bytes_read);
-	return -EFAULT;
+	printk(KERN_INFO "Testchar: Copied %zu bytes to userspace\n", bytes_read);
+	return message_len;
+}
+
+static void msg_buff_alloc(size_t len)
+{
+	if(message_len > 0)
+		message = krealloc(message, len, GFP_KERNEL);
+	else
+		message = kmalloc(len, GFP_KERNEL);
 }
 
 static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
 {
-	if(message_len > 0)
-		kfree(message);
+	msg_buff_alloc(len);
 	message_len = 0;
-	message = kmalloc(len, GFP_KERNEL);
 	if(message == NULL)
 	{
 		printk(KERN_INFO "Testchar: failed to allocate memory");
@@ -118,7 +139,12 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 	message_len = len;
 	read_ptr = message;
 	printk(KERN_INFO "Testchar: Allocated %zu bytes\n", len);
-	copy_from_user(message, buffer, len);
+	ulong errors = copy_from_user(message, buffer, len);
+	if(errors > 0)
+	{
+		printk(KERN_INFO "Testchar: Failed to copy %lu bytes to memory", errors);
+		return -EFAULT;
+	}
 	printk(KERN_INFO "Testchar: Stored %zu bytes\n", len);
 	return len;
 }
