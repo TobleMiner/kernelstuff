@@ -11,12 +11,10 @@
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
-MODULE_DESCRIPTION("Test dummy fb module");
+MODULE_DESCRIPTION("Memory only dummy fb module");
 MODULE_VERSION("0.1");
 
 #define DUMMY_FB_NAME "dummyfb"
-
-static struct list_head modelist;
 
 static char* fbmem;
 
@@ -25,9 +23,9 @@ static struct fb_videomode dummy_modedb[NUM_MODES] =
 {
 	{
 		.name =		"DEFAULT",
-		.refresh =	60,
-		.xres =		640,
-		.yres =		480,
+		.refresh =	DUMMYFB_REFRESH,
+		.xres =		DUMMYFB_WIDTH,
+		.yres =		DUMMYFB_HEIGHT,
 		.sync =		0,
 		.vmode =	FB_VMODE_NONINTERLACED
 	}
@@ -52,40 +50,26 @@ static struct fb_ops dummy_fbops =
 	.fb_check_var = dummy_check_var,
 	.fb_set_par = dummy_set_par,
 	.fb_mmap = dummy_mmap
-
-
-/*	.fb_read = fb_sys_read,
-	.fb_write = fb_sys_write,
-	.fb_setcolreg = dummy_setcolreg,
-	.fb_fillrect = cfb_fillrect,
-	.fb_copyarea = cfb_copyarea,
-	.fb_imageblit = cfb_imageblit*/
 };
 
 static int dummy_check_var(struct fb_var_screeninfo* var, struct fb_info* info)
 {
-	printk(KERN_INFO "dummy_fb: check_var");
-	if(var->bits_per_pixel != 24)
+	printk(KERN_INFO "dummyfb: check_var");
+	printk(KERN_INFO "dummyfb: bpp: %d", var->bits_per_pixel);
+	if(var->bits_per_pixel != DUMMYFB_DEPTH) // Accept only fixed color depth
 		return -EINVAL;
-	info->fix.visual = FB_VISUAL_TRUECOLOR;
 	return 0;
 }
 
 static int dummy_set_par(struct fb_info* info)
 {
-	printk(KERN_INFO "dummy_fb: set_par");
+	printk(KERN_INFO "dummyfb: set_par");
 	return 0;
-}
-
-static int dummy_setcolreg(u_int regno, u_int red, u_int green, u_int blue, u_int trans, struct fb_info* info)
-{
-	printk(KERN_INFO "dummy_fb: setcolreg");
-	return -EINVAL;
 }
 
 static int dummy_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
-	if(remap_pfn_range(vma, vma->vm_start, virt_to_phys((void *)fbmem) >> PAGE_SHIFT, 640 * 480 * 3, vma->vm_page_prot) < 0)
+	if(remap_pfn_range(vma, vma->vm_start, virt_to_phys((void *)fbmem) >> PAGE_SHIFT, DUMMYFB_MEMSIZE, vma->vm_page_prot) < 0)
 	{
 		return -EIO;
 	}
@@ -98,21 +82,21 @@ static void init_fb_info(struct fb_info* dummy_fb_info)
 	dummy_fb_info->flags = FBINFO_DEFAULT;
 	strcpy(dummy_fb_info->fix.id, "Dummy");
 	dummy_fb_info->fix.type = FB_TYPE_PACKED_PIXELS;
-	dummy_fb_info->fix.line_length = 640;
-	dummy_fb_info->fix.smem_len = 640 * 480 * 3;
+	dummy_fb_info->fix.visual = FB_VISUAL_TRUECOLOR;
+	dummy_fb_info->fix.line_length = DUMMYFB_WIDTH * (DUMMYFB_DEPTH >> 3); // Line length (in bytes!)
 	dummy_fb_info->fix.accel = FB_ACCEL_NONE;
 	memset(&dummy_fb_info->var, 0, sizeof(dummy_fb_info->var));
-	dummy_fb_info->var.xres = 640;
-	dummy_fb_info->var.yres = 480;
-	dummy_fb_info->var.xres_virtual = 640;
-	dummy_fb_info->var.yres_virtual = 480;
+	dummy_fb_info->var.xres = DUMMYFB_WIDTH;
+	dummy_fb_info->var.yres = DUMMYFB_HEIGHT;
+	dummy_fb_info->var.xres_virtual = DUMMYFB_WIDTH;
+	dummy_fb_info->var.yres_virtual = DUMMYFB_HEIGHT;
 	dummy_fb_info->var.red.length = 8;
 	dummy_fb_info->var.red.offset = 16;
 	dummy_fb_info->var.green.length = 8;
 	dummy_fb_info->var.green.offset = 8;
 	dummy_fb_info->var.blue.length = 8;
 	dummy_fb_info->var.blue.offset = 0;
-	dummy_fb_info->var.bits_per_pixel = 24;
+	dummy_fb_info->var.bits_per_pixel = DUMMYFB_DEPTH;
 	dummy_fb_info->var.transp.length = 0;
 	dummy_fb_info->var.activate = FB_ACTIVATE_NOW;
 	dummy_fb_info->var.vmode = FB_VMODE_NONINTERLACED;
@@ -131,39 +115,45 @@ static int dummy_remove(struct platform_device *device)
 		kfree(info->screen_base);
 		framebuffer_release(info);
 	}
-
 	return 0;
 }
 
 static int dummy_probe(struct platform_device *device)
 {
 	printk(KERN_INFO "dummyfb: PROBE");
-	int ret = -EINVAL;
+	printk(KERN_INFO "dummyfb: memsize=%d", DUMMYFB_MEMSIZE);
+	int ret = -ENOMEM;
 	struct fb_info* info = framebuffer_alloc(0, &device->dev);
 
 	if(!info)
-		return -ENOMEM;
+		goto noalloced;
 
 	init_fb_info(info);
-	fbmem = kmalloc(640 * 480 * 3, GFP_KERNEL);
+	fbmem = kmalloc(DUMMYFB_MEMSIZE, GFP_KERNEL);
 	if(!fbmem)
-	{
-		framebuffer_release(info);
-		return -ENOMEM;
-	}
-	memset(fbmem, 0, 640 * 480 * 3);
+		goto fballoced;
+
+	memset(fbmem, 0, DUMMYFB_MEMSIZE);
+	info->fix.smem_start = virt_to_phys((void *)fbmem);
+	info->fix.smem_len = DUMMYFB_MEMSIZE;
 	info->screen_base = (char __iomem *)fbmem;
 
 	ret = register_framebuffer(info);
 	if(ret < 0)
 	{
-		kfree(fbmem);
-		framebuffer_release(info);
-		return ret;
+		ret = -EINVAL;
+		goto memalloced;
 	}
 	platform_set_drvdata(device, info);
 	fb_info(info, "%s frame buffer device\n", info->fix.id);
 	return 0;
+
+memalloced:	
+	kfree(fbmem);
+fballoced:
+	framebuffer_release(info);
+noalloced:
+	return ret;
 }
 
 static struct platform_driver dummy_driver = {
@@ -195,7 +185,7 @@ static int __init dummyfb_init(void)
 		}
 	}
 
-	printk(KERN_INFO "dummy_fb: initialized (%d)", ret);
+	printk(KERN_INFO "dummyfb: initialized (%d)", ret);
 	return ret;
 }
 
@@ -203,7 +193,7 @@ static void __exit dummyfb_exit(void)
 {
 	platform_device_unregister(dummy_device);
 	platform_driver_unregister(&dummy_driver);
-	printk(KERN_INFO "dummy_fb: exit");
+	printk(KERN_INFO "dummyfb: exit");
 }
 
 module_init(dummyfb_init);
