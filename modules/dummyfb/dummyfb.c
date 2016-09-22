@@ -2,9 +2,7 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/fb.h>
-#include <linux/list.h>
 #include <linux/platform_device.h>
-#include <linux/vmalloc.h>
 #include <linux/mm.h>
 
 #include "dummyfb.h"
