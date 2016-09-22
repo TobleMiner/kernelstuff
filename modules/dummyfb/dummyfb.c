@@ -39,7 +39,7 @@ static struct fb_monspecs dummy_monspecs =
 	.signal =	FB_SIGNAL_NONE
 };
 
-static struct fb_ops dummy_fbops = 
+static struct fb_ops dummy_fbops =
 {
 	.owner =	THIS_MODULE,
 	.fb_read =	fb_sys_read,
@@ -108,7 +108,7 @@ static int dummy_remove(struct platform_device *device)
 {
         printk(KERN_INFO "dummyfb: REMOVE");
 	struct fb_info* info = platform_get_drvdata(device);
-	
+
 	if(info)
 	{
 		unregister_framebuffer(info);
@@ -148,7 +148,7 @@ static int dummy_probe(struct platform_device *device)
 	fb_info(info, "%s frame buffer device\n", info->fix.id);
 	return 0;
 
-memalloced:	
+memalloced:
 	kfree(fbmem);
 fballoced:
 	framebuffer_release(info);
@@ -172,7 +172,7 @@ static int __init dummyfb_init(void)
 
 	if(!ret)
 	{
-		dummy_device = platform_device_alloc(DUMMY_FB_NAME, 0);		
+		dummy_device = platform_device_alloc(DUMMY_FB_NAME, 0);
 
 		if(dummy_device)
 			ret = platform_device_add(dummy_device);
