@@ -5,6 +5,7 @@
 #include <linux/list.h>
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
+#include <linux/mm.h>
 
 #include "dummyfb.h"
 
@@ -16,6 +17,8 @@ MODULE_VERSION("0.1");
 #define DUMMY_FB_NAME "dummyfb"
 
 static struct list_head modelist;
+
+static char* fbmem;
 
 #define NUM_MODES 1
 static struct fb_videomode dummy_modedb[NUM_MODES] =
@@ -45,13 +48,14 @@ static struct fb_ops dummy_fbops =
 	.fb_write = fb_sys_write,
 	.fb_fillrect = sys_fillrect,
 	.fb_copyarea = sys_copyarea,
-	.fb_imageblit = sys_imageblit
+	.fb_imageblit = sys_imageblit,
+	.fb_check_var = dummy_check_var,
+	.fb_set_par = dummy_set_par,
+	.fb_mmap = dummy_mmap
 
 
 /*	.fb_read = fb_sys_read,
 	.fb_write = fb_sys_write,
-	.fb_check_var = dummy_check_var,
-	.fb_set_par = dummy_set_par,
 	.fb_setcolreg = dummy_setcolreg,
 	.fb_fillrect = cfb_fillrect,
 	.fb_copyarea = cfb_copyarea,
@@ -77,6 +81,15 @@ static int dummy_setcolreg(u_int regno, u_int red, u_int green, u_int blue, u_in
 {
 	printk(KERN_INFO "dummy_fb: setcolreg");
 	return -EINVAL;
+}
+
+static int dummy_mmap(struct fb_info *info, struct vm_area_struct *vma)
+{
+	if(remap_pfn_range(vma, vma->vm_start, virt_to_phys((void *)fbmem) >> PAGE_SHIFT, 640 * 480 * 3, vma->vm_page_prot) < 0)
+	{
+		return -EIO;
+	}
+	return 0;
 }
 
 static void init_fb_info(struct fb_info* dummy_fb_info)
@@ -115,7 +128,7 @@ static int dummy_remove(struct platform_device *device)
 	if(info)
 	{
 		unregister_framebuffer(info);
-		vfree(info->screen_base);
+		kfree(info->screen_base);
 		framebuffer_release(info);
 	}
 
@@ -132,7 +145,7 @@ static int dummy_probe(struct platform_device *device)
 		return -ENOMEM;
 
 	init_fb_info(info);
-	char* fbmem = vmalloc(640 * 480 * 3);
+	fbmem = kmalloc(640 * 480 * 3, GFP_KERNEL);
 	if(!fbmem)
 	{
 		framebuffer_release(info);
@@ -144,7 +157,7 @@ static int dummy_probe(struct platform_device *device)
 	ret = register_framebuffer(info);
 	if(ret < 0)
 	{
-		vfree(fbmem);
+		kfree(fbmem);
 		framebuffer_release(info);
 		return ret;
 	}
