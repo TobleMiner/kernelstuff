@@ -33,23 +33,23 @@ static struct fb_videomode dummy_modedb[NUM_MODES] =
 
 static struct fb_monspecs dummy_monspecs =
 {
-	.modedb = dummy_modedb,
-	.modedb_len = NUM_MODES,
-	.input = FB_DISP_RGB,
-	.signal = FB_SIGNAL_NONE
+	.modedb =	dummy_modedb,
+	.modedb_len =	NUM_MODES,
+	.input =	FB_DISP_RGB,
+	.signal =	FB_SIGNAL_NONE
 };
 
 static struct fb_ops dummy_fbops = 
 {
-	.owner = THIS_MODULE,
-	.fb_read = fb_sys_read,
-	.fb_write = fb_sys_write,
-	.fb_fillrect = sys_fillrect,
-	.fb_copyarea = sys_copyarea,
-	.fb_imageblit = sys_imageblit,
-	.fb_check_var = dummy_check_var,
-	.fb_set_par = dummy_set_par,
-	.fb_mmap = dummy_mmap
+	.owner =	THIS_MODULE,
+	.fb_read =	fb_sys_read,
+	.fb_write =	fb_sys_write,
+	.fb_fillrect =	sys_fillrect,
+	.fb_copyarea =	sys_copyarea,
+	.fb_imageblit =	sys_imageblit,
+	.fb_check_var =	dummy_check_var,
+	.fb_set_par =	dummy_set_par,
+	.fb_mmap =	dummy_mmap
 };
 
 static int dummy_check_var(struct fb_var_screeninfo* var, struct fb_info* info)
