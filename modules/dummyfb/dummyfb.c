@@ -4,6 +4,7 @@
 #include <linux/fb.h>
 #include <linux/list.h>
 #include <linux/platform_device.h>
+#include <linux/vmalloc.h>
 
 #include "dummyfb.h"
 
@@ -114,7 +115,7 @@ static int dummy_remove(struct platform_device *device)
 	if(info)
 	{
 		unregister_framebuffer(info);
-		kfree(info->screen_base);
+		vfree(info->screen_base);
 		framebuffer_release(info);
 	}
 
@@ -131,7 +132,7 @@ static int dummy_probe(struct platform_device *device)
 		return -ENOMEM;
 
 	init_fb_info(info);
-	char* fbmem = kmalloc(640 * 480 * 3, GFP_KERNEL);
+	char* fbmem = vmalloc(640 * 480 * 3);
 	if(!fbmem)
 	{
 		framebuffer_release(info);
@@ -143,7 +144,7 @@ static int dummy_probe(struct platform_device *device)
 	ret = register_framebuffer(info);
 	if(ret < 0)
 	{
-		kfree(fbmem);
+		vfree(fbmem);
 		framebuffer_release(info);
 		return ret;
 	}
