@@ -53,8 +53,12 @@ static struct fb_ops dummy_fbops =
 static int dummy_check_var(struct fb_var_screeninfo* var, struct fb_info* info)
 {
 	printk(KERN_INFO "dummyfb: check_var");
-	printk(KERN_INFO "dummyfb: bpp: %d", var->bits_per_pixel);
+	printk(KERN_INFO "dummyfb: size: %dx%d virtualsize:%dx%d bpp: %d", var->xres, var->yres, var->xres_virtual, var->yres_virtual, var->bits_per_pixel);
 	if(var->bits_per_pixel != DUMMYFB_DEPTH) // Accept only fixed color depth
+		return -EINVAL;
+	if(var->xres != DUMMYFB_WIDTH || var->yres != DUMMYFB_HEIGHT)
+		return -EINVAL;
+	if(var->xres_virtual != DUMMYFB_WIDTH || var->yres_virtual != DUMMYFB_HEIGHT)
 		return -EINVAL;
 	return 0;
 }
