@@ -24,3 +24,9 @@ modules.builtin
 *.gcno
 !.gitignore
 *.symvers
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.dmp
+*.raw
