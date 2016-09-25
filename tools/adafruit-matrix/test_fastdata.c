@@ -219,7 +219,7 @@ void prerender_frame(struct panel_io* rowdata, UCP red, UCP green, UCP blue, int
 				{
 					row[k].B2 = 1;
 				}			
-				*((uint32_t*)(&row[k])) |= (i << 22) & GPIO_ADDR_MASK;
+				*((uint32_t*)(&row[k])) |= (i << GPIO_ADDR_OFFSET) & GPIO_ADDR_MASK;
 				row[k].E = i >> 4;
 			}
 			memcpy(rowdata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct panel_io));
@@ -314,7 +314,7 @@ int main(int argc, char** argv)
 	memset(data, 0, COLUMNS * sizeof(struct panel_io));
 	for(i = 0; i < ROWS / 2; i++)
 	{
-		*((uint32_t*)(&data[i])) |= (i << 22) & GPIO_ADDR_MASK;
+		*((uint32_t*)(&data[i])) |= (i << GPIO_ADDR_OFFSET) & GPIO_ADDR_MASK;
 		gpio.E = i >> 4;
 		clock_out(data, COLUMNS);
 	}
