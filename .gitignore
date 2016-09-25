@@ -30,3 +30,5 @@ modules.builtin
 *.bmp
 *.dmp
 *.raw
+*.out
+*.gdb
