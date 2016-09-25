@@ -24,8 +24,8 @@
 #define GPIO_STR	4
 #define GPIO_CLK	17
 
-#define ROWS 16
-#define COLUMNS 32
+#define ROWS 32
+#define COLUMNS 64
 #define PWM_BITS 8
 
 #define GPIO_ADDR_OFFSET 22
@@ -189,7 +189,7 @@ void prerender_frame(struct panel_io* rowdata, UCP red, UCP green, UCP blue, int
 	for(i = 0; i < rows / 2; i++)
 	{
 		int row1_base = i * columns;
-    	int row2_base = (rows / 2 + i) * columns;
+		int row2_base = (rows / 2 + i) * columns;
 		for(j = 0; j < pwm_steps; j++)
 		{
 			memset(row, 0, columns * sizeof(struct panel_io));
@@ -220,7 +220,7 @@ void prerender_frame(struct panel_io* rowdata, UCP red, UCP green, UCP blue, int
 					row[k].B2 = 1;
 				}			
 				*((uint32_t*)(&row[k])) |= (i << 22) & GPIO_ADDR_MASK;
-				gpio.E = i >> 4;
+				row[k].E = i >> 4;
 			}
 			memcpy(rowdata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct panel_io));
 		}
