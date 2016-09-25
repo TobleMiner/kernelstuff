@@ -65,10 +65,6 @@ typedef struct panel_io {
 	uint32_t G1		: 1;
 };
 
-struct panel_io gpio;
-
-uint32_t* gpio_ptr = (uint32_t*)&gpio;
-
 int run = 1;
 int numchld = 0;
 int address = 0;
@@ -82,31 +78,8 @@ void llgpio_setup()
 	gpio_set_outputs((1 << GPIO_R1) | (1 << GPIO_R2) | (1 << GPIO_G1) | (1 << GPIO_G2) | (1 << GPIO_B1) | (1 << GPIO_B2) | (1 << GPIO_A) | (1 << GPIO_B) | (1 << GPIO_C) | (1 << GPIO_D) | (1 << GPIO_E) | (1 << GPIO_OE) | (1 << GPIO_STR) | (1 << GPIO_CLK));	
 }
 
-void gpio_setup()
-{
-	bcm2835_gpio_fsel(GPIO_R1, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_R2, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_G1, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_G2, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_B1, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_B2, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_A, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_B, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_C, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_D, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_E, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_OE, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_STR, BCM2835_GPIO_FSEL_OUTP);
-	bcm2835_gpio_fsel(GPIO_CLK, BCM2835_GPIO_FSEL_OUTP);
-}
-
-#ifdef LL_IO
-	#define GPIO_HI(gpio) gpio_set_bits((1 << gpio))
-	#define GPIO_LO(gpio) gpio_clr_bits((1 << gpio))
-#else
-	#define GPIO_HI(gpio) bcm2835_gpio_set(gpio)
-	#define GPIO_LO(gpio) bcm2835_gpio_clr(gpio)
-#endif
+#define GPIO_HI(gpio) gpio_set_bits((1 << gpio))
+#define GPIO_LO(gpio) gpio_clr_bits((1 << gpio))
 #define GPIO_SET(gpio, state) (state ? GPIO_HI(gpio) : GPIO_LO(gpio))
 
 void clock_out(struct panel_io* data, int length)
@@ -120,24 +93,7 @@ void clock_out(struct panel_io* data, int length)
 		GPIO_HI(GPIO_CLK);
 	}
 	GPIO_HI(GPIO_STR);
-//	GPIO_LO(GPIO_STR);
 }
-
-#ifdef LL_IO
-void set_address(uint i)
-{
-	gpio_write_bits(*gpio_ptr);
-}
-#else
-void set_address(uint i)
-{
-	GPIO_SET(GPIO_A, (i >> 0) & 0b1);
-	GPIO_SET(GPIO_B, (i >> 1) & 0b1);
-	GPIO_SET(GPIO_C, (i >> 2) & 0b1);
-	GPIO_SET(GPIO_D, (i >> 3) & 0b1);
-	GPIO_SET(GPIO_E, (i >> 4) & 0b1);
-}
-#endif
 
 int fork_child()
 {
@@ -243,15 +199,9 @@ void show_frame(struct panel_io* frame, int bits, int rows, int columns)
 
 int main(int argc, char** argv)
 {
-#ifdef LL_IO
 	if(llgpio_init() != 0)
 		return -EPERM;
 	llgpio_setup();
-#else
-	if(!bcm2835_init())
-		return -EPERM;
-	gpio_setup();
-#endif
 
 	GPIO_LO(GPIO_OE);
 	
@@ -283,13 +233,6 @@ int main(int argc, char** argv)
 
 	prerender_frame(rowdata, data_red, data_green, data_blue, PWM_BITS, ROWS, COLUMNS);
 
-	UCP row = rowdata + 3 * (1 << PWM_BITS) * COLUMNS + 10 * COLUMNS;
-	for(i = 0; i < COLUMNS; i++)
-	{
-		printf("0x%x, ", row[i]);
-	}
-	printf("\n");
-
 	signal(SIGINT, signalhandler);
 	signal(SIGCHLD, signalhandler);
 
@@ -298,12 +241,6 @@ int main(int argc, char** argv)
 	while(run)
 	{
 		show_frame(rowdata, PWM_BITS, ROWS, COLUMNS);
-//		pwm_2lines(data_red, data_green, data_blue, PWM_BITS, address, ROWS, COLUMNS);
-/*		set_address(address);
-		clock_out(data_red, len);
-		usleep(500000);
-		address++;
-		address %= ROWS / 2;*/
 		updates++;
 	}
 
@@ -315,11 +252,8 @@ int main(int argc, char** argv)
 	for(i = 0; i < ROWS / 2; i++)
 	{
 		*((uint32_t*)(&data[i])) |= (i << GPIO_ADDR_OFFSET) & GPIO_ADDR_MASK;
-		gpio.E = i >> 4;
+		data[i].E = i >> 4;
 		clock_out(data, COLUMNS);
 	}
-#ifndef LL_IO
-	bcm2835_close();
-#endif
 	return 0;
 }
