@@ -20,5 +20,7 @@ void gpio_set_bits(uint32_t value);
 
 void gpio_clr_bits(uint32_t value);
 
+void gpio_write_bits(uint32_t value);
+
 void gpio_write_masked_bits(uint32_t value, uint32_t mask);
 

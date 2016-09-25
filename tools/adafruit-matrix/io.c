@@ -68,6 +68,12 @@ void gpio_clr_bits(uint32_t value)
     *gpio_clr = value & valid_gpio_bits;
 }
 
+void gpio_write_bits(uint32_t value)
+{
+	gpio_clr_bits(~value);
+	gpio_set_bits(value);
+}
+
 void gpio_write_masked_bits(uint32_t value, uint32_t mask)
 {
     gpio_clr_bits(~value & mask);

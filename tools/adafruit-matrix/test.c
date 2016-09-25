@@ -28,10 +28,42 @@
 #define COLUMNS 32
 #define PWM_BITS 8
 
+#define GPIO_ADDR_MASK 0b0011110000000000000000000000
+
+#define GPIO_DATA_MASK 0b1000000000000000111110000000
+
 struct {
-	uint32_t GPIO0 : 1;
-	uint32_t GPIO1 : 1;
+	uint32_t GPIO0	: 1;
+	uint32_t GPIO1	: 1;
+	uint32_t GPIO2	: 1;
+	uint32_t GPIO3	: 1;
+	uint32_t STR	: 1;
+	uint32_t GPIO5	: 1;
+	uint32_t GPIO6	: 1;
+	uint32_t B1		: 1;
+	uint32_t R2		: 1;
+	uint32_t G2		: 1;
+	uint32_t B2		: 1;
+	uint32_t R1		: 1;
+	uint32_t GPIO12 : 1;
+	uint32_t GPIO13 : 1;
+	uint32_t GPIO14 : 1;
+	uint32_t E		: 1;
+	uint32_t GPIO16 : 1;
+	uint32_t CLK	: 1;
+	uint32_t OE		: 1;
+	uint32_t GPIO19 : 1;
+	uint32_t GPIO20 : 1;
+	uint32_t GPIO21 : 1;
+	uint32_t A		: 1;
+	uint32_t B		: 1;
+	uint32_t C		: 1;
+	uint32_t D		: 1;
+	uint32_t GPIO26 : 1;
+	uint32_t G1		: 1;
 } gpio;
+
+uint32_t* gpio_ptr = (uint32_t*)&gpio;
 
 int run = 1;
 int numchld = 0;
@@ -92,6 +124,15 @@ void clock_out(unsigned char* data, int length)
 //	GPIO_LO(GPIO_STR);
 }
 
+#ifdef LL_IO
+void set_address(uint i)
+{
+	*gpio_ptr &= ~GPIO_ADDR_MASK;
+	*gpio_ptr |= (i << 22) & GPIO_ADDR_MASK;
+	gpio.E = i >> 4;
+	gpio_write_bits(*gpio_ptr);
+}
+#else
 void set_address(uint i)
 {
 	GPIO_SET(GPIO_A, (i >> 0) & 0b1);
@@ -100,6 +141,7 @@ void set_address(uint i)
 	GPIO_SET(GPIO_D, (i >> 3) & 0b1);
 	GPIO_SET(GPIO_E, (i >> 4) & 0b1);
 }
+#endif
 
 int fork_child()
 {
