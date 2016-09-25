@@ -34,7 +34,7 @@
 #define GPIO_DATA_OFFSET 0
 #define GPIO_DATA_MASK 0b1000000000000000111110000000
 
-struct {
+typedef struct panel_io {
 	uint32_t GPIO0	: 1;
 	uint32_t GPIO1	: 1;
 	uint32_t GPIO2	: 1;
@@ -63,7 +63,9 @@ struct {
 	uint32_t D		: 1;
 	uint32_t GPIO26 : 1;
 	uint32_t G1		: 1;
-} gpio;
+};
+
+struct panel_io gpio;
 
 uint32_t* gpio_ptr = (uint32_t*)&gpio;
 
@@ -107,19 +109,14 @@ void gpio_setup()
 #endif
 #define GPIO_SET(gpio, state) (state ? GPIO_HI(gpio) : GPIO_LO(gpio))
 
-void clock_out(unsigned char* data, int length)
+void clock_out(struct panel_io* data, int length)
 {
 	GPIO_LO(GPIO_STR);
 	int i;
 	for(i = 0; i < length; i++)
 	{
 		GPIO_LO(GPIO_CLK);
-		GPIO_SET(GPIO_R1, (data[i] >> 0) & 0b1);
-		GPIO_SET(GPIO_R2, (data[i] >> 1) & 0b1);
-		GPIO_SET(GPIO_G1, (data[i] >> 2) & 0b1);
-		GPIO_SET(GPIO_G2, (data[i] >> 3) & 0b1);
-		GPIO_SET(GPIO_B1, (data[i] >> 4) & 0b1);
-		GPIO_SET(GPIO_B2, (data[i] >> 5) & 0b1);
+		gpio_write_bits(((uint32_t*)data)[i]);
 		GPIO_HI(GPIO_CLK);
 	}
 	GPIO_HI(GPIO_STR);
@@ -129,9 +126,6 @@ void clock_out(unsigned char* data, int length)
 #ifdef LL_IO
 void set_address(uint i)
 {
-	*gpio_ptr &= ~GPIO_ADDR_MASK;
-	*gpio_ptr |= (i << 22) & GPIO_ADDR_MASK;
-	gpio.E = i >> 4;
 	gpio_write_bits(*gpio_ptr);
 }
 #else
@@ -185,103 +179,61 @@ void signalhandler(int sig)
 
 #define UCP unsigned char*
 
-void pwm_2lines(UCP red, UCP green, UCP blue, int bits, int addr, int rows, int columns)
-{
-	int i;
-	int j;
-	int offset;
-	unsigned char line[columns];
-	set_address(addr);
-	int row1 = addr * columns;
-	int row2 = (rows / 2 + addr) * columns;
-	for(i = 0; i < (1 << bits); i++)
-	{
-		memset(line, 0, columns);
-		for(j = 0; j < columns; j++)
-		{
-			if(red[row1 + j] >= i)
-			{
-				line[j] |= 0b1;
-			}
-			if(green[row1 + j] >= i)
-			{
-				line[j] |= 0b100;
-			}
-			if(blue[row1 + j] >= i)
-			{
-				line[j] |= 0b10000;
-			}
-			if(red[row2 + j] >= i)
-			{
-				line[j] |= 0b10;
-			}
-			if(green[row2 + j] >= i)
-			{
-				line[j] |= 0b1000;
-			}
-			if(blue[row2 + j] >= i)
-			{
-				line[j] |= 0b100000;
-			}
-		}
-		clock_out(line, columns);
-	}
-}
-
-void prerender_frame(UCP rowdata, UCP red, UCP green, UCP blue, int bits, int rows, int columns)
+void prerender_frame(struct panel_io* rowdata, UCP red, UCP green, UCP blue, int bits, int rows, int columns)
 {
 	int i;
 	int j;
 	int k;
 	int pwm_steps = 1 << bits;
-	unsigned char row[columns];
+	struct panel_io row[columns];
 	for(i = 0; i < rows / 2; i++)
 	{
 		int row1_base = i * columns;
     	int row2_base = (rows / 2 + i) * columns;
 		for(j = 0; j < pwm_steps; j++)
 		{
-			memset(row, 0, columns);
+			memset(row, 0, columns * sizeof(struct panel_io));
 			for(k = 0; k < columns; k++)
 			{
 				if(red[row1_base + k] >= j)
 				{
-					row[k] |= 0b1;
+					row[k].R1 = 1;
 				}
 				if(green[row1_base + k] >= j)
 				{
-					row[k] |= 0b100;
+					row[k].G1 = 1;
 				}
 				if(blue[row1_base + k] >= j)
 				{
-					row[k] |= 0b10000;
+					row[k].B1 = 1;
 				}
 				if(red[row2_base + k] >= j)
 				{
-					row[k] |= 0b10;
+					row[k].R2 = 1;
 				}
 				if(green[row2_base + k] >= j)
 				{
-					row[k] |= 0b1000;
+					row[k].G2 = 1;
 				}
 				if(blue[row2_base + k] >= j)
 				{
-					row[k] |= 0b100000;
+					row[k].B2 = 1;
 				}			
+				*((uint32_t*)(&row[k])) |= (i << 22) & GPIO_ADDR_MASK;
+				gpio.E = i >> 4;
 			}
-			memcpy(rowdata + i * pwm_steps * columns + j * columns, row, columns);
+			memcpy(rowdata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct panel_io));
 		}
 	}
 }
 
-void show_frame(UCP frame, int bits, int rows, int columns)
+void show_frame(struct panel_io* frame, int bits, int rows, int columns)
 {
 	int i;
 	int j;
 	int pwm_steps = (1 << bits);
 	for(i = 0; i < rows / 2; i++)
 	{		
-		set_address(i);
 		for(j = 0; j < pwm_steps; j++)
 		{
 			clock_out(frame + i * pwm_steps * columns + j * columns, columns);
@@ -327,7 +279,7 @@ int main(int argc, char** argv)
 
 	int rowdata_len = ROWS / 2 * COLUMNS * (1 << PWM_BITS);
 
-	unsigned char rowdata[rowdata_len];
+	struct panel_io rowdata[rowdata_len];
 
 	prerender_frame(rowdata, data_red, data_green, data_blue, PWM_BITS, ROWS, COLUMNS);
 
@@ -358,11 +310,12 @@ int main(int argc, char** argv)
 	while(numchld > 0)
 		sleep(1);
 
-	unsigned char data[COLUMNS];
-	memset(data, 0, COLUMNS);
+	struct panel_io data[COLUMNS];
+	memset(data, 0, COLUMNS * sizeof(struct panel_io));
 	for(i = 0; i < ROWS / 2; i++)
 	{
-		set_address(i);
+		*((uint32_t*)(&data[i])) |= (i << 22) & GPIO_ADDR_MASK;
+		gpio.E = i >> 4;
 		clock_out(data, COLUMNS);
 	}
 #ifndef LL_IO
