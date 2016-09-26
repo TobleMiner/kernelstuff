@@ -10,6 +10,7 @@
 #include <pthread.h>
 
 #include "io.h"
+#include "matrix.h"
 
 #define GPIO_R1		11
 #define GPIO_R2		8
@@ -29,6 +30,9 @@
 #define ROWS 32
 #define COLUMNS 128
 #define PWM_BITS 4
+
+#define REAL_X 64
+#define REAL_Y 64
 
 #define NUM_PROCESSING_THREADS 2
 
@@ -83,6 +87,32 @@ typedef struct frame
 	off_t paneloffset;
 	uint32_t* frame;
 	off_t frameoffset;
+};
+
+#define NUM_PANELS 2
+
+struct matrix_ledpanel matrix_low = {
+	.name = "Lower",
+	.xres = 64,
+	.yres = 32,
+	.virtual_x = 0,
+	.virtual_y = 0,
+	.realx = 0,
+	.realy = 32,
+	.flip_x = 1,
+	.flip_y = 1
+};
+
+struct matrix_ledpanel matrix_up = {
+	.name = "Upper",
+	.xres = 64,
+	.yres = 32,
+	.virtual_x = 64,
+	.virtual_y = 0,
+	.realx = 0,
+	.realy = 0,
+	.flip_x = 1,
+	.flip_y = 1
 };
 
 int run = 1;
@@ -161,6 +191,23 @@ void signalhandler(int sig)
 #define UCP unsigned char*
 
 #define U16P uint16_t*
+
+void remap_frame(struct matrix_ledpanel** panels, uint32_t* from, int width_from, int height_from, uint32_t* to, int width_to, int height_to)
+{
+	int i, j;
+	struct matrix_ledpanel* panel;
+	struct matrix_pos pos;
+	for(i = 0; i < height_from; i++)
+	{
+		for(j = 0; j < width_from; j++)
+		{
+			panel = matrix_get_panel_at_real(panels, NUM_PANELS, j, i);
+			matrix_panel_get_position(&pos, panel, j, i);
+			printf("REMAP: [%d,%d] -> [%d,%d]\n", j, i, pos.x, pos.y);
+			to[pos.y * width_to + pos.x];
+		}
+	}
+}
 
 void prerender_frame_part(struct frame* framepart)
 {
@@ -296,6 +343,11 @@ int main(int argc, char** argv)
 		return -EPERM;
 	llgpio_setup();
 
+	struct matrix_ledpanel* ledpanels[NUM_PANELS] = {
+		&matrix_low,
+		&matrix_up
+	};
+
 	GPIO_LO(GPIO_OE);
 	
 	int len = ROWS * COLUMNS;
@@ -304,9 +356,15 @@ int main(int argc, char** argv)
 	
 	memset(data, 0, len * sizeof(uint32_t));
 
+	int rawlen = REAL_X * REAL_Y;
+
+	uint32_t rawdata[rawlen];
+
+	memset(rawdata, 0, rawlen * sizeof(uint32_t));
+
 	float max_distance = sqrt(pow(ROWS, 2) + pow(COLUMNS, 2));
-	float max_x = COLUMNS;
-	float max_y = ROWS;
+	float max_x = REAL_X;
+	float max_y = REAL_Y;
 	int i;
 	int j;
 	int pwm_max = (1 << PWM_BITS) - 1;
@@ -326,30 +384,32 @@ int main(int argc, char** argv)
 */
 
 	int cnt = 0;
-	for(i = 0; i < ROWS; i++)
+	for(i = 0; i < REAL_Y; i++)
 	{
-		for(j = 0; j < COLUMNS; j++)
+		for(j = 0; j < REAL_X; j++)
 		{
 			if(j < COLUMNS / 2 - 6 || i < ROWS / 2 - 6 || j > COLUMNS / 2 + 6 || i > ROWS / 2 + 6)
 				continue;
 			if(j < COLUMNS / 2)
 			{
-				data[i * COLUMNS + j] = cnt == 0 ? pwm_max : 0; 
-				data[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0; 
-				data[i * COLUMNS + j] |= cnt == 2 ? pwm_max << 16: 0;
-				data[i * COLUMNS + j] = 255;
+				rawdata[i * COLUMNS + j] = cnt == 0 ? pwm_max : 0; 
+				rawdata[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0; 
+				rawdata[i * COLUMNS + j] |= cnt == 2 ? pwm_max << 16: 0;
+				rawdata[i * COLUMNS + j] = 255;
 			}
 			else
 			{
-				data[i * COLUMNS + j] = cnt == 2 ? pwm_max : 0;
-                data[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0;
-                data[i * COLUMNS + j] |= cnt == 0 ? pwm_max << 16: 0;
-				data[i * COLUMNS + j] = 255 << 16;
+				rawdata[i * COLUMNS + j] = cnt == 2 ? pwm_max : 0;
+                rawdata[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0;
+                rawdata[i * COLUMNS + j] |= cnt == 0 ? pwm_max << 16: 0;
+				rawdata[i * COLUMNS + j] = 255 << 16;
 			}
 		}
 		cnt++;
 		cnt %= 3;
 	}
+
+	remap_frame(ledpanels, rawdata, REAL_X, REAL_Y, data, COLUMNS, ROWS);
 
 	int rowdata_len = ROWS / 2 * COLUMNS * (1 << PWM_BITS);
 
