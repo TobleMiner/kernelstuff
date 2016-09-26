@@ -8,6 +8,7 @@
 #include <math.h>
 #include <time.h>
 #include <pthread.h>
+#include <assert.h>
 
 #include "io.h"
 #include "matrix.h"
@@ -91,6 +92,17 @@ typedef struct frame
 
 #define NUM_PANELS 2
 
+struct matrix_ledpanel matrix_up = {
+	.name = "Upper",
+	.xres = 64,
+	.yres = 32,
+	.virtual_x = 64,
+	.virtual_y = 0,
+	.realx = 0,
+	.realy = 0,
+	.flip_y = 1
+};
+
 struct matrix_ledpanel matrix_low = {
 	.name = "Lower",
 	.xres = 64,
@@ -100,19 +112,7 @@ struct matrix_ledpanel matrix_low = {
 	.realx = 0,
 	.realy = 32,
 	.flip_x = 1,
-	.flip_y = 1
-};
-
-struct matrix_ledpanel matrix_up = {
-	.name = "Upper",
-	.xres = 64,
-	.yres = 32,
-	.virtual_x = 64,
-	.virtual_y = 0,
-	.realx = 0,
-	.realy = 0,
-	.flip_x = 1,
-	.flip_y = 1
+	.flip_y = 0
 };
 
 int run = 1;
@@ -134,11 +134,10 @@ void llgpio_setup()
 
 void clock_out(struct panel_io* data, int length)
 {
-	int i;
 	uint32_t clock = 1;
-	for(i = 0; i < length; i++)
+	while(--length > 0)
 	{
-		gpio_write_bits(((uint32_t*)data)[i]);
+		gpio_write_bits(((uint32_t*)data)[length]);
 		clock ^= 1;
 		GPIO_HI(GPIO_CLK);
 	}
@@ -202,9 +201,10 @@ void remap_frame(struct matrix_ledpanel** panels, uint32_t* from, int width_from
 		for(j = 0; j < width_from; j++)
 		{
 			panel = matrix_get_panel_at_real(panels, NUM_PANELS, j, i);
+			assert(panel != NULL);
 			matrix_panel_get_position(&pos, panel, j, i);
-			printf("REMAP: [%d,%d] -> [%d,%d]\n", j, i, pos.x, pos.y);
-			to[pos.y * width_to + pos.x];
+			printf("REMAP: [%d,%d] -> [%d,%d]@%s\n", j, i, pos.x, pos.y, panel->name);
+			to[pos.y * width_to + pos.x] = from[i * width_from + j];
 		}
 	}
 }
@@ -388,23 +388,25 @@ int main(int argc, char** argv)
 	{
 		for(j = 0; j < REAL_X; j++)
 		{
-			if(j < COLUMNS / 2 - 6 || i < ROWS / 2 - 6 || j > COLUMNS / 2 + 6 || i > ROWS / 2 + 6)
+			if(i == j)
+				rawdata[i * REAL_X + j] = 255;
+/*			if(j < REAL_X / 2 - 6 || i < REAL_Y / 2 - 6 || j > REAL_X / 2 + 6 || i > REAL_Y / 2 + 6)
 				continue;
-			if(j < COLUMNS / 2)
+			if(j < REAL_X / 2)
 			{
-				rawdata[i * COLUMNS + j] = cnt == 0 ? pwm_max : 0; 
-				rawdata[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0; 
-				rawdata[i * COLUMNS + j] |= cnt == 2 ? pwm_max << 16: 0;
-				rawdata[i * COLUMNS + j] = 255;
+				rawdata[i * REAL_X + j] = cnt == 0 ? pwm_max : 0; 
+				rawdata[i * REAL_X + j] |= cnt == 1 ? pwm_max << 8 : 0; 
+				rawdata[i * REAL_X + j] |= cnt == 2 ? pwm_max << 16: 0;
+				rawdata[i * REAL_X + j] = 255;
 			}
 			else
 			{
-				rawdata[i * COLUMNS + j] = cnt == 2 ? pwm_max : 0;
-                rawdata[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0;
-                rawdata[i * COLUMNS + j] |= cnt == 0 ? pwm_max << 16: 0;
-				rawdata[i * COLUMNS + j] = 255 << 16;
+				rawdata[i * REAL_X + j] = cnt == 2 ? pwm_max : 0;
+                rawdata[i * REAL_X + j] |= cnt == 1 ? pwm_max << 8 : 0;
+                rawdata[i * REAL_X + j] |= cnt == 0 ? pwm_max << 16: 0;
+				rawdata[i * REAL_X + j] = 255 << 16;
 			}
-		}
+*/		}
 		cnt++;
 		cnt %= 3;
 	}

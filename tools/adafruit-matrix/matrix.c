@@ -1,4 +1,6 @@
 #include <string.h>
+#include <stdio.h>
+#include <assert.h>
 
 #include "matrix.h"
 
@@ -36,6 +38,19 @@ void matrix_panel_get_local_position(struct matrix_pos* pos, struct matrix_ledpa
 {
 	pos->x = x - panel->realx;
 	pos->y = y - panel->realy;
+	if(panel->flip_x)
+	{
+		printf("%s is x flipped (%d)\n", panel->name, pos->x);
+		pos->x = panel->xres - pos->x - 1;
+		assert(pos->x >= 0 && pos->x < panel->xres);
+	}
+	if(panel->flip_y)
+	{
+		printf("%s is y flipped\n", panel->name);
+		pos->y = panel->yres - pos->y - 1;
+		printf("Flipped: %d\n", pos->x);
+		assert(pos->y >= 0 && pos->y < panel->yres);
+	}
 }
 
 void matrix_panel_get_position(struct matrix_pos* pos, struct matrix_ledpanel* panel, int x, int y)
