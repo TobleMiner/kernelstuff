@@ -61,11 +61,23 @@ void gpio_set_outputs(uint32_t outputs)
 void gpio_set_bits(uint32_t value)
 {
     *gpio_set = value & valid_gpio_bits;
+	#ifdef DEBUG_SLOW
+	for(int i = 0; i < DEBUG_SLOW; i++)
+	{
+		asm("nop");
+	}
+	#endif
 }
 
 void gpio_clr_bits(uint32_t value)
 {
     *gpio_clr = value & valid_gpio_bits;
+	#ifdef DEBUG_SLOW
+	for(int i = 0; i < DEBUG_SLOW; i++)
+	{
+		asm("nop");
+	}
+	#endif
 }
 
 void gpio_write_bits(uint32_t value)
