@@ -1,4 +1,4 @@
-//#define DEBUG_SLOW 40
+#define DEBUG_SLOW 40
 
 #define PERIPHERAL_BASE		0x3F000000
 #define GPIO_OFFSET  		0x200000

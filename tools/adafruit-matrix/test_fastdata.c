@@ -27,8 +27,8 @@
 #define GPIO_CLK	17
 
 #define ROWS 32
-#define COLUMNS 64
-#define PWM_BITS 8
+#define COLUMNS 128
+#define PWM_BITS 4
 
 #define NUM_PROCESSING_THREADS 2
 
@@ -286,7 +286,7 @@ void show_frame(struct panel_io* frame, int bits, int rows, int columns)
 void* render_part(void* part)
 {
 	struct frame* framepart = (struct frame*)part;
-	printf("Thread: Segment: 0x%x Width: %d Height: %d\n", framepart->paneldata, framepart->width, framepart->height);
+	printf("Thread: Segment: 0x%x Width: %d Height: %d\n", framepart->paneldata + framepart->paneloffset, framepart->width, framepart->rows);
 	prerender_frame_part(framepart);
 }
 
@@ -330,9 +330,22 @@ int main(int argc, char** argv)
 	{
 		for(j = 0; j < COLUMNS; j++)
 		{
-			data[i * COLUMNS + j] = cnt == 0 ? pwm_max : 0; 
-			data[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0; 
-			data[i * COLUMNS + j] |= cnt == 2 ? pwm_max << 16: 0;
+			if(j < COLUMNS / 2 - 6 || i < ROWS / 2 - 6 || j > COLUMNS / 2 + 6 || i > ROWS / 2 + 6)
+				continue;
+			if(j < COLUMNS / 2)
+			{
+				data[i * COLUMNS + j] = cnt == 0 ? pwm_max : 0; 
+				data[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0; 
+				data[i * COLUMNS + j] |= cnt == 2 ? pwm_max << 16: 0;
+				data[i * COLUMNS + j] = 255;
+			}
+			else
+			{
+				data[i * COLUMNS + j] = cnt == 2 ? pwm_max : 0;
+                data[i * COLUMNS + j] |= cnt == 1 ? pwm_max << 8 : 0;
+                data[i * COLUMNS + j] |= cnt == 0 ? pwm_max << 16: 0;
+				data[i * COLUMNS + j] = 255 << 16;
+			}
 		}
 		cnt++;
 		cnt %= 3;
