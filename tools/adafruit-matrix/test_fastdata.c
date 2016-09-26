@@ -119,23 +119,25 @@ int run = 1;
 int numchld = 0;
 int address = 0;
 
+int pixpos = 0;
+
 long updates = 0;
 
 #define LL_IO
 
 void llgpio_setup()
 {
-	gpio_set_outputs((1 << GPIO_R1) | (1 << GPIO_R2) | (1 << GPIO_G1) | (1 << GPIO_G2) | (1 << GPIO_B1) | (1 << GPIO_B2) | (1 << GPIO_A) | (1 << GPIO_B) | (1 << GPIO_C) | (1 << GPIO_D) | (1 << GPIO_E) | (1 << GPIO_OE) | (1 << GPIO_STR) | (1 << GPIO_CLK));	
+	gpio_set_outputs((1 << GPIO_R1) | (1 << GPIO_R2) | (1 << GPIO_G1) | (1 << GPIO_G2) | (1 << GPIO_B1) | (1 << GPIO_B2) | (1 << GPIO_A) | (1 << GPIO_B) | (1 << GPIO_C) | (1 << GPIO_D) | (1 << GPIO_E) | (1 << GPIO_OE) | (1 << GPIO_STR) | (1 << GPIO_CLK));
 }
 
 #define GPIO_HI(gpio) gpio_set_bits((1 << gpio))
 #define GPIO_LO(gpio) gpio_clr_bits((1 << gpio))
 #define GPIO_SET(gpio, state) (state ? GPIO_HI(gpio) : GPIO_LO(gpio))
 
-void clock_out(struct panel_io* data, int length)
+void display_row(struct panel_io* data, int length)
 {
 	uint32_t clock = 1;
-	while(--length > 0)
+	while(--length >= 0)
 	{
 		gpio_write_bits(((uint32_t*)data)[length]);
 		clock ^= 1;
@@ -148,7 +150,7 @@ void set_address(int addr)
 	struct panel_io data;
 	*((uint32_t*)(&data)) = (addr << GPIO_ADDR_OFFSET) & GPIO_HI_ADDR_MASK;
 	data.E = addr >> 4;
-	gpio_write_masked_bits(*((uint32_t*)&data), GPIO_ADDR_MASK);	
+	gpio_write_masked_bits(*((uint32_t*)&data), GPIO_ADDR_MASK);
 }
 
 int fork_child()
@@ -203,7 +205,7 @@ void remap_frame(struct matrix_ledpanel** panels, uint32_t* from, int width_from
 			panel = matrix_get_panel_at_real(panels, NUM_PANELS, j, i);
 			assert(panel != NULL);
 			matrix_panel_get_position(&pos, panel, j, i);
-			printf("REMAP: [%d,%d] -> [%d,%d]@%s\n", j, i, pos.x, pos.y, panel->name);
+			//printf("REMAP: [%d,%d] -> [%d,%d]@%s\n", j, i, pos.x, pos.y, panel->name);
 			to[pos.y * width_to + pos.x] = from[i * width_from + j];
 		}
 	}
@@ -222,6 +224,55 @@ void prerender_frame_part(struct frame* framepart)
 	printf("vertical offset: %d\n", vertical_offset);
 	struct panel_io row[columns];
 	for(i = vertical_offset; i < vertical_offset + framepart->rows / 2; i++)
+	{
+		int row1_base = i * columns;
+		int row2_base = (rows / 2 + i) * columns;
+		for(j = 0; j < pwm_steps; j++)
+		{
+			memset(row, 0, columns * sizeof(struct panel_io));
+			for(k = 0; k < columns; k++)
+			{
+				printf("%d: Offset: %d/%d of %d\n ", j, row1_base + k, row2_base + k, rows * columns);
+				if(frame[row1_base + k] & 0xFF > j)
+				{
+					row[k].R1 = 1;
+				}
+				if(frame[row1_base + k] >> 8 & 0xFF > j)
+				{
+					row[k].G1 = 1;
+				}
+				if(frame[row1_base + k] >> 16 & 0xFF > j)
+				{
+					row[k].B1 = 1;
+				}
+				if(frame[row2_base + k] & 0xFF > j)
+				{
+					row[k].R2 = 1;
+				}
+				if(frame[row2_base + k] >> 8 & 0xFF > j)
+				{
+					row[k].G2 = 1;
+				}
+				if(frame[row2_base + k] >> 16 & 0xFF > j)
+				{
+					row[k].B2 = 1;
+				}
+				*((uint32_t*)(&row[k])) |= (i << GPIO_ADDR_OFFSET) & GPIO_HI_ADDR_MASK;
+				row[k].E = i >> 4;
+			}
+			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct panel_io));
+		}
+	}
+}
+
+void prerender_frame(struct panel_io* rowdata, uint32_t* frame, int bits, int rows, int columns)
+{
+	int i;
+	int j;
+	int k;
+	int pwm_steps = 1 << bits;
+	struct panel_io row[columns];
+	for(i = 0; i < rows / 2; i++)
 	{
 		int row1_base = i * columns;
 		int row2_base = (rows / 2 + i) * columns;
@@ -253,57 +304,7 @@ void prerender_frame_part(struct frame* framepart)
 				if(frame[row2_base + k] >> 16 & 0xFF > j)
 				{
 					row[k].B2 = 1;
-				}			
-				*((uint32_t*)(&row[k])) |= (i << GPIO_ADDR_OFFSET) & GPIO_HI_ADDR_MASK;
-				row[k].E = i >> 4;
-			}
-			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct panel_io));
-		}
-	}
-}
-
-void prerender_frame(struct panel_io* rowdata, uint32_t* frame, int bits, int rows, int columns)
-{
-	int i;
-	int j;
-	int k;
-	int pwm_steps = 1 << bits;
-	struct panel_io row[columns];
-	for(i = 0; i < rows / 2; i++)
-	{
-		int row1_base = i * columns;
-		int row2_base = (rows / 2 + i) * columns;
-		for(j = 0; j < pwm_steps; j++)
-		{
-			memset(row, 0, columns * sizeof(struct panel_io));
-			for(k = 0; k < columns; k++)
-			{
-/*				if(i == 0 &&)
-					printf("%d: %d:%d:%d Offset: %d\n ", j, red[row1_base + k], green[row1_base + k], blue[row1_base + k], row1_base + k);
-*/				if(frame[row1_base + k] & 0xFF > j)
-				{
-					row[k].R1 = 1;
 				}
-				if(frame[row1_base + k] >> 8 & 0xFF > j)
-				{
-					row[k].G1 = 1;
-				}
-				if(frame[row1_base + k] >> 16 & 0xFF > j)
-				{
-					row[k].B1 = 1;
-				}
-				if(frame[row2_base + k] & 0xFF > j)
-				{
-					row[k].R2 = 1;
-				}
-				if(frame[row2_base + k] >> 8 & 0xFF > j)
-				{
-					row[k].G2 = 1;
-				}
-				if(frame[row2_base + k] >> 16 & 0xFF > j)
-				{
-					row[k].B2 = 1;
-				}			
 				*((uint32_t*)(&row[k])) |= (i << GPIO_ADDR_OFFSET) & GPIO_HI_ADDR_MASK;
 				row[k].E = i >> 4;
 			}
@@ -322,7 +323,7 @@ void show_frame(struct panel_io* frame, int bits, int rows, int columns)
 		//set_address(i);
 		for(j = 0; j < pwm_steps; j++)
 		{
-			clock_out(frame + i * pwm_steps * columns + j * columns, columns);
+			display_row(frame + i * pwm_steps * columns + j * columns, columns);
 			//gpio_clr_bits(GPIO_CLOCK_MASK | GPIO_DATA_MASK);
 			GPIO_HI(GPIO_STR);
 			GPIO_LO(GPIO_STR);
@@ -337,6 +338,57 @@ void* render_part(void* part)
 	prerender_frame_part(framepart);
 }
 
+void process_frame(struct panel_io* rowdata, int rowdata_len, struct matrix_ledpanel** panels, uint32_t* rawdata, int raw_width, int raw_height, int columns, int rows, int num_processing_threads, int pwm_bits)
+{
+	int i;
+
+	int len = rows * columns;
+
+	printf("Allocation size: %d (%d bytes)", len, len * sizeof(uint32_t));
+
+	uint32_t* data = malloc(len * sizeof(uint32_t));
+
+	memset(data, 0, len * sizeof(uint32_t));
+
+	remap_frame(panels, rawdata, raw_width, raw_height, data, columns, rows);
+
+	memset(rowdata, 0, rowdata_len * sizeof(struct panel_io));
+
+	int rows_per_thread = rows / num_processing_threads;
+
+	printf("Rows per thread: %d\n", rows_per_thread);
+
+	struct frame threadframes[num_processing_threads];
+
+	pthread_t threadids[num_processing_threads];
+
+	for(i = 0; i < num_processing_threads; i++)
+	{
+		struct frame* threadframe = &threadframes[i];
+		threadframe->width = columns;
+		threadframe->height = rows;
+		threadframe->vertical_offset = i * rows_per_thread;
+		threadframe->rows = rows_per_thread;
+		threadframe->paneldata = rowdata;
+		threadframe->paneloffset = i * rows_per_thread * columns;
+		threadframe->frame = data;
+		threadframe->frameoffset = i * rows_per_thread * columns;
+		threadframe->pwm_bits = pwm_bits;
+		printf("Thread %d: Start @0x%x Threadframe: 0x%x\n", i, rowdata + i * rows_per_thread * columns, &threadframe);
+		if(pthread_create(&threadids[i], NULL, &render_part, threadframe))
+			perror("Failed to create processing thread: ");
+	}
+	for(i = 0; i < num_processing_threads; i++)
+	{
+		pthread_join(threadids[i], NULL);
+	}
+}
+
+void set_pixmum(int* num)
+{
+	pixpos = *num;
+}
+
 int main(int argc, char** argv)
 {
 	if(llgpio_init() != 0)
@@ -349,12 +401,6 @@ int main(int argc, char** argv)
 	};
 
 	GPIO_LO(GPIO_OE);
-	
-	int len = ROWS * COLUMNS;
-
-	uint32_t data[len];
-	
-	memset(data, 0, len * sizeof(uint32_t));
 
 	int rawlen = REAL_X * REAL_Y;
 
@@ -394,8 +440,8 @@ int main(int argc, char** argv)
 				continue;
 			if(j < REAL_X / 2)
 			{
-				rawdata[i * REAL_X + j] = cnt == 0 ? pwm_max : 0; 
-				rawdata[i * REAL_X + j] |= cnt == 1 ? pwm_max << 8 : 0; 
+				rawdata[i * REAL_X + j] = cnt == 0 ? pwm_max : 0;
+				rawdata[i * REAL_X + j] |= cnt == 1 ? pwm_max << 8 : 0;
 				rawdata[i * REAL_X + j] |= cnt == 2 ? pwm_max << 16: 0;
 				rawdata[i * REAL_X + j] = 255;
 			}
@@ -411,46 +457,18 @@ int main(int argc, char** argv)
 		cnt %= 3;
 	}
 
-	remap_frame(ledpanels, rawdata, REAL_X, REAL_Y, data, COLUMNS, ROWS);
-
 	int rowdata_len = ROWS / 2 * COLUMNS * (1 << PWM_BITS);
-
 	struct panel_io rowdata[rowdata_len];
-	memset(rowdata, 0, rowdata_len * sizeof(struct panel_io));
 
-	int rows_per_thread = ROWS / NUM_PROCESSING_THREADS;
-
-	printf("Rows per thread: %d\n", rows_per_thread);
-
-	struct frame threadframes[NUM_PROCESSING_THREADS];
-	
-	for(i = 0; i < NUM_PROCESSING_THREADS; i++)
-	{
-		struct frame* threadframe = &threadframes[i];
-		threadframe->width = COLUMNS;
-		threadframe->height = ROWS;
-		threadframe->vertical_offset = i * rows_per_thread;
-		threadframe->rows = rows_per_thread;
-		threadframe->paneldata = rowdata;
-		threadframe->paneloffset = i * rows_per_thread * COLUMNS;
-		threadframe->frame = data;
-		threadframe->frameoffset = i * rows_per_thread * COLUMNS;
-		threadframe->pwm_bits = PWM_BITS;
-		pthread_t addr;
-		printf("Thread %d: Start @0x%x Threadframe: 0x%x\n", i, rowdata + i * rows_per_thread * COLUMNS, &threadframe);
-		if(pthread_create(&addr, NULL, &render_part, threadframe))
-			perror("Failed to create processing thread: ");
-	}
-
-	//prerender_frame(rowdata, data, PWM_BITS, ROWS, COLUMNS);
+	process_frame(rowdata, rowdata_len, ledpanels, rawdata, REAL_X, REAL_Y, COLUMNS, ROWS, NUM_PROCESSING_THREADS, PWM_BITS);
 
 /*	for(i = 0; i < rowdata_len; i++)
 	{
 		struct panel_io cio = rowdata[i];
 		if(cio.R1 || cio.G1 || cio.B1)
-			printf("%d: Row select 1\n", i);
+			printf("%d: Row select 1 [R:%d G:%d B:%d]\n", i, cio.R1, cio.G1, cio.B1);
 		if(cio.R2 || cio.G2 || cio.B2)
-			printf("%d: Row select 2\n", i);
+			printf("%d: Row select 2 [R:%d G:%d B:%d]\n", i, cio.R1, cio.G1, cio.B1);
 	}
 */
 	signal(SIGINT, signalhandler);
@@ -472,7 +490,7 @@ int main(int argc, char** argv)
 	{
 		*((uint32_t*)(&rowdata[i])) |= (i << GPIO_ADDR_OFFSET) & GPIO_HI_ADDR_MASK;
 		rowdata[i].E = i >> 4;
-		clock_out(rowdata, COLUMNS);
+		display_row(rowdata, COLUMNS);
 	}
 	return 0;
 }

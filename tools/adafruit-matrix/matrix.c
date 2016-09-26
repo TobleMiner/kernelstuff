@@ -6,12 +6,12 @@
 
 int matrix_panel_contains_real(struct matrix_ledpanel* panel, int x, int y)
 {
-	return x >= panel->realx && x < panel->realx + panel->xres && y >= panel->realy && y < panel->realy + panel->yres;	
+	return x >= panel->realx && x < panel->realx + panel->xres && y >= panel->realy && y < panel->realy + panel->yres;
 }
 
 int matrix_panel_contains(struct matrix_ledpanel* panel, int x, int y)
 {
-	return x >= panel->virtual_x && x <= panel->virtual_x + panel->xres && y >= panel->virtual_y && y <= panel->virtual_y + panel->yres;	
+	return x >= panel->virtual_x && x <= panel->virtual_x + panel->xres && y >= panel->virtual_y && y <= panel->virtual_y + panel->yres;
 }
 
 struct matrix_ledpanel* matrix_get_panel_at(struct matrix_ledpanel** panels, int numpanels, int x, int y)
@@ -40,15 +40,14 @@ void matrix_panel_get_local_position(struct matrix_pos* pos, struct matrix_ledpa
 	pos->y = y - panel->realy;
 	if(panel->flip_x)
 	{
-		printf("%s is x flipped (%d)\n", panel->name, pos->x);
+		//printf("%s is x flipped (%d)\n", panel->name, pos->x);
 		pos->x = panel->xres - pos->x - 1;
 		assert(pos->x >= 0 && pos->x < panel->xres);
 	}
 	if(panel->flip_y)
 	{
-		printf("%s is y flipped\n", panel->name);
+		//printf("%s is y flipped\n", panel->name);
 		pos->y = panel->yres - pos->y - 1;
-		printf("Flipped: %d\n", pos->x);
 		assert(pos->y >= 0 && pos->y < panel->yres);
 	}
 }
