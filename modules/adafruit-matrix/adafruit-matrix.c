@@ -138,6 +138,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 	int columns = framepart->width;
 	int pwm_steps = 1 << framepart->pwm_bits;
 	int vertical_offset = framepart->vertical_offset / 2;
+	printk(KERN_INFO ADAMTX_NAME ": dimensions: [%d;%d]\n", columns, rows);
 	printk(KERN_INFO ADAMTX_NAME ": vertical offset: %d\n", vertical_offset);
 	uint32_t row[columns];
 	for(i = vertical_offset; i < vertical_offset + framepart->rows / 2; i++)
@@ -149,6 +150,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 			memset(row, 0, columns * sizeof(uint32_t));
 			for(k = 0; k < columns; k++)
 			{
+				printk(KERN_INFO ADAMTX_NAME ": [%d;%d]@%d offset1: %d offset2: %d", k, i, j, row1_base + k, row2_base + k);
 				if(frame[row1_base + k] & 0xFF > j)
 				{
 					row[k] |= 0b1;
@@ -174,6 +176,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 					row[k] |= 0b100000;
 				}
 			}
+			printk(KERN_INFO ADAMTX_NAME ": row: %d pwm:%d offset: %d address: 0x%x", i, j, i * pwm_steps * columns + j * columns, framepart->paneldata + i * pwm_steps * columns + j * columns);
 			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(uint32_t));
 		}
 	}
@@ -215,7 +218,7 @@ void process_frame(struct adamtx_processable_frame* frame)
 
 	remap_frame(frame->panels, frame->frame, frame->width, frame->height, data, frame->columns, frame->rows);
 
-	memset(frame->iodata, 0, frame->columns * frame->rows * sizeof(uint32_t));
+	memset(frame->iodata, 0, (1 << frame->pwm_bits) * frame->columns * frame->rows * sizeof(uint32_t));
 
 	struct adamtx_frame threadframe = {
 		.width = frame->columns,
@@ -305,7 +308,7 @@ static int __init adamtx_init(void)
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate frame memory (%d)\n", ret);
 		goto panels_alloced;
 	}
-	paneldata = vmalloc(ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t));
+	paneldata = vmalloc((1 << ADAMTX_PWM_BITS) * ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t));
 	if(paneldata == NULL)
 	{
 		ret = -ENOMEM;
