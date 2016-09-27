@@ -36,7 +36,7 @@
 #define ADAMTX_PWM_BITS		4
 #define ADAMTX_REAL_WIDTH	64
 #define ADAMTX_REAL_HEIGHT	64
-#define ADAMTX_RATE			60
+#define ADAMTX_RATE			60UL
 
 typedef struct adamtx_frame
 {
@@ -45,7 +45,7 @@ typedef struct adamtx_frame
 	int vertical_offset;
 	int rows;
 	int pwm_bits;
-	struct panel_io* paneldata;
+	uint32_t* paneldata;
 	off_t paneloffset;
 	uint32_t* frame;
 	off_t frameoffset;
