@@ -36,6 +36,7 @@
 #define ADAMTX_PWM_BITS		4
 #define ADAMTX_REAL_WIDTH	64
 #define ADAMTX_REAL_HEIGHT	64
+#define ADAMTX_RATE			60
 
 typedef struct adamtx_frame
 {

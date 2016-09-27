@@ -6,6 +6,7 @@
 #include <linux/sched.h>
 #include <linux/gpio.h>
 #include <linux/vmalloc.h>
+#include <asm/uaccess.h>
 
 #include "matrix.h"
 #include "adafruit-matrix.h"
@@ -18,6 +19,8 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
 MODULE_DESCRIPTION("Adafruit LED matrix driver");
 MODULE_VERSION("0.1");
+
+static DEFINE_MUTEX(adamtx_draw_mutex);
 
 static unsigned adamtx_gpios[ADAMTX_NUM_GPIOS] = {ADAMTX_GPIO_R1, ADAMTX_GPIO_R2, ADAMTX_GPIO_G1, ADAMTX_GPIO_G2, ADAMTX_GPIO_B1, ADAMTX_GPIO_B2, ADAMTX_GPIO_A, ADAMTX_GPIO_B, ADAMTX_GPIO_C, ADAMTX_GPIO_D, ADAMTX_GPIO_E, ADAMTX_GPIO_OE, ADAMTX_GPIO_STR, ADAMTX_GPIO_CLK};
 
@@ -50,6 +53,10 @@ struct matrix_ledpanel adamtx_matrix_low = {
 	.flip_x = 1,
 	.flip_y = 0
 };
+
+static struct hrtimer adamtx_frametimer;
+static ktime_t adamtx_frameperiod;
+static int adamtx_frametimer_enabled = 0;
 
 static int __init adamtx_alloc_gpio()
 {
@@ -100,24 +107,63 @@ void adamtx_set_address(int address)
 	ADAMTX_GPIO_SET(ADAMTX_GPIO_E, (address >> 4) & 0b1);
 }
 
+void show_frame(uint32_t* frame, int bits, int rows, int columns)
+{
+	int i;
+	int j;
+	int pwm_steps = (1 << bits);
+	for(i = 0; i < rows / 2; i++)
+	{
+		set_address(i);
+		for(j = 0; j < pwm_steps; j++)
+		{
+			display_row(frame + i * pwm_steps * columns + j * columns, columns);
+		}
+	}
+}
+
+static enum hrtimer_restart draw_frame(struct hrtimer* timer)
+{
+	hrtimer_forward_now(timer, adamtx_frameperiod);
+	if(!mutex_trylock(&adamtx_draw_mutex))
+	{
+		printk(KERN_WARNING ADAMTX_NAME ": Can't keep up. Frame not finished");
+		return -EBUSY;
+	}
+	mutex_unlock(&adamtx_draw_mutex);
+}
+
 static int __init adamtx_init(void)
 {
 	int ret;
 	if(ret = adamtx_alloc_gpio())
 	{
-		printk(KERN_WARN ADAMTX_NAME ": failed to allocate gpios (%d)", ret);
+		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate gpios (%d)", ret);
 		goto none_alloced;
 	}
-	adamtx_panels = malloc(ADAMTX_NUM_PANELS * sizeof(struct matrix_ledpanel));
+	adamtx_panels = vmalloc(ADAMTX_NUM_PANELS * sizeof(struct matrix_ledpanel));
 	if(adamtx_panels == NULL)
 	{
 		ret = -ENOMEM;
-		printk(KERN_WARN ADAMTX_NAME ": failed to allocate panels (%d)", ret);
+		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panels (%d)", ret);
 		goto gpio_alloced;
 	}
+	adamtx_panels[0] = adamtx_matrix_up;
+	adamtx_panels[1] = adamtx_matrix_low;
+
+	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
+	hrtimer_init(&adamtx_frametimer, CLOCK_REALTIME, HRTIMER_MODE_REL);
+	adamtx_frametimer.function = hrtest_callback;
+	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
+	adamtx_frametimer_enabled = 1;
+
 	printk(KERN_INFO ADAMTX_NAME ": initialized");
 	return 0;
 
+timer_started:
+	hrtimer_cancel(&adamtx_frametimer);
+panels_alloced:
+	vfree(adamtx_panels);
 gpio_alloced:
 	adamtx_free_gpio();
 none_alloced:
@@ -126,6 +172,9 @@ none_alloced:
 
 static void __exit adamtx_exit(void)
 {
+	if(adamtx_frametimer_enabled)
+		hrtimer_cancel(&adamtx_frametimer);
+	vfree(adamtx_panels);
 	adamtx_free_gpio();
 	printk(KERN_INFO ADAMTX_NAME ": Shutting down\n");
 }
