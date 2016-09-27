@@ -1,1 +1,3 @@
-obj-m := adafruit-matrix.o matrix.o
+obj-m := adafruit_matrix.o
+adafruit-matrix-y := matrix.o adafruit-matrix.o
+adafruit_matrix-objs := $(adafruit-matrix-y)

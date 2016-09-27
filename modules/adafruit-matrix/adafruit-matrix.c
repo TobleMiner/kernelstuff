@@ -262,7 +262,7 @@ void process_frame(uint32_t* rowdata, int rowdata_len, uint32_t* rawdata, int ra
 
 static enum hrtimer_restart draw_frame(struct hrtimer* timer)
 {
-	hrtimer_forward_now(timer, adamtx_frameperiod);
+/*	hrtimer_forward_now(timer, adamtx_frameperiod);
 	if(!mutex_trylock(&adamtx_draw_mutex))
 	{
 		printk(KERN_WARNING ADAMTX_NAME ": Can't keep up. Frame not finished");
@@ -270,7 +270,7 @@ static enum hrtimer_restart draw_frame(struct hrtimer* timer)
 	}
 	show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
 	mutex_unlock(&adamtx_draw_mutex);
-	return HRTIMER_RESTART;
+*/	return HRTIMER_RESTART;
 }
 
 static int __init adamtx_init(void)
@@ -316,7 +316,7 @@ static int __init adamtx_init(void)
 		}
 	}
 
-	process_frame(paneldata, ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t), framedata, ADAMTX_REAL_WIDTH, ADAMTX_REAL_HEIGHT, ADAMTX_COLUMNS, ADAMTX_ROWS, ADAMTX_PWM_BITS);
+//	process_frame(paneldata, ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t), framedata, ADAMTX_REAL_WIDTH, ADAMTX_REAL_HEIGHT, ADAMTX_COLUMNS, ADAMTX_ROWS, ADAMTX_PWM_BITS);
 
 	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
 	hrtimer_init(&adamtx_frametimer, CLOCK_REALTIME, HRTIMER_MODE_REL);
