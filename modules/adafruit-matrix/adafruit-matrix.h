@@ -51,4 +51,16 @@ typedef struct adamtx_frame
 	off_t frameoffset;
 };
 
+typedef struct adamtx_processable_frame
+{
+	int width;
+	int height;
+	int columns;
+	int rows;
+	int pwm_bits;
+	uint32_t* frame;
+	uint32_t* iodata;
+	struct matrix_ledpanel** panels;
+};
+
 #endif

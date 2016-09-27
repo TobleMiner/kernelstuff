@@ -13,7 +13,8 @@
 
 #define ADAMTX_GPIO_HI(gpio) ADAMTX_GPIO_SET(gpio, 1)
 #define ADAMTX_GPIO_LO(gpio) ADAMTX_GPIO_SET(gpio, 0)
-#define ADAMTX_GPIO_SET(gpio, state) gpio_set_value(gpio, state)
+//#define ADAMTX_GPIO_SET(gpio, state) gpio_set_value(gpio, state)
+#define ADAMTX_GPIO_SET(gpio, state) asm("nop")
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
@@ -63,6 +64,7 @@ static int adamtx_frametimer_enabled = 0;
 
 static int __init adamtx_alloc_gpio(void)
 {
+	return 0;
 	int i;
 	adamtx_gpios = vmalloc(ADAMTX_NUM_GPIOS * sizeof(struct gpio));
 	if(adamtx_gpios == NULL)
@@ -78,12 +80,13 @@ static int __init adamtx_alloc_gpio(void)
 
 static int __exit adamtx_free_gpio(void)
 {
+	return 0;
 	gpio_free_array(adamtx_gpios, ADAMTX_NUM_GPIOS);
 	vfree(adamtx_gpios);
 	return 0;
 }
 
-void adamtx_clock_out_row(unsigned char* data, int length)
+void adamtx_clock_out_row(uint32_t* data, int length)
 {
 	while(--length >= 0)
 	{
@@ -198,35 +201,35 @@ void render_part(struct adamtx_frame* part)
 	prerender_frame_part(framepart);
 }
 
-void process_frame(uint32_t* rowdata, int rowdata_len, uint32_t* rawdata, int raw_width, int raw_height, int columns, int rows, int pwm_bits)
+void process_frame(struct adamtx_processable_frame* frame)
 {
 	int i;
 
-	int len = rows * columns;
+	int datalen = frame->rows * frame->columns * sizeof(uint32_t);
 
-	printk(KERN_INFO ADAMTX_NAME ": allocation size: %d (%d bytes)", len, len * sizeof(uint32_t));
+	printk(KERN_INFO ADAMTX_NAME ": allocation size: %d bytes\n", datalen);
 
-	uint32_t data[len];
+	uint32_t* data = vmalloc(datalen);
 
-	memset(data, 0, len * sizeof(uint32_t));
+	memset(data, 0, datalen);
 
-	remap_frame(adamtx_panels, rawdata, raw_width, raw_height, data, columns, rows);
+	remap_frame(frame->panels, frame->frame, frame->width, frame->height, data, frame->columns, frame->rows);
 
-	memset(rowdata, 0, rowdata_len * sizeof(uint32_t));
+	memset(frame->iodata, 0, frame->columns * frame->rows * sizeof(uint32_t));
 
-	struct adamtx_frame frame = {
-		.width = columns,
-		.height = rows,
+	struct adamtx_frame threadframe = {
+		.width = frame->columns,
+		.height = frame->rows,
 		.vertical_offset = 0,
-		.rows = rows,
-		.paneldata = rowdata,
+		.rows = frame->rows,
+		.paneldata = frame->iodata,
 		.paneloffset = 0,
 		.frame = data,
 		.frameoffset = 0,
-		.pwm_bits = pwm_bits
+		.pwm_bits = frame->pwm_bits
 	};
 
-	render_part(&frame);
+	render_part(&threadframe);
 
 
 /*	int rows_per_thread = rows / num_processing_threads;
@@ -258,35 +261,38 @@ void process_frame(uint32_t* rowdata, int rowdata_len, uint32_t* rawdata, int ra
 		pthread_join(threadids[i], NULL);
 	}
 */
+	vfree(data);
 }
 
 static enum hrtimer_restart draw_frame(struct hrtimer* timer)
 {
-/*	hrtimer_forward_now(timer, adamtx_frameperiod);
+	printk(KERN_INFO ADAMTX_NAME ": Draw frame\n");
+	hrtimer_forward_now(timer, adamtx_frameperiod);
 	if(!mutex_trylock(&adamtx_draw_mutex))
 	{
-		printk(KERN_WARNING ADAMTX_NAME ": Can't keep up. Frame not finished");
+		printk(KERN_WARNING ADAMTX_NAME ": Can't keep up. Frame not finished\n");
 		return HRTIMER_RESTART;
 	}
 	show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
 	mutex_unlock(&adamtx_draw_mutex);
-*/	return HRTIMER_RESTART;
+	return HRTIMER_RESTART;
 }
 
 static int __init adamtx_init(void)
 {
 	int i, j, ret;
-	if(ret = adamtx_alloc_gpio())
+	
+	if((ret = adamtx_alloc_gpio()))
 	{
-		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate gpios (%d)", ret);
+		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate gpios (%d)\n", ret);
 		goto none_alloced;
 	}
 
-	adamtx_panels = vmalloc(ADAMTX_NUM_PANELS * sizeof(struct matrix_ledpanel));
+	adamtx_panels = vmalloc(ADAMTX_NUM_PANELS * sizeof(struct matrix_ledpanel*));
 	if(adamtx_panels == NULL)
 	{
 		ret = -ENOMEM;
-		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panels (%d)", ret);
+		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panels (%d)\n", ret);
 		goto gpio_alloced;
 	}
 	adamtx_panels[0] = &adamtx_matrix_up;
@@ -296,14 +302,14 @@ static int __init adamtx_init(void)
 	if(framedata == NULL)
 	{
 		ret = -ENOMEM;
-		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate frame memory (%d)", ret);
+		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate frame memory (%d)\n", ret);
 		goto panels_alloced;
 	}
 	paneldata = vmalloc(ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t));
 	if(paneldata == NULL)
 	{
 		ret = -ENOMEM;
-		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panel memory (%d)", ret);
+		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panel memory (%d)\n", ret);
 		goto framedata_alloced;
 	}
 
@@ -316,15 +322,28 @@ static int __init adamtx_init(void)
 		}
 	}
 
-//	process_frame(paneldata, ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t), framedata, ADAMTX_REAL_WIDTH, ADAMTX_REAL_HEIGHT, ADAMTX_COLUMNS, ADAMTX_ROWS, ADAMTX_PWM_BITS);
+	struct adamtx_processable_frame frame = {
+		.width = ADAMTX_REAL_WIDTH,
+		.height = ADAMTX_REAL_HEIGHT,
+		.columns = ADAMTX_COLUMNS,
+		.rows = ADAMTX_ROWS,
+		.pwm_bits = ADAMTX_PWM_BITS,
+		.iodata = paneldata,
+		.frame = framedata,
+		.panels = adamtx_panels
+	};
+	
 
-	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
+	process_frame(&frame);
+
+//	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
+	adamtx_frameperiod = ktime_set(1, 0);
 	hrtimer_init(&adamtx_frametimer, CLOCK_REALTIME, HRTIMER_MODE_REL);
 	adamtx_frametimer.function = draw_frame;
 	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
 	adamtx_frametimer_enabled = 1;
 
-	printk(KERN_INFO ADAMTX_NAME ": initialized");
+	printk(KERN_INFO ADAMTX_NAME ": initialized\n");
 	return 0;
 
 framedata_alloced:
@@ -341,9 +360,11 @@ static void __exit adamtx_exit(void)
 {
 	if(adamtx_frametimer_enabled)
 		hrtimer_cancel(&adamtx_frametimer);
+	vfree(paneldata);
+	vfree(framedata);
 	vfree(adamtx_panels);
 	adamtx_free_gpio();
-	printk(KERN_INFO ADAMTX_NAME ": Shutting down\n");
+	printk(KERN_INFO ADAMTX_NAME ": shutting down\n");
 }
 
 module_init(adamtx_init);
