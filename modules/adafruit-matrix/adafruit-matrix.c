@@ -11,8 +11,8 @@
 #include "matrix.h"
 #include "adafruit-matrix.h"
 
-#define ADAMTX_GPIO_HI(gpio) GPIO_SET(gpio, 1)
-#define ADAMTX_GPIO_LO(gpio) GPIO_SET(gpio, 0)
+#define ADAMTX_GPIO_HI(gpio) ADAMTX_GPIO_SET(gpio, 1)
+#define ADAMTX_GPIO_LO(gpio) ADAMTX_GPIO_SET(gpio, 0)
 #define ADAMTX_GPIO_SET(gpio, state) gpio_set_value(gpio, state)
 
 MODULE_LICENSE("GPL");
@@ -22,11 +22,11 @@ MODULE_VERSION("0.1");
 
 static DEFINE_MUTEX(adamtx_draw_mutex);
 
-static unsigned adamtx_gpios[ADAMTX_NUM_GPIOS] = {ADAMTX_GPIO_R1, ADAMTX_GPIO_R2, ADAMTX_GPIO_G1, ADAMTX_GPIO_G2, ADAMTX_GPIO_B1, ADAMTX_GPIO_B2, ADAMTX_GPIO_A, ADAMTX_GPIO_B, ADAMTX_GPIO_C, ADAMTX_GPIO_D, ADAMTX_GPIO_E, ADAMTX_GPIO_OE, ADAMTX_GPIO_STR, ADAMTX_GPIO_CLK};
+static unsigned adamtx_gpio_ids[ADAMTX_NUM_GPIOS] = {ADAMTX_GPIO_R1, ADAMTX_GPIO_R2, ADAMTX_GPIO_G1, ADAMTX_GPIO_G2, ADAMTX_GPIO_B1, ADAMTX_GPIO_B2, ADAMTX_GPIO_A, ADAMTX_GPIO_B, ADAMTX_GPIO_C, ADAMTX_GPIO_D, ADAMTX_GPIO_E, ADAMTX_GPIO_OE, ADAMTX_GPIO_STR, ADAMTX_GPIO_CLK};
 
 static struct gpio* adamtx_gpios;
 
-static struct matrix_ledpanel* adamtx_panels;
+static struct matrix_ledpanel** adamtx_panels;
 
 static uint32_t* framedata;
 static uint32_t* paneldata;
@@ -61,7 +61,7 @@ static struct hrtimer adamtx_frametimer;
 static ktime_t adamtx_frameperiod;
 static int adamtx_frametimer_enabled = 0;
 
-static int __init adamtx_alloc_gpio()
+static int __init adamtx_alloc_gpio(void)
 {
 	int i;
 	adamtx_gpios = vmalloc(ADAMTX_NUM_GPIOS * sizeof(struct gpio));
@@ -69,19 +69,18 @@ static int __init adamtx_alloc_gpio()
 		return -ENOMEM;
 	for(i = 0; i < ADAMTX_NUM_GPIOS; i++)
 	{
-		adamtx_gpios[i].gpio = adamtx_gpios[i];
+		adamtx_gpios[i].gpio = adamtx_gpio_ids[i];
 		adamtx_gpios[i].flags = GPIOF_OUT_INIT_LOW;
 		adamtx_gpios[i].label = ADAMTX_NAME;
 	}
 	return gpio_request_array(adamtx_gpios, ADAMTX_NUM_GPIOS);
 }
 
-static int __exit adamtx_free_gpio()
+static int __exit adamtx_free_gpio(void)
 {
-	int ret;
-	ret = gpio_free_array(adamtx_gpios, ADAMTX_NUM_GPIOS);
+	gpio_free_array(adamtx_gpios, ADAMTX_NUM_GPIOS);
 	vfree(adamtx_gpios);
-	return ret;
+	return 0;
 }
 
 void adamtx_clock_out_row(unsigned char* data, int length)
@@ -119,14 +118,14 @@ void remap_frame(struct matrix_ledpanel** panels, uint32_t* from, int width_from
 	{
 		for(j = 0; j < width_from; j++)
 		{
-			panel = matrix_get_panel_at_real(panels, NUM_PANELS, j, i);
+			panel = matrix_get_panel_at_real(panels, ADAMTX_NUM_PANELS, j, i);
 			matrix_panel_get_position(&pos, panel, j, i);
 			to[pos.y * width_to + pos.x] = from[i * width_from + j];
 		}
 	}
 }
 
-void prerender_frame_part(struct frame* framepart)
+void prerender_frame_part(struct adamtx_frame* framepart)
 {
 	int i;
 	int j;
@@ -137,14 +136,14 @@ void prerender_frame_part(struct frame* framepart)
 	int pwm_steps = 1 << framepart->pwm_bits;
 	int vertical_offset = framepart->vertical_offset / 2;
 	printk(KERN_INFO ADAMTX_NAME ": vertical offset: %d\n", vertical_offset);
-	struct uint32 row[columns];
+	uint32_t row[columns];
 	for(i = vertical_offset; i < vertical_offset + framepart->rows / 2; i++)
 	{
 		int row1_base = i * columns;
 		int row2_base = (rows / 2 + i) * columns;
 		for(j = 0; j < pwm_steps; j++)
 		{
-			memset(row, 0, columns * sizeof(struct uint32_t));
+			memset(row, 0, columns * sizeof(uint32_t));
 			for(k = 0; k < columns; k++)
 			{
 				if(frame[row1_base + k] & 0xFF > j)
@@ -184,10 +183,10 @@ void show_frame(uint32_t* frame, int bits, int rows, int columns)
 	int pwm_steps = (1 << bits);
 	for(i = 0; i < rows / 2; i++)
 	{
-		set_address(i);
+		adamtx_set_address(i);
 		for(j = 0; j < pwm_steps; j++)
 		{
-			display_row(frame + i * pwm_steps * columns + j * columns, columns);
+			adamtx_clock_out_row(frame + i * pwm_steps * columns + j * columns, columns);
 		}
 	}
 }
@@ -216,16 +215,16 @@ void process_frame(uint32_t* rowdata, int rowdata_len, uint32_t* rawdata, int ra
 	memset(rowdata, 0, rowdata_len * sizeof(uint32_t));
 
 	struct adamtx_frame frame = {
-		.width = columns;
-		.height = rows;
-		.vertical_offset = 0;
-		.rows = rows;
-		.paneldata = rowdata;
-		.paneloffset = 0;
-		.frame = data;
-		.frameoffset = 0;
-		.pwm_bits = pwm_bits;
-	}
+		.width = columns,
+		.height = rows,
+		.vertical_offset = 0,
+		.rows = rows,
+		.paneldata = rowdata,
+		.paneloffset = 0,
+		.frame = data,
+		.frameoffset = 0,
+		.pwm_bits = pwm_bits
+	};
 
 	render_part(&frame);
 
@@ -290,34 +289,46 @@ static int __init adamtx_init(void)
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panels (%d)", ret);
 		goto gpio_alloced;
 	}
-	adamtx_panels[0] = adamtx_matrix_up;
-	adamtx_panels[1] = adamtx_matrix_low;
+	adamtx_panels[0] = &adamtx_matrix_up;
+	adamtx_panels[1] = &adamtx_matrix_low;
 
 	framedata = vmalloc(ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * sizeof(uint32_t));
+	if(framedata == NULL)
+	{
+		ret = -ENOMEM;
+		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate frame memory (%d)", ret);
+		goto panels_alloced;
+	}
 	paneldata = vmalloc(ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t));
+	if(paneldata == NULL)
+	{
+		ret = -ENOMEM;
+		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panel memory (%d)", ret);
+		goto framedata_alloced;
+	}
 
 	for(i = 0; i < ADAMTX_REAL_HEIGHT; i++)
 	{
 		for(j = 0; j < ADAMTX_REAL_WIDTH; j++)
 		{
 			if(i == j)
-				framedata[i * framedata + j] = 255;
+				framedata[i * ADAMTX_REAL_WIDTH + j] = 255;
 		}
 	}
 
-	process_frame(paneldata, rowdata_len, adamtx_panels, framedata, ADAMTX_REAL_WIDTH, ADAMTX_REAL_HEIGHT, ADAMTX_COLUMNS, ADAMTX_ROWS, ADAMTX_PWM_BITS);
+	process_frame(paneldata, ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t), framedata, ADAMTX_REAL_WIDTH, ADAMTX_REAL_HEIGHT, ADAMTX_COLUMNS, ADAMTX_ROWS, ADAMTX_PWM_BITS);
 
 	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
 	hrtimer_init(&adamtx_frametimer, CLOCK_REALTIME, HRTIMER_MODE_REL);
-	adamtx_frametimer.function = hrtest_callback;
+	adamtx_frametimer.function = draw_frame;
 	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
 	adamtx_frametimer_enabled = 1;
 
 	printk(KERN_INFO ADAMTX_NAME ": initialized");
 	return 0;
 
-paneldata_alloced:
-	vfree(paneldata);
+framedata_alloced:
+	vfree(framedata);
 panels_alloced:
 	vfree(adamtx_panels);
 gpio_alloced:

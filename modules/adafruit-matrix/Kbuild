@@ -1,1 +1,1 @@
-obj-m := adafruit-matrix.o
+obj-m := adafruit-matrix.o matrix.o
