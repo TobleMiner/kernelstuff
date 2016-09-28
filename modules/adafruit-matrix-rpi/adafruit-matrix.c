@@ -8,6 +8,9 @@
 #include <asm/uaccess.h>
 #include <linux/time.h>
 #include <linux/timekeeping.h>
+#include <linux/kthread.h>
+#include <linux/err.h>
+#include <linux/delay.h>
 
 static struct timespec last_call_time;
 
@@ -36,6 +39,9 @@ static struct matrix_ledpanel** adamtx_panels;
 
 static char* framedata;
 static struct adamtx_panel_io* paneldata;
+
+static struct adamtx_update_param adamtx_update_param;
+struct task_struct* adamtx_update_thread;
 
 #define ADAMTX_NUM_PANELS 2
 
@@ -241,25 +247,41 @@ int process_frame(struct adamtx_processable_frame* frame)
 	return 0;
 }
 
+int update_frame(void* arg)
+{
+	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
+
+	while(!kthread_should_stop())
+	{
+		usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
+
+		dummyfb_copy(framedata);
+
+	    struct adamtx_processable_frame frame = {
+			.width = ADAMTX_REAL_WIDTH,
+			.height = ADAMTX_REAL_HEIGHT,
+			.columns = ADAMTX_COLUMNS,
+			.rows = ADAMTX_ROWS,
+			.pwm_bits = ADAMTX_PWM_BITS,
+			.iodata = paneldata,
+			.frame = framedata,
+			.panels = adamtx_panels
+		};
+
+		process_frame(&frame);
+	}
+	do_exit(0);
+}
+
 static enum hrtimer_restart draw_frame(struct hrtimer* timer)
 {
-	//printk(KERN_INFO ADAMTX_NAME ": Draw frame\n");
-/*	struct timespec now;
-	getnstimeofday(&now);
-	printk("%lu ns since last timer interrupt\n", (now.tv_sec - last_call_time.tv_sec) * 1000000000 + (now.tv_nsec - last_call_time.tv_nsec));
-	getnstimeofday(&now);
-*/	hrtimer_forward_now(timer, adamtx_frameperiod);
+	hrtimer_forward_now(timer, adamtx_frameperiod);
 	if(!mutex_trylock(&adamtx_draw_mutex))
 	{
 		printk(KERN_WARNING ADAMTX_NAME ": Can't keep up. Frame not finished\n");
 		return HRTIMER_RESTART;
 	}
 	show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
-/*	struct timespec now_after;
-	getnstimeofday(&now_after);
-	printk("Showing frame took %lu ns\n", (now_after.tv_sec - now.tv_sec) * 1000000000 + (now_after.tv_nsec - now.tv_nsec));
-	getnstimeofday(&now);
-	memcpy(&last_call_time, &now, sizeof(struct timespec));*/
 	mutex_unlock(&adamtx_draw_mutex);
 	return HRTIMER_RESTART;
 }
@@ -271,7 +293,7 @@ static void __init adamtx_init_gpio(void)
 
 static int __init adamtx_init(void)
 {
-	int i, j, k, ret;
+	int i, j, ret, framesize;
 	
 	if((ret = adamtx_gpio_alloc()))
 	{
@@ -290,7 +312,14 @@ static int __init adamtx_init(void)
 	adamtx_panels[0] = &adamtx_matrix_up;
 	adamtx_panels[1] = &adamtx_matrix_low;
 
-	framedata = vmalloc(ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN);
+	framesize = ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN;
+	if(dummyfb_get_fbsize() != framesize)
+	{
+        ret = -EINVAL;
+        printk(KERN_WARNING ADAMTX_NAME ": size of framebuffer != framesize\n");
+        goto framedata_alloced;
+	}
+	framedata = vmalloc(framesize);
 	if(framedata == NULL)
 	{
 		ret = -ENOMEM;
@@ -346,6 +375,17 @@ static int __init adamtx_init(void)
 		}
 	}
 */
+	
+	adamtx_update_param.rate_min = ADAMTX_FBRATE_MIN;
+	adamtx_update_param.rate_max = ADAMTX_FBRATE_MAX;
+	adamtx_update_thread = kthread_run(update_frame, &adamtx_update_param, "adamtx_draw");
+	if(IS_ERR(adamtx_update_thread))
+	{
+		ret = PTR_ERR(adamtx_update_thread);
+		printk(KERN_WARNING ADAMTX_NAME ": failed to create draw thread (%d)\n", ret);
+		goto paneldata_alloced;
+	}
+
 	printk(KERN_INFO ADAMTX_NAME ": Update spacing %lu ns\n", 1000000000UL / ADAMTX_RATE);
 
 	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
@@ -356,7 +396,8 @@ static int __init adamtx_init(void)
 
 	printk(KERN_INFO ADAMTX_NAME ": initialized\n");
 	return 0;
-
+paneldata_alloced:
+	vfree(paneldata);
 framedata_alloced:
 	vfree(framedata);
 panels_alloced:
@@ -369,6 +410,7 @@ none_alloced:
 
 static void __exit adamtx_exit(void)
 {
+	kthread_stop(adamtx_update_thread);
 	if(adamtx_frametimer_enabled)
 		hrtimer_cancel(&adamtx_frametimer);
 	vfree(paneldata);
