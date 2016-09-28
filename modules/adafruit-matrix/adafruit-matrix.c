@@ -7,14 +7,18 @@
 #include <linux/gpio.h>
 #include <linux/vmalloc.h>
 #include <asm/uaccess.h>
+#include <linux/time.h>
+#include <linux/timekeeping.h>
+
+static struct timespec last_call_time;
 
 #include "matrix.h"
 #include "adafruit-matrix.h"
 
 #define ADAMTX_GPIO_HI(gpio) ADAMTX_GPIO_SET(gpio, 1)
 #define ADAMTX_GPIO_LO(gpio) ADAMTX_GPIO_SET(gpio, 0)
-//#define ADAMTX_GPIO_SET(gpio, state) gpio_set_value(gpio, state)
-#define ADAMTX_GPIO_SET(gpio, state) asm("nop")
+#define ADAMTX_GPIO_SET(gpio, state) gpio_set_value(gpio, state)
+//#define ADAMTX_GPIO_SET(gpio, state) asm("nop")
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
@@ -42,8 +46,8 @@ static struct matrix_ledpanel adamtx_matrix_up = {
 	.virtual_y = 0,
 	.realx = 0,
 	.realy = 0,
-	.flip_y = 1,
-	.flip_y = 0
+	.flip_x = 0,
+	.flip_y = 1
 };
 
 static struct matrix_ledpanel adamtx_matrix_low = {
@@ -64,7 +68,6 @@ static int adamtx_frametimer_enabled = 0;
 
 static int __init adamtx_alloc_gpio(void)
 {
-	return 0;
 	int i;
 	adamtx_gpios = vmalloc(ADAMTX_NUM_GPIOS * sizeof(struct gpio));
 	if(adamtx_gpios == NULL)
@@ -78,9 +81,8 @@ static int __init adamtx_alloc_gpio(void)
 	return gpio_request_array(adamtx_gpios, ADAMTX_NUM_GPIOS);
 }
 
-static int __exit adamtx_free_gpio(void)
+static int adamtx_free_gpio(void)
 {
-	return 0;
 	gpio_free_array(adamtx_gpios, ADAMTX_NUM_GPIOS);
 	vfree(adamtx_gpios);
 	return 0;
@@ -150,7 +152,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 			memset(row, 0, columns * sizeof(uint32_t));
 			for(k = 0; k < columns; k++)
 			{
-				printk(KERN_INFO ADAMTX_NAME ": [%d;%d]@%d offset1: %d offset2: %d", k, i, j, row1_base + k, row2_base + k);
+//				printk(KERN_INFO ADAMTX_NAME ": [%d;%d]@%d offset1: %d offset2: %d", k, i, j, row1_base + k, row2_base + k);
 				if(frame[row1_base + k] & 0xFF > j)
 				{
 					row[k] |= 0b1;
@@ -176,7 +178,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 					row[k] |= 0b100000;
 				}
 			}
-			printk(KERN_INFO ADAMTX_NAME ": row: %d pwm:%d offset: %d address: 0x%x", i, j, i * pwm_steps * columns + j * columns, framepart->paneldata + i * pwm_steps * columns + j * columns);
+//			printk(KERN_INFO ADAMTX_NAME ": row: %d pwm:%d offset: %d address: 0x%x", i, j, i * pwm_steps * columns + j * columns, framepart->paneldata + i * pwm_steps * columns + j * columns);
 			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(uint32_t));
 		}
 	}
@@ -204,7 +206,7 @@ void render_part(struct adamtx_frame* part)
 	prerender_frame_part(framepart);
 }
 
-void process_frame(struct adamtx_processable_frame* frame)
+int process_frame(struct adamtx_processable_frame* frame)
 {
 	int i;
 
@@ -213,6 +215,8 @@ void process_frame(struct adamtx_processable_frame* frame)
 	printk(KERN_INFO ADAMTX_NAME ": allocation size: %d bytes\n", datalen);
 
 	uint32_t* data = vmalloc(datalen);
+	if(data == NULL)
+		return -ENOMEM;
 
 	memset(data, 0, datalen);
 
@@ -265,11 +269,16 @@ void process_frame(struct adamtx_processable_frame* frame)
 	}
 */
 	vfree(data);
+	return 0;
 }
 
 static enum hrtimer_restart draw_frame(struct hrtimer* timer)
 {
-	printk(KERN_INFO ADAMTX_NAME ": Draw frame\n");
+	//printk(KERN_INFO ADAMTX_NAME ": Draw frame\n");
+	struct timespec now;
+	getnstimeofday(&now);
+	printk("%lu ns since last timer interrupt\n", (now.tv_sec - last_call_time.tv_sec) * 1000000000 + (now.tv_nsec - last_call_time.tv_nsec));
+	memcpy(&last_call_time, &now, sizeof(struct timespec));
 	hrtimer_forward_now(timer, adamtx_frameperiod);
 	if(!mutex_trylock(&adamtx_draw_mutex))
 	{
@@ -277,6 +286,9 @@ static enum hrtimer_restart draw_frame(struct hrtimer* timer)
 		return HRTIMER_RESTART;
 	}
 	show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
+	struct timespec now_after;
+	getnstimeofday(&now_after);
+	printk("Showing frame took %lu ns\n", (now_after.tv_sec - now.tv_sec) * 1000000000 + (now_after.tv_nsec - now.tv_nsec));
 	mutex_unlock(&adamtx_draw_mutex);
 	return HRTIMER_RESTART;
 }
@@ -339,9 +351,11 @@ static int __init adamtx_init(void)
 
 	process_frame(&frame);
 
-//	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
-	adamtx_frameperiod = ktime_set(1, 0);
-	hrtimer_init(&adamtx_frametimer, CLOCK_REALTIME, HRTIMER_MODE_REL);
+	printk(KERN_INFO ADAMTX_NAME ": Update spaceing %lu ns\n", 1000000000UL / ADAMTX_RATE);
+
+	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
+//	adamtx_frameperiod = ktime_set(1, 0);
+	hrtimer_init(&adamtx_frametimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	adamtx_frametimer.function = draw_frame;
 	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
 	adamtx_frametimer_enabled = 1;
