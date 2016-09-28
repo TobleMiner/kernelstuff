@@ -15,15 +15,15 @@ static struct timespec last_call_time;
 #include "adafruit-matrix.h"
 #include "io.h"
 
-/*
 #define ADAMTX_GPIO_HI(gpio) adamtx_gpio_set_bits((1 << gpio))
 #define ADAMTX_GPIO_LO(gpio) adamtx_gpio_clr_bits((1 << gpio))
 #define ADAMTX_GPIO_SET(gpio, state) (state ? ADAMTX_GPIO_HI(gpio) : ADAMTX_GPIO_LO(gpio))
-*/
 
+/*
 #define ADAMTX_GPIO_HI(gpio) asm("nop")
 #define ADAMTX_GPIO_LO(gpio) asm("nop")
 #define ADAMTX_GPIO_SET(gpio, state) asm("nop")
+*/
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
@@ -31,10 +31,6 @@ MODULE_DESCRIPTION("Adafruit LED matrix driver");
 MODULE_VERSION("0.1");
 
 static DEFINE_MUTEX(adamtx_draw_mutex);
-
-static unsigned adamtx_gpio_ids[ADAMTX_NUM_GPIOS] = {ADAMTX_GPIO_R1, ADAMTX_GPIO_R2, ADAMTX_GPIO_G1, ADAMTX_GPIO_G2, ADAMTX_GPIO_B1, ADAMTX_GPIO_B2, ADAMTX_GPIO_A, ADAMTX_GPIO_B, ADAMTX_GPIO_C, ADAMTX_GPIO_D, ADAMTX_GPIO_E, ADAMTX_GPIO_OE, ADAMTX_GPIO_STR, ADAMTX_GPIO_CLK};
-
-static struct gpio* adamtx_gpios;
 
 static struct matrix_ledpanel** adamtx_panels;
 
@@ -163,7 +159,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 	}
 }
 
-void show_frame(uint32_t* frame, int bits, int rows, int columns)
+void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 {
 	int i;
 	int j;
@@ -254,22 +250,29 @@ int process_frame(struct adamtx_processable_frame* frame)
 static enum hrtimer_restart draw_frame(struct hrtimer* timer)
 {
 	//printk(KERN_INFO ADAMTX_NAME ": Draw frame\n");
-	struct timespec now;
+/*	struct timespec now;
 	getnstimeofday(&now);
 	printk("%lu ns since last timer interrupt\n", (now.tv_sec - last_call_time.tv_sec) * 1000000000 + (now.tv_nsec - last_call_time.tv_nsec));
-	memcpy(&last_call_time, &now, sizeof(struct timespec));
-	hrtimer_forward_now(timer, adamtx_frameperiod);
+	getnstimeofday(&now);
+*/	hrtimer_forward_now(timer, adamtx_frameperiod);
 	if(!mutex_trylock(&adamtx_draw_mutex))
 	{
 		printk(KERN_WARNING ADAMTX_NAME ": Can't keep up. Frame not finished\n");
 		return HRTIMER_RESTART;
 	}
 	show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
-	struct timespec now_after;
+/*	struct timespec now_after;
 	getnstimeofday(&now_after);
 	printk("Showing frame took %lu ns\n", (now_after.tv_sec - now.tv_sec) * 1000000000 + (now_after.tv_nsec - now.tv_nsec));
+	getnstimeofday(&now);
+	memcpy(&last_call_time, &now, sizeof(struct timespec));*/
 	mutex_unlock(&adamtx_draw_mutex);
 	return HRTIMER_RESTART;
+}
+
+static void __init adamtx_init_gpio(void)
+{
+	adamtx_gpio_set_outputs((1 << ADAMTX_GPIO_R1) | (1 << ADAMTX_GPIO_R2) | (1 << ADAMTX_GPIO_G1) | (1 << ADAMTX_GPIO_G2) | (1 << ADAMTX_GPIO_B1) | (1 << ADAMTX_GPIO_B2) | (1 << ADAMTX_GPIO_A) | (1 << ADAMTX_GPIO_B) | (1 << ADAMTX_GPIO_C) | (1 << ADAMTX_GPIO_D) | (1 << ADAMTX_GPIO_E) | (1 << ADAMTX_GPIO_OE) | (1 << ADAMTX_GPIO_STR) | (1 << ADAMTX_GPIO_CLK));
 }
 
 static int __init adamtx_init(void)
@@ -281,6 +284,7 @@ static int __init adamtx_init(void)
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate gpios (%d)\n", ret);
 		goto none_alloced;
 	}
+	adamtx_init_gpio();
 
 	adamtx_panels = vmalloc(ADAMTX_NUM_PANELS * sizeof(struct matrix_ledpanel*));
 	if(adamtx_panels == NULL)
@@ -330,7 +334,7 @@ static int __init adamtx_init(void)
 
 	process_frame(&frame);
 
-	printk(KERN_INFO ADAMTX_NAME ": Update spaceing %lu ns\n", 1000000000UL / ADAMTX_RATE);
+	printk(KERN_INFO ADAMTX_NAME ": Update spacing %lu ns\n", 1000000000UL / ADAMTX_RATE);
 
 	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
 //	adamtx_frameperiod = ktime_set(1, 0);
