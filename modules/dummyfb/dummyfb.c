@@ -14,7 +14,7 @@ MODULE_VERSION("0.1");
 
 #define DUMMY_FB_NAME "dummyfb"
 
-static char* fbmem;
+static char* fbmem = NULL;
 
 #define NUM_MODES 1
 static struct fb_videomode dummy_modedb[NUM_MODES] =
@@ -108,8 +108,9 @@ static void init_fb_info(struct fb_info* dummy_fb_info)
 
 static int dummy_remove(struct platform_device *device)
 {
-        printk(KERN_INFO "dummyfb: REMOVE");
-	struct fb_info* info = platform_get_drvdata(device);
+	struct fb_info* info;
+	printk(KERN_INFO "dummyfb: REMOVE");
+	info = platform_get_drvdata(device);
 
 	if(info)
 	{
@@ -122,10 +123,12 @@ static int dummy_remove(struct platform_device *device)
 
 static int dummy_probe(struct platform_device *device)
 {
+	int ret;
+	struct fb_info* info;
 	printk(KERN_INFO "dummyfb: PROBE");
 	printk(KERN_INFO "dummyfb: memsize=%d", DUMMYFB_MEMSIZE);
-	int ret = -ENOMEM;
-	struct fb_info* info = framebuffer_alloc(0, &device->dev);
+	ret = -ENOMEM;
+	info = framebuffer_alloc(0, &device->dev);
 
 	if(!info)
 		goto noalloced;
@@ -170,9 +173,9 @@ static struct platform_device* dummy_device;
 
 static int __init dummyfb_init(void)
 {
-	int ret = platform_driver_register(&dummy_driver);
+	int ret;
 
-	if(!ret)
+	if(!(ret = platform_driver_register(&dummy_driver)))
 	{
 		dummy_device = platform_device_alloc(DUMMY_FB_NAME, 0);
 
@@ -200,3 +203,28 @@ static void __exit dummyfb_exit(void)
 
 module_init(dummyfb_init);
 module_exit(dummyfb_exit);
+
+size_t dummyfb_get_fbsize(void)
+{
+	return DUMMYFB_MEMSIZE;
+}
+
+char* dummyfb_get_fbmem(void)
+{
+	return fbmem;
+}
+
+void dummyfb_copy(void* buffer)
+{
+	memcpy(buffer, fbmem, DUMMYFB_MEMSIZE);
+}
+
+void dummyfb_copy_part(void* buffer, size_t len)
+{
+	memcpy(buffer, fbmem, len);
+}
+
+EXPORT_SYMBOL(dummyfb_get_fbsize);
+EXPORT_SYMBOL(dummyfb_get_fbmem);
+EXPORT_SYMBOL(dummyfb_copy);
+EXPORT_SYMBOL(dummyfb_copy_part);
