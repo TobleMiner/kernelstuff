@@ -34,7 +34,7 @@ static DEFINE_MUTEX(adamtx_draw_mutex);
 
 static struct matrix_ledpanel** adamtx_panels;
 
-static uint32_t* framedata;
+static char* framedata;
 static struct adamtx_panel_io* paneldata;
 
 #define ADAMTX_NUM_PANELS 2
@@ -78,18 +78,10 @@ void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 	ADAMTX_GPIO_LO(ADAMTX_GPIO_STR);
 }
 
-void adamtx_set_address(int address)
-{
-	ADAMTX_GPIO_SET(ADAMTX_GPIO_A, (address >> 0) & 0b1);
-	ADAMTX_GPIO_SET(ADAMTX_GPIO_B, (address >> 1) & 0b1);
-	ADAMTX_GPIO_SET(ADAMTX_GPIO_C, (address >> 2) & 0b1);
-	ADAMTX_GPIO_SET(ADAMTX_GPIO_D, (address >> 3) & 0b1);
-	ADAMTX_GPIO_SET(ADAMTX_GPIO_E, (address >> 4) & 0b1);
-}
-
-void remap_frame(struct matrix_ledpanel** panels, uint32_t* from, int width_from, int height_from, uint32_t* to, int width_to, int height_to)
+void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, int height_from, uint32_t* to, int width_to, int height_to)
 {
 	int i, j;
+	off_t offset;
 	struct matrix_ledpanel* panel;
 	struct matrix_pos pos;
 	for(i = 0; i < height_from; i++)
@@ -99,7 +91,8 @@ void remap_frame(struct matrix_ledpanel** panels, uint32_t* from, int width_from
 //			printk(KERN_INFO ADAMTX_NAME ": [%d,%d] color: 0x%x", j, i, from[i * width_from + j]);
 			panel = matrix_get_panel_at_real(panels, ADAMTX_NUM_PANELS, j, i);
 			matrix_panel_get_position(&pos, panel, j, i);
-			to[pos.y * width_to + pos.x] = from[i * width_from + j];
+			offset = i * width_from * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN;
+			to[pos.y * width_to + pos.x] = from[offset] | from[offset + 1] << 8 | from[offset + 2] << 16;
 		}
 	}
 }
@@ -156,7 +149,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 				row[k].E = i >> 4;
 			}
 //			printk(KERN_INFO ADAMTX_NAME ": row: %d pwm:%d offset: %d address: 0x%x", i, j, i * pwm_steps * columns + j * columns, framepart->paneldata + i * pwm_steps * columns + j * columns);
-			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(uint32_t));
+			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct adamtx_panel_io));
 		}
 	}
 }
@@ -168,7 +161,6 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 	int pwm_steps = (1 << bits);
 	for(i = 0; i < rows / 2; i++)
 	{
-		adamtx_set_address(i);
 		for(j = 0; j < pwm_steps; j++)
 		{
 			adamtx_clock_out_row(frame + i * pwm_steps * columns + j * columns, columns);
@@ -298,7 +290,7 @@ static int __init adamtx_init(void)
 	adamtx_panels[0] = &adamtx_matrix_up;
 	adamtx_panels[1] = &adamtx_matrix_low;
 
-	framedata = vmalloc(ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * sizeof(uint32_t));
+	framedata = vmalloc(ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN);
 	if(framedata == NULL)
 	{
 		ret = -ENOMEM;
@@ -313,13 +305,15 @@ static int __init adamtx_init(void)
 		goto framedata_alloced;
 	}
 
-	memset(framedata, 0, ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * sizeof(uint32_t));
+	memset(framedata, 0, ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN);
 	for(i = 0; i < ADAMTX_REAL_HEIGHT; i++)
 	{
 		for(j = 0; j < ADAMTX_REAL_WIDTH; j++)
 		{
 			if(i == j)
-				framedata[i * ADAMTX_REAL_WIDTH + j] = 255;
+				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN] = 255;
+			if(i == ADAMTX_REAL_WIDTH - j - 1)
+				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 1] = 255;
 		}
 	}
 

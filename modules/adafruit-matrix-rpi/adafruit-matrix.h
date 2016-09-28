@@ -37,7 +37,13 @@
 #define ADAMTX_REAL_WIDTH	64
 #define ADAMTX_REAL_HEIGHT	64
 #define ADAMTX_RATE			240UL
+#define ADAMTX_DEPTH		24
 
+// Macros
+#define ADAMTX_BITS_TO_BYTES(bits) (bits >> 3)
+#define ADAMTX_PIX_LEN ADAMTX_BITS_TO_BYTES(ADAMTX_DEPTH)
+
+// Typdedefs
 typedef struct adamtx_panel_io {
 	uint32_t GPIO0	: 1;
 	uint32_t GPIO1	: 1;
@@ -89,7 +95,7 @@ typedef struct adamtx_processable_frame
 	int columns;
 	int rows;
 	int pwm_bits;
-	uint32_t* frame;
+	char* frame;
 	struct adamtx_panel_io* iodata;
 	struct matrix_ledpanel** panels;
 };
