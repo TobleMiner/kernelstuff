@@ -1,3 +1,11 @@
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/device.h>
+#include <linux/fs.h>
+#include <linux/slab.h>
+#include <asm/uaccess.h>
+
 #include "chrdev.h"
 
 #define DEVICE_NAME "testchar"
@@ -83,17 +91,20 @@ static int dev_open(struct inode* inodep, struct file *filep)
 	return 0;
 }
 
-static ssize_t testchr_set_message(char* buffer, size_t len)
+ssize_t testchr_set_message(char* buffer, size_t len)
 {
+	printk(KERN_INFO "Testchar: Got foreign pointer 0x%x, size: %d\n", buffer, len);
 	msg_buff_alloc(len);
-	message_len = 0;
+    message_len = 0;
 	if(message == NULL)
 	{
 		printk(KERN_INFO "Testchar: failed to allocate memory");
 		return -ENOMEM;
 	}
+    message_len = len;
 	memcpy(message, buffer, len);
-	return 0;
+	printk(KERN_INFO "Testchar: Stored %zu bytes\n", len);
+	return len;
 }
 
 EXPORT_SYMBOL(testchr_set_message);
