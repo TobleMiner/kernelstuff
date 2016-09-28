@@ -96,6 +96,7 @@ void remap_frame(struct matrix_ledpanel** panels, uint32_t* from, int width_from
 	{
 		for(j = 0; j < width_from; j++)
 		{
+//			printk(KERN_INFO ADAMTX_NAME ": [%d,%d] color: 0x%x", j, i, from[i * width_from + j]);
 			panel = matrix_get_panel_at_real(panels, ADAMTX_NUM_PANELS, j, i);
 			matrix_panel_get_position(&pos, panel, j, i);
 			to[pos.y * width_to + pos.x] = from[i * width_from + j];
@@ -122,10 +123,9 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 		int row2_base = (rows / 2 + i) * columns;
 		for(j = 0; j < pwm_steps; j++)
 		{
-			memset(row, 0, columns * sizeof(uint32_t));
+			memset(row, 0, columns * sizeof(struct adamtx_panel_io));
 			for(k = 0; k < columns; k++)
 			{
-//				printk(KERN_INFO ADAMTX_NAME ": [%d;%d]@%d offset1: %d offset2: %d", k, i, j, row1_base + k, row2_base + k);
 				if(frame[row1_base + k] & 0xFF > j)
 				{
 					row[k].R1 = 1;
@@ -150,6 +150,8 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 				{
 					row[k].B2 = 1;
 				}
+//				if(row[k].G1 || row[k].G2 || row[k].B1 || row[k].B2)
+//					printk(KERN_INFO ADAMTX_NAME ": [%d;%d]@%d offset1: %d offset2: %d raw value1:0x%x raw value2:0x%x\n", k, i, j, row1_base + k, row2_base + k, frame[row1_base + k], frame[row2_base + k]);
 				*((uint32_t*)(&row[k])) |= (i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
 				row[k].E = i >> 4;
 			}
@@ -277,7 +279,7 @@ static void __init adamtx_init_gpio(void)
 
 static int __init adamtx_init(void)
 {
-	int i, j, ret;
+	int i, j, k, ret;
 	
 	if((ret = adamtx_gpio_alloc()))
 	{
@@ -311,6 +313,7 @@ static int __init adamtx_init(void)
 		goto framedata_alloced;
 	}
 
+	memset(framedata, 0, ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * sizeof(uint32_t));
 	for(i = 0; i < ADAMTX_REAL_HEIGHT; i++)
 	{
 		for(j = 0; j < ADAMTX_REAL_WIDTH; j++)
@@ -334,10 +337,24 @@ static int __init adamtx_init(void)
 
 	process_frame(&frame);
 
+/*	for(i = 0; i < ADAMTX_ROWS / 2; i++)
+	{
+		for(j = 0; j < ADAMTX_COLUMNS; j++)
+		{
+			for(k = 0; k < (1 << ADAMTX_PWM_BITS); k++)
+			{
+				struct adamtx_panel_io cio = paneldata[i * (1 << ADAMTX_PWM_BITS) * ADAMTX_COLUMNS + j * (1 << ADAMTX_PWM_BITS) + k];
+				if(cio.R1 || cio.G1 || cio.B1)
+					printk(KERN_INFO ADAMTX_NAME " [%d;%d]@%d: Row select 1 [R:%d G:%d B:%d]\n", j, i, k, cio.R1, cio.G1, cio.B1);
+				if(cio.R2 || cio.G2 || cio.B2)
+					printk(KERN_INFO ADAMTX_NAME " [%d;%d]@%d: Row select 2 [R:%d G:%d B:%d]\n", j, i + ADAMTX_ROWS / 2, k, cio.R1, cio.G1, cio.B1);
+			}
+		}
+	}
+*/
 	printk(KERN_INFO ADAMTX_NAME ": Update spacing %lu ns\n", 1000000000UL / ADAMTX_RATE);
 
 	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
-//	adamtx_frameperiod = ktime_set(1, 0);
 	hrtimer_init(&adamtx_frametimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	adamtx_frametimer.function = draw_frame;
 	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
