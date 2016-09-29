@@ -2,7 +2,7 @@
 #define _ADAMTX_IO_H
 
 //#define ADMATX_DEBUG_SLOW 40
-//#define REQUEST_EXCLUSIVE_GPIO
+//#define ADMATX_REQUEST_EXCLUSIVE_GPIO
 
 #define ADAMTX_PERIPHERAL_BASE		0x3F000000
 #define ADAMTX_GPIO_OFFSET  		0x200000
@@ -10,13 +10,8 @@
 #define ADAMTX_GPIO_CLR_OFFSET 		(0x28 / sizeof(uint32_t))
 #define ADAMTX_REGISTER_BLOCK_SIZE	4096
 
-#define INP_GPIO(g) *(adamtx_gpio_map+((g)/10)) &= ~(7<<(((g)%10)*3))
-#define OUT_GPIO(g) *(adamtx_gpio_map+((g)/10)) |=  (1<<(((g)%10)*3))
-
-//uint32_t* adamtx_gpio_set;
-//uint32_t* adamtx_gpio_clr;
-
-//const uint32_t adatmx_valid_gpio_bits;
+#define ADAMTX_INP_GPIO(g) *(adamtx_gpio_map+((g)/10)) &= ~(7<<(((g)%10)*3))
+#define ADAMTX_OUT_GPIO(g) *(adamtx_gpio_map+((g)/10)) |=  (1<<(((g)%10)*3))
 
 int adamtx_gpio_alloc(void);
 

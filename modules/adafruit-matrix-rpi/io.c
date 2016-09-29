@@ -20,7 +20,7 @@ const uint32_t adamtx_valid_gpio_bits = ((1 <<  0) | (1 <<  1) | // RPi 1 - Revi
 
 int adamtx_gpio_alloc()
 {
-	#ifdef REQUEST_EXCLUSIVE_GPIO
+	#ifdef ADAMTX_REQUEST_EXCLUSIVE_GPIO
 	if(request_mem_region(ADAMTX_PERIPHERAL_BASE + ADAMTX_GPIO_OFFSET, ADAMTX_REGISTER_BLOCK_SIZE, "ADAMTX_GPIO") == NULL)
 	{
 		return -EIO;
@@ -52,8 +52,8 @@ void adamtx_gpio_set_outputs(uint32_t outputs)
 	{
 		if(outputs & (1 << b))
 		{
-			INP_GPIO(b);
-			OUT_GPIO(b);
+			ADAMTX_INP_GPIO(b);
+			ADAMTX_OUT_GPIO(b);
 		}
 	}
 }

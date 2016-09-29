@@ -80,8 +80,6 @@ void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 		adamtx_gpio_write_bits(((uint32_t*)data)[length]);
 		ADAMTX_GPIO_HI(ADAMTX_GPIO_CLK);
 	}
-	ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
-	ADAMTX_GPIO_LO(ADAMTX_GPIO_STR);
 }
 
 void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, int height_from, uint32_t* to, int width_to, int height_to)
@@ -113,8 +111,8 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 	int columns = framepart->width;
 	int pwm_steps = 1 << framepart->pwm_bits;
 	int vertical_offset = framepart->vertical_offset / 2;
-	printk(KERN_INFO ADAMTX_NAME ": dimensions: [%d;%d]\n", columns, rows);
-	printk(KERN_INFO ADAMTX_NAME ": vertical offset: %d\n", vertical_offset);
+//	printk(KERN_INFO ADAMTX_NAME ": dimensions: [%d;%d]\n", columns, rows);
+//	printk(KERN_INFO ADAMTX_NAME ": vertical offset: %d\n", vertical_offset);
 	struct adamtx_panel_io row[columns];
 	for(i = vertical_offset; i < vertical_offset + framepart->rows / 2; i++)
 	{
@@ -127,7 +125,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 			{
 				if(frame[row1_base + k] & 0xFF > j)
 				{
-					row[k].R1 = 1;
+					row[k].B1 = 1;
 				}
 				if(frame[row1_base + k] >> 8 & 0xFF > j)
 				{
@@ -135,11 +133,11 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 				}
 				if(frame[row1_base + k] >> 16 & 0xFF > j)
 				{
-					row[k].B1 = 1;
+					row[k].R1 = 1;
 				}
 				if(frame[row2_base + k] & 0xFF > j)
 				{
-					row[k].R2 = 1;
+					row[k].B2 = 1;
 				}
 				if(frame[row2_base + k] >> 8 & 0xFF > j)
 				{
@@ -147,7 +145,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 				}
 				if(frame[row2_base + k] >> 16 & 0xFF > j)
 				{
-					row[k].B2 = 1;
+					row[k].R2 = 1;
 				}
 //				if(row[k].G1 || row[k].G2 || row[k].B1 || row[k].B2)
 //					printk(KERN_INFO ADAMTX_NAME ": [%d;%d]@%d offset1: %d offset2: %d raw value1:0x%x raw value2:0x%x\n", k, i, j, row1_base + k, row2_base + k, frame[row1_base + k], frame[row2_base + k]);
@@ -157,6 +155,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 //			printk(KERN_INFO ADAMTX_NAME ": row: %d pwm:%d offset: %d address: 0x%x", i, j, i * pwm_steps * columns + j * columns, framepart->paneldata + i * pwm_steps * columns + j * columns);
 			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct adamtx_panel_io));
 		}
+		printk(KERN_INFO ADAMTX_NAME ": row: %d address: %u", i, (unsigned int)((*((uint32_t*)(&row[0])) & ADAMTX_GPIO_MASK_ADDRESS_HI) >> ADAMTX_GPIO_OFFSET_ADDRESS));
 	}
 }
 
@@ -170,6 +169,8 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 		for(j = 0; j < pwm_steps; j++)
 		{
 			adamtx_clock_out_row(frame + i * pwm_steps * columns + j * columns, columns);
+			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
+			ADAMTX_GPIO_LO(ADAMTX_GPIO_STR);
 		}
 	}
 }
@@ -177,7 +178,7 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 void render_part(struct adamtx_frame* part)
 {
 	struct adamtx_frame* framepart = (struct adamtx_frame*)part;
-	printk(KERN_INFO ADAMTX_NAME ": Segment: 0x%x Width: %d Height: %d\n", framepart->paneldata + framepart->paneloffset, framepart->width, framepart->rows);
+//	printk(KERN_INFO ADAMTX_NAME ": Segment: 0x%x Width: %d Height: %d\n", framepart->paneldata + framepart->paneloffset, framepart->width, framepart->rows);
 	prerender_frame_part(framepart);
 }
 
@@ -187,7 +188,7 @@ int process_frame(struct adamtx_processable_frame* frame)
 
 	int datalen = frame->rows * frame->columns * sizeof(uint32_t);
 
-	printk(KERN_INFO ADAMTX_NAME ": allocation size: %d bytes\n", datalen);
+//	printk(KERN_INFO ADAMTX_NAME ": allocation size: %d bytes\n", datalen);
 
 	uint32_t* data = vmalloc(datalen);
 	if(data == NULL)
@@ -268,7 +269,7 @@ int update_frame(void* arg)
 			.panels = adamtx_panels
 		};
 
-		process_frame(&frame);
+		//process_frame(&frame);
 	}
 	do_exit(0);
 }
@@ -293,7 +294,7 @@ static void __init adamtx_init_gpio(void)
 
 static int __init adamtx_init(void)
 {
-	int i, j, ret, framesize;
+	int i, j, k, ret, framesize;
 	
 	if((ret = adamtx_gpio_alloc()))
 	{
@@ -343,6 +344,8 @@ static int __init adamtx_init(void)
 				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN] = 255;
 			if(i == ADAMTX_REAL_WIDTH - j - 1)
 				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 1] = 255;
+			if(i == 31 || i == 32)
+				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 2] = 255;
 		}
 	}
 
@@ -360,21 +363,24 @@ static int __init adamtx_init(void)
 
 	process_frame(&frame);
 
-/*	for(i = 0; i < ADAMTX_ROWS / 2; i++)
+	for(i = 0; i < ADAMTX_ROWS / 2; i++)
 	{
 		for(j = 0; j < ADAMTX_COLUMNS; j++)
 		{
 			for(k = 0; k < (1 << ADAMTX_PWM_BITS); k++)
 			{
 				struct adamtx_panel_io cio = paneldata[i * (1 << ADAMTX_PWM_BITS) * ADAMTX_COLUMNS + j * (1 << ADAMTX_PWM_BITS) + k];
-				if(cio.R1 || cio.G1 || cio.B1)
-					printk(KERN_INFO ADAMTX_NAME " [%d;%d]@%d: Row select 1 [R:%d G:%d B:%d]\n", j, i, k, cio.R1, cio.G1, cio.B1);
-				if(cio.R2 || cio.G2 || cio.B2)
-					printk(KERN_INFO ADAMTX_NAME " [%d;%d]@%d: Row select 2 [R:%d G:%d B:%d]\n", j, i + ADAMTX_ROWS / 2, k, cio.R1, cio.G1, cio.B1);
+				if(i == 0)
+				{
+					if(cio.R1 || cio.G1 || cio.B1)
+						printk(KERN_INFO ADAMTX_NAME " [%d;%d]@%d: Row select 1 [R:%d G:%d B:%d]\n", j, i, k, cio.R1, cio.G1, cio.B1);
+					if(cio.R2 || cio.G2 || cio.B2)
+						printk(KERN_INFO ADAMTX_NAME " [%d;%d]@%d: Row select 2 [R:%d G:%d B:%d]\n", j, i + ADAMTX_ROWS / 2, k, cio.R1, cio.G1, cio.B1);
+				}
 			}
 		}
 	}
-*/
+
 	
 	adamtx_update_param.rate_min = ADAMTX_FBRATE_MIN;
 	adamtx_update_param.rate_max = ADAMTX_FBRATE_MAX;
