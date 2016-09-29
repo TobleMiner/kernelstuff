@@ -35,7 +35,7 @@
 #define REAL_X 64
 #define REAL_Y 64
 
-#define NUM_PROCESSING_THREADS 2
+#define NUM_PROCESSING_THREADS 1
 
 #define GPIO_CLOCK_MASK (1 << 17)
 
@@ -235,7 +235,7 @@ void prerender_frame_part(struct frame* framepart)
 				printf("%d: Offset: %d/%d of %d\n ", j, row1_base + k, row2_base + k, rows * columns);
 				if(frame[row1_base + k] & 0xFF > j)
 				{
-					row[k].R1 = 1;
+					row[k].B1 = 1;
 				}
 				if(frame[row1_base + k] >> 8 & 0xFF > j)
 				{
@@ -243,11 +243,11 @@ void prerender_frame_part(struct frame* framepart)
 				}
 				if(frame[row1_base + k] >> 16 & 0xFF > j)
 				{
-					row[k].B1 = 1;
+					row[k].R1 = 1;
 				}
 				if(frame[row2_base + k] & 0xFF > j)
 				{
-					row[k].R2 = 1;
+					row[k].B2 = 1;
 				}
 				if(frame[row2_base + k] >> 8 & 0xFF > j)
 				{
@@ -255,7 +255,7 @@ void prerender_frame_part(struct frame* framepart)
 				}
 				if(frame[row2_base + k] >> 16 & 0xFF > j)
 				{
-					row[k].B2 = 1;
+					row[k].R2 = 1;
 				}
 				*((uint32_t*)(&row[k])) |= (i << GPIO_ADDR_OFFSET) & GPIO_HI_ADDR_MASK;
 				row[k].E = i >> 4;

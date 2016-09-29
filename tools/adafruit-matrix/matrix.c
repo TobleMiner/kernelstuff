@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "matrix.h"
 
 int matrix_panel_contains_real(struct matrix_ledpanel* panel, int x, int y)
