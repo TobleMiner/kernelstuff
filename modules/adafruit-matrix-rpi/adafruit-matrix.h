@@ -36,10 +36,10 @@
 #define ADAMTX_PWM_BITS		4
 #define ADAMTX_REAL_WIDTH	64
 #define ADAMTX_REAL_HEIGHT	64
-#define ADAMTX_RATE			120UL
+#define ADAMTX_RATE			60UL
 #define ADAMTX_DEPTH		24
-#define ADAMTX_FBRATE_MIN	1UL
-#define ADAMTX_FBRATE_MAX	3UL
+#define ADAMTX_FBRATE_MIN	60UL
+#define ADAMTX_FBRATE_MAX	120UL
 
 // Macros
 #define ADAMTX_BITS_TO_BYTES(bits) (bits >> 3)
@@ -103,6 +103,12 @@ typedef struct adamtx_processable_frame
 };
 
 typedef struct adamtx_update_param
+{
+	long rate_min;
+	long rate_max;
+};
+
+typedef struct adamtx_draw_param
 {
 	long rate_min;
 	long rate_max;
