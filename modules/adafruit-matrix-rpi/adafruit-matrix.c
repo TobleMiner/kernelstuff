@@ -43,6 +43,8 @@ static struct adamtx_panel_io* paneldata;
 static struct adamtx_update_param adamtx_update_param;
 struct task_struct* adamtx_update_thread;
 
+static int pixnum = 0;
+
 #define ADAMTX_NUM_PANELS 2
 
 static struct matrix_ledpanel adamtx_matrix_up = {
@@ -155,7 +157,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 //			printk(KERN_INFO ADAMTX_NAME ": row: %d pwm:%d offset: %d address: 0x%x", i, j, i * pwm_steps * columns + j * columns, framepart->paneldata + i * pwm_steps * columns + j * columns);
 			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct adamtx_panel_io));
 		}
-		printk(KERN_INFO ADAMTX_NAME ": row: %d address: %u", i, (unsigned int)((*((uint32_t*)(&row[0])) & ADAMTX_GPIO_MASK_ADDRESS_HI) >> ADAMTX_GPIO_OFFSET_ADDRESS));
+//		printk(KERN_INFO ADAMTX_NAME ": row: %d address: %u", i, (unsigned int)((*((uint32_t*)(&row[0])) & ADAMTX_GPIO_MASK_ADDRESS_HI) >> ADAMTX_GPIO_OFFSET_ADDRESS));
 	}
 }
 
@@ -198,7 +200,7 @@ int process_frame(struct adamtx_processable_frame* frame)
 
 	remap_frame(frame->panels, frame->frame, frame->width, frame->height, data, frame->columns, frame->rows);
 
-	memset(frame->iodata, 0, (1 << frame->pwm_bits) * frame->columns * frame->rows * sizeof(struct adamtx_panel_io));
+	memset(frame->iodata, 0, (1 << frame->pwm_bits) * frame->columns * frame->rows / 2 * sizeof(struct adamtx_panel_io));
 
 	struct adamtx_frame threadframe = {
 		.width = frame->columns,
@@ -248,15 +250,31 @@ int process_frame(struct adamtx_processable_frame* frame)
 	return 0;
 }
 
-int update_frame(void* arg)
+static int update_frame(void* arg)
 {
+	int i;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
 
 	while(!kthread_should_stop())
 	{
 		usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
 
-		dummyfb_copy(framedata);
+		//dummyfb_copy(framedata);
+//            memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct adamtx_panel_io));
+
+		for(i = 0; i < (1 << ADAMTX_PWM_BITS); i++)
+		{
+			if(pixnum < 16)
+				paneldata[(pixnum % 16) * ADAMTX_COLUMNS * (1 << ADAMTX_PWM_BITS) + i * ADAMTX_COLUMNS + pixnum].R1 = 1;
+			else
+				paneldata[(pixnum % 16) * ADAMTX_COLUMNS * (1 << ADAMTX_PWM_BITS) + i * ADAMTX_COLUMNS + pixnum].R2 = 1;
+			paneldata[0 * ADAMTX_COLUMNS * (1 << ADAMTX_PWM_BITS) + pixnum * (1 << ADAMTX_PWM_BITS) + i].R1 = 1;
+		}
+
+		framedata[pixnum * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + pixnum * ADAMTX_PIX_LEN] = 0xFF;
+		framedata[0 * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + pixnum * ADAMTX_PIX_LEN + 2] = 0xFF;
+		pixnum++;
+		pixnum %= 32;
 
 	    struct adamtx_processable_frame frame = {
 			.width = ADAMTX_REAL_WIDTH,
@@ -327,7 +345,7 @@ static int __init adamtx_init(void)
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate frame memory (%d)\n", ret);
 		goto panels_alloced;
 	}
-	paneldata = vmalloc((1 << ADAMTX_PWM_BITS) * ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(struct adamtx_panel_io));
+	paneldata = vmalloc((1 << ADAMTX_PWM_BITS) * ADAMTX_ROWS / 2 * ADAMTX_COLUMNS * sizeof(struct adamtx_panel_io));
 	if(paneldata == NULL)
 	{
 		ret = -ENOMEM;
@@ -384,13 +402,16 @@ static int __init adamtx_init(void)
 	
 	adamtx_update_param.rate_min = ADAMTX_FBRATE_MIN;
 	adamtx_update_param.rate_max = ADAMTX_FBRATE_MAX;
-	adamtx_update_thread = kthread_run(update_frame, &adamtx_update_param, "adamtx_draw");
+	adamtx_update_thread = kthread_create(update_frame, &adamtx_update_param, "adamtx_draw@%u");
+	kthread_bind(adamtx_update_thread, 3);
+//	adamtx_update_thread = kthread_run(update_frame, &adamtx_update_param, "adamtx_draw");
 	if(IS_ERR(adamtx_update_thread))
 	{
 		ret = PTR_ERR(adamtx_update_thread);
 		printk(KERN_WARNING ADAMTX_NAME ": failed to create draw thread (%d)\n", ret);
 		goto paneldata_alloced;
 	}
+	wake_up_process(adamtx_update_thread);
 
 	printk(KERN_INFO ADAMTX_NAME ": Update spacing %lu ns\n", 1000000000UL / ADAMTX_RATE);
 

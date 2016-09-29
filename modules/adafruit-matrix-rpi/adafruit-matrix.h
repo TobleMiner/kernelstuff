@@ -38,8 +38,8 @@
 #define ADAMTX_REAL_HEIGHT	64
 #define ADAMTX_RATE			120UL
 #define ADAMTX_DEPTH		24
-#define ADAMTX_FBRATE_MIN	60UL
-#define ADAMTX_FBRATE_MAX	120UL
+#define ADAMTX_FBRATE_MIN	1UL
+#define ADAMTX_FBRATE_MAX	3UL
 
 // Macros
 #define ADAMTX_BITS_TO_BYTES(bits) (bits >> 3)
