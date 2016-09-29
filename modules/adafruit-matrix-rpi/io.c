@@ -60,7 +60,7 @@ void adamtx_gpio_set_outputs(uint32_t outputs)
 
 void adamtx_gpio_set_bits(uint32_t value)
 {
-    *adamtx_gpio_set = value & adamtx_valid_gpio_bits;
+	*adamtx_gpio_set = value & adamtx_valid_gpio_bits;
 	#ifdef ADAMTX_DEBUG_SLOW
 	int i;
 	for(i = 0; i < ADAMTX_DEBUG_SLOW; i++)
@@ -72,7 +72,7 @@ void adamtx_gpio_set_bits(uint32_t value)
 
 void adamtx_gpio_clr_bits(uint32_t value)
 {
-    *adamtx_gpio_clr = value & adamtx_valid_gpio_bits;
+	*adamtx_gpio_clr = value & adamtx_valid_gpio_bits;
 	#ifdef ADAMTX_DEBUG_SLOW
 	int i;
 	for(i = 0; i < DEBUG_SLOW; i++)
@@ -90,6 +90,6 @@ void adamtx_gpio_write_bits(uint32_t value)
 
 void adamtx_gpio_write_masked_bits(uint32_t value, uint32_t mask)
 {
-    adamtx_gpio_clr_bits(~value & mask);
-    adamtx_gpio_set_bits(value & mask);
+	adamtx_gpio_clr_bits(~value & mask);
+	adamtx_gpio_set_bits(value & mask);
 }
