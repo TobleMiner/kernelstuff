@@ -50,8 +50,8 @@ static struct matrix_ledpanel adamtx_matrix_up = {
 	.virtual_y = 0,
 	.realx = 0,
 	.realy = 0,
-	.flip_x = 0,
-	.flip_y = 1
+	.flip_x = 1,
+	.flip_y = 0
 };
 
 static struct matrix_ledpanel adamtx_matrix_low = {
@@ -126,30 +126,12 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 			memset(row, 0, columns * sizeof(struct adamtx_panel_io));
 			for(k = 0; k < columns; k++)
 			{
-				if(frame[row1_base + k] & 0xFF > j)
-				{
-					row[k].B1 = 1;
-				}
-				if(frame[row1_base + k] >> 8 & 0xFF > j)
-				{
-					row[k].G1 = 1;
-				}
-				if(frame[row1_base + k] >> 16 & 0xFF > j)
-				{
-					row[k].R1 = 1;
-				}
-				if(frame[row2_base + k] & 0xFF > j)
-				{
-					row[k].B2 = 1;
-				}
-				if(frame[row2_base + k] >> 8 & 0xFF > j)
-				{
-					row[k].G2 = 1;
-				}
-				if(frame[row2_base + k] >> 16 & 0xFF > j)
-				{
-					row[k].R2 = 1;
-				}
+				row[k].B1 = (frame[row1_base + k] & 0xFF) > j;
+				row[k].G1 = ((frame[row1_base + k] >> 8) & 0xFF) > j;
+				row[k].R1 = ((frame[row1_base + k] >> 16) & 0xFF) > j;
+				row[k].B2 = (frame[row2_base + k] & 0xFF) > j;
+				row[k].G2 = ((frame[row2_base + k] >> 8) & 0xFF) > j;
+				row[k].R2 = ((frame[row2_base + k] >> 16) & 0xFF) > j;
 				if(j == 0)
 					addr = (i - 1) % (framepart->rows / 2);
 				else
@@ -273,7 +255,7 @@ static int update_frame(void* arg)
 	{
 		usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
 
-		dummyfb_copy(framedata);
+/*		dummyfb_copy(framedata);
 
 		struct adamtx_processable_frame frame = {
 			.width = ADAMTX_REAL_WIDTH,
@@ -289,7 +271,7 @@ static int update_frame(void* arg)
 		err = process_frame(&frame);
 		if(err)
 			do_exit(err);
-	}
+*/	}
 	do_exit(0);
 }
 
@@ -376,9 +358,9 @@ static int __init adamtx_init(void)
 		{
 			if(i == j)
 			{
-				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 0] = 255;
-				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 1] = 255;
-				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 2] = 255;
+				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 0] = 4;
+				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 1] = 8;
+				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 2] = 2;
 			}
 		}
 	}

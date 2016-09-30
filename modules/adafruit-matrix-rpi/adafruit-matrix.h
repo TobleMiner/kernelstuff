@@ -33,7 +33,7 @@
 // Matrix parameters
 #define ADAMTX_ROWS			32
 #define ADAMTX_COLUMNS		128
-#define ADAMTX_PWM_BITS		4
+#define ADAMTX_PWM_BITS		5
 #define ADAMTX_REAL_WIDTH	64
 #define ADAMTX_REAL_HEIGHT	64
 #define ADAMTX_RATE_MIN		60UL
