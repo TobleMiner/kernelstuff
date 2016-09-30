@@ -133,7 +133,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 				row[k].G2 = ((frame[row2_base + k] >> 8) & 0xFF) > j;
 				row[k].R2 = ((frame[row2_base + k] >> 16) & 0xFF) > j;
 				if(j == 0)
-					addr = (i - 1) % (framepart->rows / 2);
+					addr = (i + 1) % (framepart->rows / 2);
 				else
 					addr = i;
 				*((uint32_t*)(&row[k])) |= (addr << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;

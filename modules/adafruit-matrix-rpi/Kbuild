@@ -1,4 +1,4 @@
 obj-m := adafruit_matrix.o
-ccflags-y := -O3
+ccflags-y := -O5
 adafruit-matrix-y := matrix.o adafruit-matrix.o io.o
 adafruit_matrix-objs := $(adafruit-matrix-y)
