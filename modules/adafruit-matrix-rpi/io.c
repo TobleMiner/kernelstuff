@@ -75,7 +75,7 @@ void adamtx_gpio_clr_bits(uint32_t value)
 	*adamtx_gpio_clr = value & adamtx_valid_gpio_bits;
 	#ifdef ADAMTX_DEBUG_SLOW
 	int i;
-	for(i = 0; i < DEBUG_SLOW; i++)
+	for(i = 0; i < ADAMTX_DEBUG_SLOW; i++)
 	{
 		asm("nop");
 	}
