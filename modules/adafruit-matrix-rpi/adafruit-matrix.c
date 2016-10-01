@@ -105,7 +105,6 @@ void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, in
 	{
 		for(j = 0; j < width_from; j++)
 		{
-//			printk(KERN_INFO ADAMTX_NAME ": [%d,%d] color: 0x%x", j, i, from[i * width_from + j]);
 			panel = matrix_get_panel_at_real(panels, ADAMTX_NUM_PANELS, j, i);
 			matrix_panel_get_position(&pos, panel, j, i);
 			offset = i * width_from * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN;
@@ -122,8 +121,6 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 	int columns = framepart->width;
 	int pwm_steps = framepart->pwm_bits;
 	int vertical_offset = framepart->vertical_offset / 2;
-//	printk(KERN_INFO ADAMTX_NAME ": dimensions: [%d;%d]\n", columns, rows);
-//	printk(KERN_INFO ADAMTX_NAME ": vertical offset: %d\n", vertical_offset);
 	struct adamtx_panel_io row[columns];
 	for(i = vertical_offset; i < vertical_offset + framepart->rows / 2; i++)
 	{
@@ -164,7 +161,6 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 			adamtx_clock_out_row(frame + i * pwm_steps * columns + j * columns, columns);
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
-//			adamtx_set_address(i);
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_STR);
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
 			ndelay((1 << j) * ADAMTX_BCD_TIME_NS);
@@ -176,7 +172,6 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 void render_part(struct adamtx_frame* part)
 {
 	struct adamtx_frame* framepart = (struct adamtx_frame*)part;
-//	printk(KERN_INFO ADAMTX_NAME ": Segment: 0x%x Width: %d Height: %d\n", framepart->paneldata + framepart->paneloffset, framepart->width, framepart->rows);
 	prerender_frame_part(framepart);
 }
 
@@ -248,10 +243,9 @@ static int draw_frame(void* arg)
 {
 	unsigned long irqflags;
 	struct adamtx_draw_param* param = (struct adamtx_draw_param*)arg;
-	printk(KERN_INFO ADAMTX_NAME ": Draw spacing: %lu us - %lu us", 1000000UL / param->rate_max, 1000000UL / param->rate_min);
+	printk(KERN_INFO ADAMTX_NAME ": Draw spacing: %lu us", 1000000UL / param->rate);
 	while(!kthread_should_stop())
 	{
-//		usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
 		while(!adamtx_do_draw && !kthread_should_stop())
 			usleep_range(50, 500);
 		if(kthread_should_stop())
@@ -269,10 +263,9 @@ static int update_frame(void* arg)
 	int err;
 	unsigned long irqflags;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
-	printk(KERN_INFO ADAMTX_NAME ": Update spacing: %lu us - %lu us", 1000000UL / param->rate_max, 1000000UL / param->rate_min);
+	printk(KERN_INFO ADAMTX_NAME ": Update spacing: %lu us", 1000000UL / param->rate);
 	while(!kthread_should_stop())
 	{
-		//usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
 		while(!adamtx_do_update && !kthread_should_stop())
 			usleep_range(50, 500);
 		if(kthread_should_stop())
@@ -312,21 +305,7 @@ static enum hrtimer_restart draw_callack(struct hrtimer* timer)
 {
 	hrtimer_forward_now(timer, adamtx_frameperiod);
 	adamtx_do_draw = 1;
-/*	dummyfb_copy(framedata);
-
-	struct adamtx_processable_frame frame = {
-		.width = ADAMTX_REAL_WIDTH,
-		.height = ADAMTX_REAL_HEIGHT,
-		.columns = ADAMTX_COLUMNS,
-		.rows = ADAMTX_ROWS,
-		.pwm_bits = ADAMTX_PWM_BITS,
-		.iodata = paneldata,
-		.frame = framedata,
-		.panels = adamtx_panels
-	};
-
-	process_frame(&frame);
-*/	return HRTIMER_RESTART;
+	return HRTIMER_RESTART;
 }
 
 static void __init adamtx_init_gpio(void)
@@ -412,11 +391,9 @@ static int __init adamtx_init(void)
 
 	process_frame(&frame);
 
-	adamtx_update_param.rate_min = ADAMTX_FBRATE_MIN;
-	adamtx_update_param.rate_max = ADAMTX_FBRATE_MAX;
+	adamtx_update_param.rate = ADAMTX_FBRATE;
 	adamtx_update_thread = kthread_create(update_frame, &adamtx_update_param, "adamtx_update@%u");
 	kthread_bind(adamtx_update_thread, 2);
-//	adamtx_update_thread = kthread_run(update_frame, &adamtx_update_param, "adamtx_draw");
 	if(IS_ERR(adamtx_update_thread))
 	{
 		ret = PTR_ERR(adamtx_update_thread);
@@ -425,11 +402,9 @@ static int __init adamtx_init(void)
 	}
 	wake_up_process(adamtx_update_thread);
 
-	adamtx_draw_param.rate_min = ADAMTX_RATE_MIN;
-	adamtx_draw_param.rate_max = ADAMTX_RATE_MAX;
+	adamtx_draw_param.rate = ADAMTX_RATE;
 	adamtx_draw_thread = kthread_create(draw_frame, &adamtx_draw_param, "adamtx_draw@%u");
 	kthread_bind(adamtx_draw_thread, 3);
-//	adamtx_draw_thread = kthread_run(draw_frame, &adamtx_draw_param, "adamtx_draw");
 	if(IS_ERR(adamtx_draw_thread))
 	{
 		ret = PTR_ERR(adamtx_draw_thread);
@@ -438,15 +413,13 @@ static int __init adamtx_init(void)
 	}
 	wake_up_process(adamtx_draw_thread);
 
-	printk(KERN_INFO ADAMTX_NAME ": Update spacing %lu ns\n", 1000000000UL / ADAMTX_RATE_MIN);
-
-	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE_MAX);
+	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
 	hrtimer_init(&adamtx_frametimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	adamtx_frametimer.function = draw_callack;
 	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
 	adamtx_frametimer_enabled = 1;
 
-	adamtx_updateperiod = ktime_set(0, 1000000000UL / ADAMTX_FBRATE_MAX);
+	adamtx_updateperiod = ktime_set(0, 1000000000UL / ADAMTX_FBRATE);
 	hrtimer_init(&adamtx_updatetimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	adamtx_updatetimer.function = update_callack;
 	hrtimer_start(&adamtx_updatetimer, adamtx_updateperiod, HRTIMER_MODE_REL);

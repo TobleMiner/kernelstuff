@@ -33,15 +33,13 @@
 // Matrix parameters
 #define ADAMTX_ROWS			32
 #define ADAMTX_COLUMNS		128
-#define ADAMTX_PWM_BITS		6
+#define ADAMTX_PWM_BITS		8
 #define ADAMTX_REAL_WIDTH	64
 #define ADAMTX_REAL_HEIGHT	64
-#define ADAMTX_RATE_MIN		60UL
-#define ADAMTX_RATE_MAX		120UL
-#define ADAMTX_DEPTH		24
-#define ADAMTX_FBRATE_MIN	20UL
-#define ADAMTX_FBRATE_MAX	30UL
-#define ADAMTX_BCD_TIME_NS	100UL		
+#define ADAMTX_RATE			60UL
+#define ADAMTX_DEPTH		ADAMTX_PWM_BITS * 3
+#define ADAMTX_FBRATE		30UL
+#define ADAMTX_BCD_TIME_NS	1000UL		
 
 // Macros
 #define ADAMTX_BITS_TO_BYTES(bits) (bits >> 3)
@@ -106,14 +104,12 @@ typedef struct adamtx_processable_frame
 
 typedef struct adamtx_update_param
 {
-	long rate_min;
-	long rate_max;
+	long rate;
 };
 
 typedef struct adamtx_draw_param
 {
-	long rate_min;
-	long rate_max;
+	long rate;
 };
 
 extern size_t dummyfb_get_fbsize(void);
