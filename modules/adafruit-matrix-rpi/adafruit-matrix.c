@@ -120,7 +120,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 	uint32_t* frame = framepart->frame;
 	int rows = framepart->height;
 	int columns = framepart->width;
-	int pwm_steps = 1 << framepart->pwm_bits;
+	int pwm_steps = framepart->pwm_bits;
 	int vertical_offset = framepart->vertical_offset / 2;
 //	printk(KERN_INFO ADAMTX_NAME ": dimensions: [%d;%d]\n", columns, rows);
 //	printk(KERN_INFO ADAMTX_NAME ": vertical offset: %d\n", vertical_offset);
@@ -134,12 +134,12 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 			memset(row, 0, columns * sizeof(struct adamtx_panel_io));
 			for(k = 0; k < columns; k++)
 			{
-				row[k].B1 = (frame[row1_base + k] & 0xFF) > j;
-				row[k].G1 = ((frame[row1_base + k] >> 8) & 0xFF) > j;
-				row[k].R1 = ((frame[row1_base + k] >> 16) & 0xFF) > j;
-				row[k].B2 = (frame[row2_base + k] & 0xFF) > j;
-				row[k].G2 = ((frame[row2_base + k] >> 8) & 0xFF) > j;
-				row[k].R2 = ((frame[row2_base + k] >> 16) & 0xFF) > j;
+				row[k].B1 = (frame[row1_base + k] & (1 << j)) > 0;
+				row[k].G1 = ((frame[row1_base + k] >> 8) & (1 << j)) > 0;
+				row[k].R1 = ((frame[row1_base + k] >> 16) & (1 << j)) > 0;
+				row[k].B2 = (frame[row2_base + k] & (1 << j)) > 0;
+				row[k].G2 = ((frame[row2_base + k] >> 8) & (1 << j)) > 0;
+				row[k].R2 = ((frame[row2_base + k] >> 16) & (1 << j)) > 0;
 				if(j == 0)
 					addr = (i + 1) % (framepart->rows / 2);
 				else
@@ -156,7 +156,7 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 {
 	ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
 	int i, j, k;
-	int pwm_steps = (1 << bits);
+	int pwm_steps = bits;
 	for(i = rows / 2 - 1; i >= 0; i--)
 	{
 		for(j = 0; j < pwm_steps; j++)
@@ -167,6 +167,7 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 //			adamtx_set_address(i);
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_STR);
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
+			ndelay((1 << j) * ADAMTX_BCD_TIME_NS);
 		}
 	}
 	ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
@@ -193,7 +194,7 @@ int process_frame(struct adamtx_processable_frame* frame)
 */
 	remap_frame(frame->panels, frame->frame, frame->width, frame->height, adamtx_intermediate_frame, frame->columns, frame->rows);
 
-	memset(frame->iodata, 0, (1 << frame->pwm_bits) * frame->columns * frame->rows / 2 * sizeof(struct adamtx_panel_io));
+	memset(frame->iodata, 0, frame->pwm_bits * frame->columns * frame->rows / 2 * sizeof(struct adamtx_panel_io));
 
 	struct adamtx_frame threadframe = {
 		.width = frame->columns,
@@ -368,7 +369,7 @@ static int __init adamtx_init(void)
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate frame memory (%d)\n", ret);
 		goto panels_alloced;
 	}
-	paneldata = vmalloc((1 << ADAMTX_PWM_BITS) * ADAMTX_ROWS / 2 * ADAMTX_COLUMNS * sizeof(struct adamtx_panel_io));
+	paneldata = vmalloc(ADAMTX_PWM_BITS * ADAMTX_ROWS / 2 * ADAMTX_COLUMNS * sizeof(struct adamtx_panel_io));
 	if(paneldata == NULL)
 	{
 		ret = -ENOMEM;

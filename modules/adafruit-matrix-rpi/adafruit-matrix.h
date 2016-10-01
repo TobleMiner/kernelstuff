@@ -41,6 +41,7 @@
 #define ADAMTX_DEPTH		24
 #define ADAMTX_FBRATE_MIN	20UL
 #define ADAMTX_FBRATE_MAX	30UL
+#define ADAMTX_BCD_TIME_NS	100UL		
 
 // Macros
 #define ADAMTX_BITS_TO_BYTES(bits) (bits >> 3)
