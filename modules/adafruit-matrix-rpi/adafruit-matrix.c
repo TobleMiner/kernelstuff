@@ -70,6 +70,14 @@ static struct hrtimer adamtx_frametimer;
 static ktime_t adamtx_frameperiod;
 static int adamtx_frametimer_enabled = 0;
 
+static struct hrtimer adamtx_updatetimer;
+static ktime_t adamtx_updateperiod;
+static int adamtx_updatetimer_enabled = 0;
+
+static DEFINE_SPINLOCK(adamtx_lock_draw);
+static int adamtx_do_draw = 0;
+static int adamtx_do_update = 0;
+
 void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 {
 	while(--length >= 0)
@@ -237,11 +245,20 @@ int process_frame(struct adamtx_processable_frame* frame)
 
 static int draw_frame(void* arg)
 {
+	unsigned long irqflags;
 	struct adamtx_draw_param* param = (struct adamtx_draw_param*)arg;
 	printk(KERN_INFO ADAMTX_NAME ": Draw spacing: %lu us - %lu us", 1000000UL / param->rate_max, 1000000UL / param->rate_min);
 	while(!kthread_should_stop())
 	{
-		usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
+//		usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
+		while(!adamtx_do_draw && !kthread_should_stop())
+			usleep_range(50, 500);
+		if(kthread_should_stop())
+			break;
+		adamtx_do_draw = 0;
+		spin_lock_irqsave(&adamtx_lock_draw, irqflags);
+		show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
+		spin_unlock_irqrestore(&adamtx_lock_draw, irqflags);
 	}
 	do_exit(0);	
 }
@@ -249,13 +266,19 @@ static int draw_frame(void* arg)
 static int update_frame(void* arg)
 {
 	int err;
+	unsigned long irqflags;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
 	printk(KERN_INFO ADAMTX_NAME ": Update spacing: %lu us - %lu us", 1000000UL / param->rate_max, 1000000UL / param->rate_min);
 	while(!kthread_should_stop())
 	{
-		usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
+		//usleep_range(1000000UL / param->rate_min, 1000000UL / param->rate_max);
+		while(!adamtx_do_update && !kthread_should_stop())
+			usleep_range(50, 500);
+		if(kthread_should_stop())
+			break;
+		adamtx_do_update = 0;
 
-/*		dummyfb_copy(framedata);
+		dummyfb_copy(framedata);
 
 		struct adamtx_processable_frame frame = {
 			.width = ADAMTX_REAL_WIDTH,
@@ -268,16 +291,26 @@ static int update_frame(void* arg)
 			.panels = adamtx_panels
 		};
 
+		spin_lock_irqsave(&adamtx_lock_draw, irqflags);
 		err = process_frame(&frame);
+		spin_unlock_irqrestore(&adamtx_lock_draw, irqflags);
 		if(err)
 			do_exit(err);
-*/	}
+	}
 	do_exit(0);
+}
+
+static enum hrtimer_restart update_callack(struct hrtimer* timer)
+{
+	hrtimer_forward_now(timer, adamtx_frameperiod);
+	adamtx_do_update = 1;
+	return HRTIMER_RESTART;
 }
 
 static enum hrtimer_restart draw_callack(struct hrtimer* timer)
 {
 	hrtimer_forward_now(timer, adamtx_frameperiod);
+	adamtx_do_draw = 1;
 /*	dummyfb_copy(framedata);
 
 	struct adamtx_processable_frame frame = {
@@ -291,9 +324,8 @@ static enum hrtimer_restart draw_callack(struct hrtimer* timer)
 		.panels = adamtx_panels
 	};
 
-	process_frame(&frame); */
-	show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
-	return HRTIMER_RESTART;
+	process_frame(&frame);
+*/	return HRTIMER_RESTART;
 }
 
 static void __init adamtx_init_gpio(void)
@@ -356,7 +388,7 @@ static int __init adamtx_init(void)
 	{
 		for(j = 0; j < ADAMTX_REAL_WIDTH; j++)
 		{
-			if(i == j)
+			if(i == j || i == ADAMTX_REAL_WIDTH - j - 1)
 			{
 				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 0] = 4;
 				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 1] = 8;
@@ -413,6 +445,12 @@ static int __init adamtx_init(void)
 	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
 	adamtx_frametimer_enabled = 1;
 
+	adamtx_updateperiod = ktime_set(0, 1000000000UL / ADAMTX_FBRATE_MAX);
+	hrtimer_init(&adamtx_updatetimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	adamtx_updatetimer.function = update_callack;
+	hrtimer_start(&adamtx_updatetimer, adamtx_updateperiod, HRTIMER_MODE_REL);
+	adamtx_updatetimer_enabled = 1;
+
 	printk(KERN_INFO ADAMTX_NAME ": initialized\n");
 	return 0;
 
@@ -432,10 +470,12 @@ none_alloced:
 
 static void __exit adamtx_exit(void)
 {
-	kthread_stop(adamtx_draw_thread);
-	kthread_stop(adamtx_update_thread);
+	if(adamtx_updatetimer_enabled)
+		hrtimer_cancel(&adamtx_updatetimer);
 	if(adamtx_frametimer_enabled)
 		hrtimer_cancel(&adamtx_frametimer);
+	kthread_stop(adamtx_draw_thread);
+	kthread_stop(adamtx_update_thread);
 	vfree(adamtx_intermediate_frame);
 	vfree(paneldata);
 	vfree(framedata);
