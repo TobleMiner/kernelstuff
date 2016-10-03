@@ -12,8 +12,6 @@
 #include <linux/err.h>
 #include <linux/delay.h>
 
-static struct timespec last_call_time;
-
 #include "matrix.h"
 #include "adafruit-matrix.h"
 #include "io.h"
@@ -37,6 +35,9 @@ struct task_struct* adamtx_update_thread;
 
 static struct adamtx_draw_param adamtx_draw_param;
 struct task_struct* adamtx_draw_thread;
+
+struct task_struct* adamtx_perf_thread;
+static int adamtx_do_perf = 0;
 
 static uint32_t* adamtx_intermediate_frame;
 
@@ -77,6 +78,10 @@ static int adamtx_updatetimer_enabled = 0;
 static DEFINE_SPINLOCK(adamtx_lock_draw);
 static int adamtx_do_draw = 0;
 static int adamtx_do_update = 0;
+
+static struct hrtimer adamtx_perftimer;
+static ktime_t adamtx_perfperiod;
+static int adamtx_perftimer_enabled = 0;
 
 void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 {
@@ -239,9 +244,15 @@ int process_frame(struct adamtx_processable_frame* frame)
 	return 0;
 }
 
+static unsigned long adamtx_draws = 0;
+static unsigned long adamtx_draw_irqs = 0;
+static unsigned long adamtx_draw_time = 0;
+
 static int draw_frame(void* arg)
 {
 	unsigned long irqflags;
+	struct timespec before;
+	struct timespec after;
 	struct adamtx_draw_param* param = (struct adamtx_draw_param*)arg;
 	printk(KERN_INFO ADAMTX_NAME ": Draw spacing: %lu us", 1000000UL / param->rate);
 	while(!kthread_should_stop())
@@ -252,16 +263,26 @@ static int draw_frame(void* arg)
 			break;
 		adamtx_do_draw = 0;
 		spin_lock_irqsave(&adamtx_lock_draw, irqflags);
+		getnstimeofday(&before);
 		show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
+		getnstimeofday(&after);
+		adamtx_draw_time += (after.tv_sec - before.tv_sec) * 1000000000UL + (after.tv_nsec - before.tv_nsec);
+		adamtx_draws++;
 		spin_unlock_irqrestore(&adamtx_lock_draw, irqflags);
 	}
 	do_exit(0);	
 }
 
+static unsigned long adamtx_updates = 0;
+static unsigned long adamtx_update_irqs = 0;
+static unsigned long adamtx_update_time = 0;
+
 static int update_frame(void* arg)
 {
 	int err;
 	unsigned long irqflags;
+	struct timespec before;
+	struct timespec after;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
 	printk(KERN_INFO ADAMTX_NAME ": Update spacing: %lu us", 1000000UL / param->rate);
 	while(!kthread_should_stop())
@@ -286,7 +307,11 @@ static int update_frame(void* arg)
 		};
 
 		spin_lock_irqsave(&adamtx_lock_draw, irqflags);
+		getnstimeofday(&before);
 		err = process_frame(&frame);
+		getnstimeofday(&after);
+		adamtx_update_time += (after.tv_sec - before.tv_sec) * 1000000000UL + (after.tv_nsec - before.tv_nsec);
+		adamtx_updates++;
 		spin_unlock_irqrestore(&adamtx_lock_draw, irqflags);
 		if(err)
 			do_exit(err);
@@ -294,17 +319,61 @@ static int update_frame(void* arg)
 	do_exit(0);
 }
 
-static enum hrtimer_restart update_callack(struct hrtimer* timer)
+static int show_perf(void* arg)
+{
+	long irqflags, perf_adamtx_updates, perf_adamtx_update_irqs, perf_adamtx_update_time;
+	long perf_adamtx_draws, perf_adamtx_draw_irqs, perf_adamtx_draw_time;
+	while(!kthread_should_stop())
+    {
+        while(!adamtx_do_perf && !kthread_should_stop())
+            usleep_range(5000, 10000);
+        if(kthread_should_stop())
+            break;
+		adamtx_do_perf = 0;
+
+		spin_lock_irqsave(&adamtx_lock_draw, irqflags);
+
+		perf_adamtx_updates = adamtx_updates;
+		adamtx_updates = 0;
+		perf_adamtx_update_irqs = adamtx_update_irqs;
+		adamtx_update_irqs = 0;
+		perf_adamtx_update_time = adamtx_update_time;
+		adamtx_update_time = 0;
+
+		perf_adamtx_draws = adamtx_draws;
+		adamtx_draws = 0;
+		perf_adamtx_draw_irqs = adamtx_draw_irqs;
+		adamtx_draw_irqs = 0;
+		perf_adamtx_draw_time = adamtx_draw_time;
+		adamtx_draw_time = 0;
+
+		spin_unlock_irqrestore(&adamtx_lock_draw, irqflags);
+		printk(KERN_INFO ADAMTX_NAME ": %ld updates/s\t%ld irqs/s\t%lu ns/update", perf_adamtx_updates, perf_adamtx_update_irqs, perf_adamtx_updates != 0 ? perf_adamtx_update_time / perf_adamtx_updates : 0);
+		printk(KERN_INFO ADAMTX_NAME ": %ld draws/s\t%ld irqs/s\t%lu ns/draw", perf_adamtx_draws, perf_adamtx_draw_irqs, perf_adamtx_draws != 0 ? perf_adamtx_draw_time / perf_adamtx_draws : 0);	
+	}
+}
+
+static enum hrtimer_restart update_callback(struct hrtimer* timer)
 {
 	hrtimer_forward_now(timer, adamtx_frameperiod);
 	adamtx_do_update = 1;
+	adamtx_update_irqs++;
 	return HRTIMER_RESTART;
 }
 
-static enum hrtimer_restart draw_callack(struct hrtimer* timer)
+static enum hrtimer_restart draw_callback(struct hrtimer* timer)
 {
 	hrtimer_forward_now(timer, adamtx_frameperiod);
 	adamtx_do_draw = 1;
+	adamtx_draw_irqs++;
+	return HRTIMER_RESTART;
+}
+
+static enum hrtimer_restart perf_callback(struct hrtimer* timer)
+{
+	hrtimer_forward_now(timer, adamtx_perfperiod);
+	adamtx_do_perf = 1;
+
 	return HRTIMER_RESTART;
 }
 
@@ -412,17 +481,33 @@ static int __init adamtx_init(void)
 	}
 	wake_up_process(adamtx_draw_thread);
 
+	adamtx_perf_thread = kthread_create(show_perf, NULL, "adamtx_perf@%u");
+	kthread_bind(adamtx_perf_thread, 1);
+	if(IS_ERR(adamtx_perf_thread))
+	{
+		ret = PTR_ERR(adamtx_perf_thread);
+		printk(KERN_WARNING ADAMTX_NAME ": failed to create perf thread (%d)\n", ret);
+		goto interframe_alloced;
+	}
+	wake_up_process(adamtx_perf_thread);
+
 	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
 	hrtimer_init(&adamtx_frametimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	adamtx_frametimer.function = draw_callack;
+	adamtx_frametimer.function = draw_callback;
 	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
 	adamtx_frametimer_enabled = 1;
 
 	adamtx_updateperiod = ktime_set(0, 1000000000UL / ADAMTX_FBRATE);
 	hrtimer_init(&adamtx_updatetimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	adamtx_updatetimer.function = update_callack;
+	adamtx_updatetimer.function = update_callback;
 	hrtimer_start(&adamtx_updatetimer, adamtx_updateperiod, HRTIMER_MODE_REL);
 	adamtx_updatetimer_enabled = 1;
+
+	adamtx_perfperiod = ktime_set(0, 1000000000UL);
+	hrtimer_init(&adamtx_perftimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	adamtx_perftimer.function = perf_callback;
+	hrtimer_start(&adamtx_perftimer, adamtx_perfperiod, HRTIMER_MODE_REL);
+	adamtx_perftimer_enabled = 1;
 
 	printk(KERN_INFO ADAMTX_NAME ": initialized\n");
 	return 0;
@@ -447,8 +532,11 @@ static void __exit adamtx_exit(void)
 		hrtimer_cancel(&adamtx_updatetimer);
 	if(adamtx_frametimer_enabled)
 		hrtimer_cancel(&adamtx_frametimer);
+	if(adamtx_perftimer_enabled)
+		hrtimer_cancel(&adamtx_perftimer);
 	kthread_stop(adamtx_draw_thread);
 	kthread_stop(adamtx_update_thread);
+	kthread_stop(adamtx_perf_thread);
 	vfree(adamtx_intermediate_frame);
 	vfree(paneldata);
 	vfree(framedata);
