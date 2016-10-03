@@ -460,7 +460,7 @@ static int __init adamtx_init(void)
 	process_frame(&frame);
 
 	adamtx_update_param.rate = ADAMTX_FBRATE;
-	adamtx_update_thread = kthread_create(update_frame, &adamtx_update_param, "adamtx_update@%u");
+	adamtx_update_thread = kthread_create(update_frame, &adamtx_update_param, "adamtx_update");
 	kthread_bind(adamtx_update_thread, 2);
 	if(IS_ERR(adamtx_update_thread))
 	{
@@ -471,7 +471,7 @@ static int __init adamtx_init(void)
 	wake_up_process(adamtx_update_thread);
 
 	adamtx_draw_param.rate = ADAMTX_RATE;
-	adamtx_draw_thread = kthread_create(draw_frame, &adamtx_draw_param, "adamtx_draw@%u");
+	adamtx_draw_thread = kthread_create(draw_frame, &adamtx_draw_param, "adamtx_draw@");
 	kthread_bind(adamtx_draw_thread, 3);
 	if(IS_ERR(adamtx_draw_thread))
 	{
@@ -481,7 +481,7 @@ static int __init adamtx_init(void)
 	}
 	wake_up_process(adamtx_draw_thread);
 
-	adamtx_perf_thread = kthread_create(show_perf, NULL, "adamtx_perf@%u");
+	adamtx_perf_thread = kthread_create(show_perf, NULL, "adamtx_perf");
 	kthread_bind(adamtx_perf_thread, 1);
 	if(IS_ERR(adamtx_perf_thread))
 	{
