@@ -38,10 +38,10 @@ int adamtx_gpio_alloc()
 
 void adamtx_gpio_free()
 {
-	#ifdef REQUEST_EXCLUSIVE_GPIO
 	iounmap(adamtx_gpio_map);
-	#endif
+	#ifdef ADAMTX_REQUEST_EXCLUSIVE_GPIO
 	release_mem_region(ADAMTX_PERIPHERAL_BASE + ADAMTX_GPIO_OFFSET, ADAMTX_REGISTER_BLOCK_SIZE);
+	#endif
 }
 
 void adamtx_gpio_set_outputs(uint32_t outputs)
