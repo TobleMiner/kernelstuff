@@ -189,7 +189,7 @@ int process_frame(struct adamtx_processable_frame* frame)
 */
 	remap_frame(frame->panels, frame->frame, frame->width, frame->height, adamtx_intermediate_frame, frame->columns, frame->rows);
 
-	memset(frame->iodata, 0, frame->pwm_bits * frame->columns * frame->rows / 2 * sizeof(struct adamtx_panel_io));
+//	memset(frame->iodata, 0, frame->pwm_bits * frame->columns * frame->rows / 2 * sizeof(struct adamtx_panel_io));
 
 	struct adamtx_frame threadframe = {
 		.width = frame->columns,
@@ -341,7 +341,7 @@ static int __init adamtx_init(void)
         printk(KERN_WARNING ADAMTX_NAME ": size of framebuffer != framesize\n");
         goto framedata_alloced;
 	}
-	framedata = vmalloc(framesize);
+	framedata = vzalloc(framesize);
 	if(framedata == NULL)
 	{
 		ret = -ENOMEM;
@@ -363,7 +363,6 @@ static int __init adamtx_init(void)
         goto paneldata_alloced;
 	}
 
-	memset(framedata, 0, ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN);
 	for(i = 0; i < ADAMTX_REAL_HEIGHT; i++)
 	{
 		for(j = 0; j < ADAMTX_REAL_WIDTH; j++)
@@ -460,3 +459,4 @@ static void __exit adamtx_exit(void)
 
 module_init(adamtx_init);
 module_exit(adamtx_exit);
+	
