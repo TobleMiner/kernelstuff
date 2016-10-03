@@ -30,7 +30,8 @@
 
 #define ROWS 32
 #define COLUMNS 128
-#define PWM_BITS 4
+#define PWM_BITS 8
+#define BASE_TIME 50000
 
 #define REAL_X 64
 #define REAL_Y 64
@@ -100,7 +101,7 @@ struct matrix_ledpanel matrix_up = {
 	.virtual_y = 0,
 	.realx = 0,
 	.realy = 0,
-	.flip_y = 1
+	.flip_x = 1
 };
 
 struct matrix_ledpanel matrix_low = {
@@ -134,13 +135,25 @@ void llgpio_setup()
 #define GPIO_LO(gpio) gpio_clr_bits((1 << gpio))
 #define GPIO_SET(gpio, state) (state ? GPIO_HI(gpio) : GPIO_LO(gpio))
 
+inline void nanosleep_real(long nanos)
+{
+//	printf("sleeping for %ld\n", nanos);
+	struct timespec spec = {0, nanos};
+	struct timespec remain = {0, 0};
+	do
+	{
+		nanosleep(&spec, &remain);
+//		printf("Continuing sleep for %ld\n", (&remain)->tv_nsec);
+//		assert(0);
+	}
+	while(((&remain)->tv_nsec + (&remain)->tv_sec * 1000000000UL) > 0 && 0);
+}
+
 void display_row(struct panel_io* data, int length)
 {
-	uint32_t clock = 1;
 	while(--length >= 0)
 	{
 		gpio_write_bits(((uint32_t*)data)[length]);
-		clock ^= 1;
 		GPIO_HI(GPIO_CLK);
 	}
 }
@@ -213,13 +226,10 @@ void remap_frame(struct matrix_ledpanel** panels, uint32_t* from, int width_from
 
 void prerender_frame_part(struct frame* framepart)
 {
-	int i;
-	int j;
-	int k;
+	int i, j, k, addr;
 	uint32_t* frame = framepart->frame;
 	int rows = framepart->height;
 	int columns = framepart->width;
-	int pwm_steps = 1 << framepart->pwm_bits;
 	int vertical_offset = framepart->vertical_offset / 2;
 	printf("vertical offset: %d\n", vertical_offset);
 	struct panel_io row[columns];
@@ -227,40 +237,25 @@ void prerender_frame_part(struct frame* framepart)
 	{
 		int row1_base = i * columns;
 		int row2_base = (rows / 2 + i) * columns;
-		for(j = 0; j < pwm_steps; j++)
+		for(j = 0; j < framepart->pwm_bits; j++)
 		{
 			memset(row, 0, columns * sizeof(struct panel_io));
 			for(k = 0; k < columns; k++)
 			{
-				printf("%d: Offset: %d/%d of %d\n ", j, row1_base + k, row2_base + k, rows * columns);
-				if(frame[row1_base + k] & 0xFF > j)
-				{
-					row[k].B1 = 1;
-				}
-				if(frame[row1_base + k] >> 8 & 0xFF > j)
-				{
-					row[k].G1 = 1;
-				}
-				if(frame[row1_base + k] >> 16 & 0xFF > j)
-				{
-					row[k].R1 = 1;
-				}
-				if(frame[row2_base + k] & 0xFF > j)
-				{
-					row[k].B2 = 1;
-				}
-				if(frame[row2_base + k] >> 8 & 0xFF > j)
-				{
-					row[k].G2 = 1;
-				}
-				if(frame[row2_base + k] >> 16 & 0xFF > j)
-				{
-					row[k].R2 = 1;
-				}
-				*((uint32_t*)(&row[k])) |= (i << GPIO_ADDR_OFFSET) & GPIO_HI_ADDR_MASK;
-				row[k].E = i >> 4;
+				row[k].B1 = (frame[row1_base + k] & (1 << j)) > 0;
+				row[k].G1 = ((frame[row1_base + k] >> 8) & (1 << j)) > 0;
+				row[k].R1 = ((frame[row1_base + k] >> 16) & (1 << j)) > 0;
+				row[k].B2 = (frame[row2_base + k] & (1 << j)) > 0;
+				row[k].G2 = ((frame[row2_base + k] >> 8) & (1 << j)) > 0;
+				row[k].R2 = ((frame[row2_base + k] >> 16) & (1 << j)) > 0;
+				if(j == 0)
+					addr = (i + 1) % (framepart->rows / 2);
+				else
+					addr = i;
+				*((uint32_t*)(&row[k])) |= (addr << GPIO_ADDR_OFFSET) & GPIO_HI_ADDR_MASK;
+				row[k].E = addr >> 4;
 			}
-			memcpy(framepart->paneldata + i * pwm_steps * columns + j * columns, row, columns * sizeof(struct panel_io));
+			memcpy(framepart->paneldata + i * framepart->pwm_bits * columns + j * columns, row, columns * sizeof(struct panel_io));
 		}
 	}
 }
@@ -315,18 +310,17 @@ void prerender_frame(struct panel_io* rowdata, uint32_t* frame, int bits, int ro
 
 void show_frame(struct panel_io* frame, int bits, int rows, int columns)
 {
-	int i;
-	int j;
-	int pwm_steps = (1 << bits);
-	for(i = 0; i < rows / 2; i++)
+	int i, j;
+	for(i = rows / 2 - 1; i >= 0; i--)
 	{
 		//set_address(i);
-		for(j = 0; j < pwm_steps; j++)
+		for(j = 0; j < bits; j++)
 		{
-			display_row(frame + i * pwm_steps * columns + j * columns, columns);
+			display_row(frame + i * bits * columns + j * columns, columns);
 			//gpio_clr_bits(GPIO_CLOCK_MASK | GPIO_DATA_MASK);
 			GPIO_HI(GPIO_STR);
 			GPIO_LO(GPIO_STR);
+			nanosleep_real(( 1 << j) * BASE_TIME);
 		}
 	}
 }
@@ -434,8 +428,10 @@ int main(int argc, char** argv)
 	{
 		for(j = 0; j < REAL_X; j++)
 		{
-			if(i == j)
-				rawdata[i * REAL_X + j] = 255;
+			rawdata[i * REAL_X + j] = (1 << PWM_BITS) * j / REAL_X;
+//			rawdata[i * REAL_X + j] = (1 << (PWM_BITS - 1)) - 1;
+			if(i == 0)
+				printf("PWM%d: %u\n", j, rawdata[i * REAL_X + j]);
 /*			if(j < REAL_X / 2 - 6 || i < REAL_Y / 2 - 6 || j > REAL_X / 2 + 6 || i > REAL_Y / 2 + 6)
 				continue;
 			if(j < REAL_X / 2)
@@ -457,7 +453,7 @@ int main(int argc, char** argv)
 		cnt %= 3;
 	}
 
-	int rowdata_len = ROWS / 2 * COLUMNS * (1 << PWM_BITS);
+	int rowdata_len = ROWS / 2 * COLUMNS * PWM_BITS;
 	struct panel_io rowdata[rowdata_len];
 
 	process_frame(rowdata, rowdata_len, ledpanels, rawdata, REAL_X, REAL_Y, COLUMNS, ROWS, NUM_PROCESSING_THREADS, PWM_BITS);
@@ -468,7 +464,7 @@ int main(int argc, char** argv)
 		if(cio.R1 || cio.G1 || cio.B1)
 			printf("%d: Row select 1 [R:%d G:%d B:%d]\n", i, cio.R1, cio.G1, cio.B1);
 		if(cio.R2 || cio.G2 || cio.B2)
-			printf("%d: Row select 2 [R:%d G:%d B:%d]\n", i, cio.R1, cio.G1, cio.B1);
+			printf("%d: Row select 2 [R:%d G:%d B:%d]\n", i, cio.R2, cio.G2, cio.B2);
 	}
 */
 	signal(SIGINT, signalhandler);
