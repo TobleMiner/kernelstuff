@@ -11,6 +11,7 @@
 #include <linux/kthread.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/platform_device.h>
 
 #include "matrix.h"
 #include "adafruit-matrix.h"
@@ -210,36 +211,6 @@ int process_frame(struct adamtx_processable_frame* frame)
 
 	render_part(&threadframe);
 
-
-/*	int rows_per_thread = rows / num_processing_threads;
-
-	printf("Rows per thread: %d\n", rows_per_thread);
-
-	struct frame threadframes[num_processing_threads];
-
-	pthread_t threadids[num_processing_threads];
-
-	for(i = 0; i < num_processing_threads; i++)
-	{
-		struct frame* threadframe = &threadframes[i];
-		threadframe->width = columns;
-		threadframe->height = rows;
-		threadframe->vertical_offset = i * rows_per_thread;
-		threadframe->rows = rows_per_thread;
-		threadframe->paneldata = rowdata;
-		threadframe->paneloffset = i * rows_per_thread * columns;
-		threadframe->frame = data;
-		threadframe->frameoffset = i * rows_per_thread * columns;
-		threadframe->pwm_bits = pwm_bits;
-		printf("Thread %d: Start @0x%x Threadframe: 0x%x\n", i, rowdata + i * rows_per_thread * columns, &threadframe);
-		if(pthread_create(&threadids[i], NULL, &render_part, threadframe))
-			perror("Failed to create processing thread: ");
-	}
-	for(i = 0; i < num_processing_threads; i++)
-	{
-		pthread_join(threadids[i], NULL);
-	}
-*/
 //	vfree(data);
 	return 0;
 }
@@ -382,7 +353,7 @@ static void __init adamtx_init_gpio(void)
 	adamtx_gpio_set_outputs((1 << ADAMTX_GPIO_R1) | (1 << ADAMTX_GPIO_R2) | (1 << ADAMTX_GPIO_G1) | (1 << ADAMTX_GPIO_G2) | (1 << ADAMTX_GPIO_B1) | (1 << ADAMTX_GPIO_B2) | (1 << ADAMTX_GPIO_A) | (1 << ADAMTX_GPIO_B) | (1 << ADAMTX_GPIO_C) | (1 << ADAMTX_GPIO_D) | (1 << ADAMTX_GPIO_E) | (1 << ADAMTX_GPIO_OE) | (1 << ADAMTX_GPIO_STR) | (1 << ADAMTX_GPIO_CLK));
 }
 
-static int __init adamtx_init(void)
+static int adamtx_probe(struct platform_device *device)
 {
 	int i, j, ret, framesize;
 	
@@ -526,7 +497,7 @@ none_alloced:
 	return ret;
 }
 
-static void __exit adamtx_exit(void)
+static int adamtx_remove(struct platform_device *device)
 {
 	if(adamtx_updatetimer_enabled)
 		hrtimer_cancel(&adamtx_updatetimer);
@@ -543,8 +514,47 @@ static void __exit adamtx_exit(void)
 	vfree(adamtx_panels);
 	adamtx_gpio_free();
 	printk(KERN_INFO ADAMTX_NAME ": shutting down\n");
+	return 0;
+}
+
+static struct platform_driver adamtx_driver = {
+	.probe = adamtx_probe,
+	.remove = adamtx_remove,
+	.driver = {
+		.name = ADAMTX_NAME
+	}
+};
+
+static struct platform_device* adamtx_dev;
+
+static int __init adamtx_init(void)
+{
+	int ret = -ENOMEM;
+	ret = platform_driver_register(&adamtx_driver);
+	if(ret)
+		goto none_allocated;
+	adamtx_dev = platform_device_alloc(ADAMTX_NAME, 0);
+	if(adamtx_dev == NULL)
+		goto driver_registered;
+	ret = platform_device_add(adamtx_dev);
+	if(ret)
+		goto dev_allocated;
+	return 0;
+
+dev_allocated:
+	platform_device_put(adamtx_dev);
+driver_registered:
+	platform_driver_unregister(&adamtx_driver);
+none_allocated:
+	return ret;
+}
+
+static void __exit adamtx_exit(void)
+{
+	platform_device_unregister(adamtx_dev);
+	platform_driver_unregister(&adamtx_driver);
 }
 
 module_init(adamtx_init);
 module_exit(adamtx_exit);
-	
+
