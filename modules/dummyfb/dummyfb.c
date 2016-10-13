@@ -2,7 +2,6 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/fb.h>
-#include <linux/platform_device.h>
 #include <linux/mm.h>
 
 #include "dummyfb.h"
@@ -15,6 +14,8 @@ MODULE_VERSION("0.1");
 #define DUMMY_FB_NAME "dummyfb"
 
 static char* fbmem = NULL;
+
+static struct fb_info* dummy_fbinfo;
 
 #define NUM_MODES 1
 static struct fb_videomode dummy_modedb[NUM_MODES] =
@@ -101,104 +102,53 @@ static void init_fb_info(struct fb_info* dummy_fb_info)
 	dummy_fb_info->mode = &dummy_modedb[0];
 }
 
-static int dummy_remove(struct platform_device *device)
+static void __exit dummyfb_exit(void)
 {
-	struct fb_info* info;
 	printk(KERN_INFO "dummyfb: REMOVE");
-	info = platform_get_drvdata(device);
-
-	if(info)
+	if(dummy_fbinfo)
 	{
-		unregister_framebuffer(info);
-		kfree(info->screen_base);
-		framebuffer_release(info);
+		unregister_framebuffer(dummy_fbinfo);
+		kfree(dummy_fbinfo->screen_base);
+		framebuffer_release(dummy_fbinfo);
 	}
-	return 0;
 }
 
-static int dummy_probe(struct platform_device *device)
+static int __init dummyfb_init(void)
 {
 	int ret;
-	struct fb_info* info;
+	dummy_fbinfo = NULL;
 	printk(KERN_INFO "dummyfb: PROBE");
 	printk(KERN_INFO "dummyfb: memsize=%d", DUMMYFB_MEMSIZE);
 	ret = -ENOMEM;
-	info = framebuffer_alloc(0, &device->dev);
+	dummy_fbinfo = framebuffer_alloc(0, NULL);
 
-	if(!info)
+	if(!dummy_fbinfo)
 		goto noalloced;
 
-	init_fb_info(info);
-	fbmem = kmalloc(DUMMYFB_MEMSIZE, GFP_KERNEL);
+	init_fb_info(dummy_fbinfo);
+	fbmem = kzalloc(DUMMYFB_MEMSIZE, GFP_KERNEL);
 	if(!fbmem)
 		goto fballoced;
 
-	memset(fbmem, 0, DUMMYFB_MEMSIZE);
-	info->fix.smem_start = virt_to_phys((void *)fbmem);
-	info->fix.smem_len = DUMMYFB_MEMSIZE;
-	info->screen_base = (char __iomem *)fbmem;
+	dummy_fbinfo->fix.smem_start = virt_to_phys((void *)fbmem);
+	dummy_fbinfo->fix.smem_len = DUMMYFB_MEMSIZE;
+	dummy_fbinfo->screen_base = (char __iomem *)fbmem;
 
-	ret = register_framebuffer(info);
+	ret = register_framebuffer(dummy_fbinfo);
 	if(ret < 0)
 	{
 		ret = -EINVAL;
 		goto memalloced;
 	}
-	platform_set_drvdata(device, info);
-	fb_info(info, "%s frame buffer device\n", info->fix.id);
+	fb_info(dummy_fbinfo, "%s frame buffer device\n", dummy_fbinfo->fix.id);
 	return 0;
 
 memalloced:
 	kfree(fbmem);
 fballoced:
-	framebuffer_release(info);
+	framebuffer_release(dummy_fbinfo);
 noalloced:
 	return ret;
-}
-
-static struct platform_driver dummy_driver = {
-	.probe	= dummy_probe,
-	.remove = dummy_remove,
-	.driver = {
-		.name = DUMMY_FB_NAME
-	}
-};
-
-static struct platform_device* dummy_device;
-
-static int __init dummyfb_init(void)
-{
-	int ret;
-
-	ret = platform_driver_register(&dummy_driver);
-	if(ret)
-		goto none_allocated;
-	dummy_device = platform_device_alloc(DUMMY_FB_NAME, 0);
-	if(dummy_device == NULL)
-	{
-		ret = -ENOMEM;
-		goto driver_registered;
-	}
-	ret = platform_device_add(dummy_device);
-	if(ret)
-		goto dev_allocated;
-
-	printk(KERN_INFO "dummyfb: initialized");
-	return 0;
-
-dev_allocated:
-	platform_device_put(dummy_device);
-driver_registered:
-	platform_driver_unregister(&dummy_driver);
-none_allocated:
-	return ret;
-}
-
-static void __exit dummyfb_exit(void)
-{
-	platform_device_unregister(dummy_device);
-	platform_driver_unregister(&dummy_driver);
-	printk(KERN_INFO "dummyfb: exit");
 }
 
 module_init(dummyfb_init);
