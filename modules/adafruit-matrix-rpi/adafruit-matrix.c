@@ -529,13 +529,16 @@ static struct platform_device* adamtx_dev;
 
 static int __init adamtx_init(void)
 {
-	int ret = -ENOMEM;
+	int ret;
 	ret = platform_driver_register(&adamtx_driver);
 	if(ret)
 		goto none_allocated;
 	adamtx_dev = platform_device_alloc(ADAMTX_NAME, 0);
 	if(adamtx_dev == NULL)
+	{
+		ret = -ENOMEM;
 		goto driver_registered;
+	}
 	ret = platform_device_add(adamtx_dev);
 	if(ret)
 		goto dev_allocated;
