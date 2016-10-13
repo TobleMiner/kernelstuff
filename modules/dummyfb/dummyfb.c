@@ -170,22 +170,27 @@ static int __init dummyfb_init(void)
 {
 	int ret;
 
-	if(!(ret = platform_driver_register(&dummy_driver)))
+	ret = platform_driver_register(&dummy_driver);
+	if(ret)
+		goto none_allocated;
+	dummy_device = platform_device_alloc(DUMMY_FB_NAME, 0);
+	if(dummy_device == NULL)
 	{
-		dummy_device = platform_device_alloc(DUMMY_FB_NAME, 0);
-
-		if(dummy_device)
-			ret = platform_device_add(dummy_device);
-		else
-			ret = -ENOMEM;
-		if(ret)
-		{
-			platform_device_put(dummy_device);
-			platform_driver_unregister(&dummy_driver);
-		}
+		ret = -ENOMEM;
+		goto driver_registered;
 	}
+	ret = platform_device_add(dummy_device);
+	if(ret)
+		goto dev_allocated;
 
-	printk(KERN_INFO "dummyfb: initialized (%d)", ret);
+	printk(KERN_INFO "dummyfb: initialized");
+	return 0;
+
+dev_allocated:
+	platform_device_put(dummy_device);
+driver_registered:
+	platform_driver_unregister(&dummy_driver);
+none_allocated:
 	return ret;
 }
 
