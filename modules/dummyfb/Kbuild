@@ -1,1 +1,2 @@
+ccflags-y := -O3
 obj-m := dummyfb.o
