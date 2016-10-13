@@ -17,14 +17,25 @@ static char* fbmem = NULL;
 
 static struct fb_info* dummy_fbinfo;
 
+static int dummyfb_width = DUMMYFB_DEFAULT_WIDTH;
+static int dummyfb_height = DUMMYFB_DEFAULT_HEIGHT;
+static int dummyfb_depth = DUMMYFB_DEFAULT_DEPTH;
+static int dummyfb_refresh = DUMMYFB_DEFAULT_REFRESH;
+
+module_param_named(width, dummyfb_width, int, S_IRUGO);
+MODULE_PARM_DESC(width, "Framebuffer horizontal resolution");
+module_param_named(height, dummyfb_height, int, S_IRUGO);
+MODULE_PARM_DESC(height, "Framebuffer vertical resolution");
+module_param_named(depth, dummyfb_depth, int, S_IRUGO);
+MODULE_PARM_DESC(depth, "Framebuffer depth/bpp");
+module_param_named(refresh, dummyfb_refresh, int, S_IRUGO);
+MODULE_PARM_DESC(refresh, "Framebuffer refresh rate in Hz");
+
 #define NUM_MODES 1
 static struct fb_videomode dummy_modedb[NUM_MODES] =
 {
 	{
 		.name =		"DEFAULT",
-		.refresh =	DUMMYFB_REFRESH,
-		.xres =		DUMMYFB_WIDTH,
-		.yres =		DUMMYFB_HEIGHT,
 		.sync =		0,
 		.vmode =	FB_VMODE_NONINTERLACED
 	}
@@ -50,11 +61,11 @@ static int dummy_check_var(struct fb_var_screeninfo* var, struct fb_info* info)
 {
 	printk(KERN_INFO "dummyfb: check_var");
 	printk(KERN_INFO "dummyfb: size: %dx%d virtualsize:%dx%d bpp: %d", var->xres, var->yres, var->xres_virtual, var->yres_virtual, var->bits_per_pixel);
-	if(var->bits_per_pixel != DUMMYFB_DEPTH) // Accept only fixed color depth
+	if(var->bits_per_pixel != dummyfb_depth) // Accept only fixed color depth
 		return -EINVAL;
-	if(var->xres != DUMMYFB_WIDTH || var->yres != DUMMYFB_HEIGHT)
+	if(var->xres != dummyfb_width || var->yres != dummyfb_height)
 		return -EINVAL;
-	if(var->xres_virtual != DUMMYFB_WIDTH || var->yres_virtual != DUMMYFB_HEIGHT)
+	if(var->xres_virtual != dummyfb_width || var->yres_virtual != dummyfb_height)
 		return -EINVAL;
 	return 0;
 }
@@ -81,24 +92,27 @@ static void init_fb_info(struct fb_info* dummy_fb_info)
 	strcpy(dummy_fb_info->fix.id, "Dummy");
 	dummy_fb_info->fix.type = FB_TYPE_PACKED_PIXELS;
 	dummy_fb_info->fix.visual = FB_VISUAL_TRUECOLOR;
-	dummy_fb_info->fix.line_length = DUMMYFB_WIDTH * (DUMMYFB_DEPTH >> 3); // Line length (in bytes!)
+	dummy_fb_info->fix.line_length = dummyfb_width * (dummyfb_depth >> 3); // Line length (in bytes!)
 	dummy_fb_info->fix.accel = FB_ACCEL_NONE;
 	memset(&dummy_fb_info->var, 0, sizeof(dummy_fb_info->var));
-	dummy_fb_info->var.xres = DUMMYFB_WIDTH;
-	dummy_fb_info->var.yres = DUMMYFB_HEIGHT;
-	dummy_fb_info->var.xres_virtual = DUMMYFB_WIDTH;
-	dummy_fb_info->var.yres_virtual = DUMMYFB_HEIGHT;
+	dummy_fb_info->var.xres = dummyfb_width;
+	dummy_fb_info->var.yres = dummyfb_height;
+	dummy_fb_info->var.xres_virtual = dummyfb_width;
+	dummy_fb_info->var.yres_virtual = dummyfb_height;
 	dummy_fb_info->var.red.length = 8;
 	dummy_fb_info->var.red.offset = 16;
 	dummy_fb_info->var.green.length = 8;
 	dummy_fb_info->var.green.offset = 8;
 	dummy_fb_info->var.blue.length = 8;
 	dummy_fb_info->var.blue.offset = 0;
-	dummy_fb_info->var.bits_per_pixel = DUMMYFB_DEPTH;
+	dummy_fb_info->var.bits_per_pixel = dummyfb_depth;
 	dummy_fb_info->var.transp.length = 0;
 	dummy_fb_info->var.activate = FB_ACTIVATE_NOW;
 	dummy_fb_info->var.vmode = FB_VMODE_NONINTERLACED;
 	dummy_fb_info->monspecs = dummy_monspecs;
+	dummy_modedb[0].refresh = dummyfb_refresh;
+	dummy_modedb[0].xres = dummyfb_width;
+	dummy_modedb[0].yres = dummyfb_height;
 	dummy_fb_info->mode = &dummy_modedb[0];
 }
 
