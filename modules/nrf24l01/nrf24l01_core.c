@@ -89,6 +89,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	unsigned int val = 0;
 	int ret = regmap_read(nrf24l01_dev->regmap_short, NRF24L01_REG_STATUS, &val);
 	printk(KERN_INFO "Read NRF24L01_REG_STATUS as %d with result %d\n", val, ret);
+	chrdev_alloc(nrf24l01_dev);
 	return 0;
 exit_nrfalloc:
 	vfree(nrf24l01_dev);
@@ -99,6 +100,7 @@ exit_noalloc:
 static int nrf24l01_remove(struct spi_device* spi)
 {
 	printk(KERN_WARNING "nrf24l01_remove\n");
+	chrdev_free(nrf24l01_dev);
 	regmap_exit(nrf24l01_dev->regmap_short);
 	vfree(nrf24l01_dev);
 	return 0;
