@@ -1,0 +1,2 @@
+obj-m := nrf24l01.o
+ccflags-y := -O3
