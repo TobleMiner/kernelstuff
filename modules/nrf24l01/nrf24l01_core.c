@@ -3,11 +3,13 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/regmap.h>
+#include <linux/vmalloc.h>
 
 #include "nrf24l01_core.h"
 #include "nrf24l01_reg.h"
 #include "nrf24l01_cmd.h"
 #include "nrf24l01_spi.h"
+#include "nrf24l01_chrdev.h"
 
 enum nrf24l01_modules {nRF24L01, nRF24L01p};
 
@@ -64,40 +66,41 @@ static const struct regmap_config nrf24l01_regmap_short = {
 	.use_single_rw = 1
 };
 
-static struct regmap* regmap_short;
+static struct nrf24l01_t* nrf24l01_dev;
 
 static int nrf24l01_probe(struct spi_device* spi)
 {
+	int err = 0;
 	printk(KERN_WARNING "nrf24l01_probe\n");
+	nrf24l01_dev = vzalloc(sizeof(nrf24l01_t));
+	nrf24l01_dev->dev = spi;
+	if(IS_ERR(nrf24l01_dev))
+	{
+		err = PTR_ERR(nrf24l01_dev);
+		goto exit_noalloc;
+	}
 	printk(KERN_INFO "Adding regmap...\n");
-	regmap_short = regmap_init(&spi->dev, NULL, spi, &nrf24l01_regmap_short);
-	if(IS_ERR(regmap_short))
-		return PTR_ERR(regmap_short);
+	nrf24l01_dev->regmap_short = regmap_init(&spi->dev, NULL, spi, &nrf24l01_regmap_short);
+	if(IS_ERR(nrf24l01_dev->regmap_short))
+	{
+		err = PTR_ERR(nrf24l01_dev->regmap_short);
+		goto exit_nrfalloc;
+	}
 	unsigned int val = 0;
-	int ret = regmap_read(regmap_short, NRF24L01_REG_STATUS, &val);
+	int ret = regmap_read(nrf24l01_dev->regmap_short, NRF24L01_REG_STATUS, &val);
 	printk(KERN_INFO "Read NRF24L01_REG_STATUS as %d with result %d\n", val, ret);
-/*	char data_init[] = {0b00100000 | 0x00, 0b00001011};
-	size_t len = 2;
-	int err = spi_write(spi, data_init, len);
-	if(err)
-		return err;
-	char data_addr[] = {0b00100000 | 0x0A, 0xDE, 0xAD, 0xBE, 0xEF, 0x42};
-	len = 6;
-	err = spi_write(spi, data_addr, len);
-	if(err)
-		return err;
-	char data_read[] = {0x0A, 0, 0, 0, 0, 0};
-	len = 6;
-	err = spi_write(spi, data_read, len);
-	if(err)
-		return err;*/
 	return 0;
+exit_nrfalloc:
+	vfree(nrf24l01_dev);
+exit_noalloc:
+	return err;
 }
 
 static int nrf24l01_remove(struct spi_device* spi)
 {
 	printk(KERN_WARNING "nrf24l01_remove\n");
-	regmap_exit(regmap_short);
+	regmap_exit(nrf24l01_dev->regmap_short);
+	vfree(nrf24l01_dev);
 	return 0;
 }
 
