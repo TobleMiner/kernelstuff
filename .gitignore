@@ -32,3 +32,5 @@ modules.builtin
 *.raw
 *.out
 *.gdb
+*.dtb
+*.dtbo
