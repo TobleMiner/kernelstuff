@@ -73,14 +73,14 @@ static int nrf24l01_probe(struct spi_device* spi)
 	int err = 0;
 	printk(KERN_WARNING "nrf24l01_probe\n");
 	nrf24l01_dev = vzalloc(sizeof(nrf24l01_t));
-	nrf24l01_dev->dev = spi;
+	nrf24l01_dev->spi = spi;
 	if(IS_ERR(nrf24l01_dev))
 	{
 		err = PTR_ERR(nrf24l01_dev);
 		goto exit_noalloc;
 	}
 	printk(KERN_INFO "Adding regmap...\n");
-	nrf24l01_dev->regmap_short = regmap_init(&spi->dev, NULL, spi, &nrf24l01_regmap_short);
+	nrf24l01_dev->regmap_short = regmap_init(nrf24l01_dev, NULL, spi, &nrf24l01_regmap_short);
 	if(IS_ERR(nrf24l01_dev->regmap_short))
 	{
 		err = PTR_ERR(nrf24l01_dev->regmap_short);

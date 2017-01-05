@@ -1,5 +1,7 @@
 #include <linux/spi/spi.h>
+#include <linux/vmalloc.h>
 
+#include "nrf24l01_core.h"
 #include "nrf24l01_spi.h"
 #include "nrf24l01_reg.h"
 #include "nrf24l01_cmd.h"
@@ -37,7 +39,7 @@ static char nrf24l01_reg_masks[] = {
 int nrf24l01_write_short_reg(void* ctx, unsigned int reg, unsigned int val)
 {
 	char data[] = { NRF24L01_CMD_W_REGISTER | (u8)reg, (u8)val };
-	return spi_write((struct spi_device*)ctx, (char*)&data, 2);
+	return spi_write(((struct nrf24l01_t*)ctx)->spi, (char*)&data, 2);
 }
 
 int nrf24l01_write_short_reg_masked(void* ctx, unsigned int reg, unsigned int val)
@@ -51,9 +53,27 @@ int nrf24l01_write_short_reg_masked(void* ctx, unsigned int reg, unsigned int va
 int nrf24l01_read_short_reg(void* ctx, unsigned int reg, unsigned int* val)
 {
 	printk(KERN_INFO "Reading register %d with cmd %d\n", reg, NRF24L01_CMD_R_REGISTER | (u8)reg);
-	ssize_t err = spi_w8r8((struct spi_device*)ctx, NRF24L01_CMD_R_REGISTER | (u8)reg);
+	ssize_t err = spi_w8r8(((struct nrf24l01_t*)ctx)->spi, NRF24L01_CMD_R_REGISTER | (u8)reg);
 	if(err < 0)
 		return err;
 	*val = err;
 	return 0;
+}
+
+int nrf24l01_spi_write(struct spi_device* spi, unsigned char* data, unsigned int len)
+{
+	spi_write(spi, data, len);
+}
+
+int nrf24l01_write_reg(void* ctx, unsigned int reg, unsigned char* data, unsigned int len)
+{
+	int err;
+	unsigned char* regwrite = vmalloc(len + 1);
+	if(IS_ERR(regwrite))
+		return PTR_ERR(regwrite);
+	*regwrite = NRF24L01_CMD_W_REGISTER | (u8)reg;
+	memcpy(regwrite + 1, data, len);
+	err = nrf24l01_spi_write(((nrf24l01_t*)ctx)->spi, regwrite, len); 
+	vfree(regwrite);
+	return err;
 }
