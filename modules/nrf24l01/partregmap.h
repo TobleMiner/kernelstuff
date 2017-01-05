@@ -36,8 +36,9 @@ typedef struct partreg_template {
 	unsigned int offset;
 	unsigned int* mask;
 	unsigned int len;
-	void* ctx;
-	unsigned int (* len_func)(void* ctx, unsigned int reg);
+	int (* len_func)(void* ctx, unsigned int reg);
+	int (* reg_write)(void* ctx, unsigned int reg, unsigned int* data, unsigned int len); 
+	int (* reg_read)(void* ctx, unsigned int reg, unsigned int* data, unsigned int len); 
 	struct partreg_range* value_range;
 	struct partreg_range_table* value_ranges;	
 } partreg_template;
