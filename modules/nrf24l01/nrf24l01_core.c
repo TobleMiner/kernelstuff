@@ -97,10 +97,10 @@ static int nrf24l01_probe(struct spi_device* spi)
 	printk(KERN_INFO "Read NRF24L01_REG_STATUS as %d with result %d\n", val, ret);
 	printk(KERN_INFO "Testing partregmap\n");
 	val = 1;
-	err = partreg_table_write(nrf24l01_dev->reg_table, 0, &val, 1);
+	err = partreg_table_write(nrf24l01_dev->reg_table, 1, &val, 1);
 	printk(KERN_INFO "Wrote to partreg: %d\n", err);
 	val = 0;
-	err = partreg_table_read(nrf24l01_dev->reg_table, 0, &val, 1);
+	err = partreg_table_read(nrf24l01_dev->reg_table, 1, &val, 1);
 	printk(KERN_INFO "Read back from partreg: %d, err: %d", val, err);
 	return 0;
 exit_regmapalloc:

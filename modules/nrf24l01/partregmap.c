@@ -31,10 +31,15 @@ static int partreg_regmap_write(struct partreg* reg, unsigned int value)
 	if((err = partreg_in_range(reg, value)) < 0)
 		return err;
 	
+	printk(KERN_INFO "partregmap: before shift: %u\n", value);
 	value <<= reg->offset;
+	printk(KERN_INFO "partregmap: after shift: %u\n", value);
 	if(reg->mask != NULL)
+	{
+		printk(KERN_INFO "partregmap: mask: %u\n", *reg->mask);
 		value &= *reg->mask;
-
+		printk(KERN_INFO "partregmap: value & mask: %u\n", value);
+	}
 	return regmap_write_bits(reg->regmap, reg->reg, *reg->mask, value);
 }
 
