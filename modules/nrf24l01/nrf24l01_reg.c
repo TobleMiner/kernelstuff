@@ -437,12 +437,13 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_status_tx_ds,
 	&reg_status_rx_dr,
 	&reg_observe_tx_arc_cnt,
-	&reg_observe_tx_plos_cnt
+	&reg_observe_tx_plos_cnt,
+	&reg_rpd_rpd
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 33,
+	.n_regs = 34,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
