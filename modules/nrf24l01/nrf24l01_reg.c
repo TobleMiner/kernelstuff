@@ -1,4 +1,5 @@
 #include <linux/errno.h>
+#include <linux/err.h>
 #include <linux/vmalloc.h>
 
 #include "nrf24l01_reg.h"
@@ -27,9 +28,10 @@ static struct partreg_layout nrf24l01_reg_layout = {
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
 {
-	nrf->reg_table = partreg_create_table(nrf24l01_reg_layout, nrf->regmap_short, nrf);	
+	nrf->reg_table = partreg_create_table(&nrf24l01_reg_layout, nrf->regmap_short, nrf);	
 	if(IS_ERR(nrf->reg_table))
 		return PTR_ERR(nrf->reg_table);
+	return 0;
 }
 
 void nrf24l01_free_partregs(nrf24l01_t* nrf)

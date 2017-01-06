@@ -10,6 +10,7 @@
 #include "nrf24l01_cmd.h"
 #include "nrf24l01_spi.h"
 #include "nrf24l01_chrdev.h"
+#include "partregmap.h"
 
 enum nrf24l01_modules {nRF24L01, nRF24L01p};
 
@@ -33,12 +34,12 @@ static const struct regmap_access_table regmap_rd_table_short = {
 	.n_no_ranges = 2
 };
 
-static const struct regmap_range regmap_volatile_table_short_yes[] = { regmap_reg_range(0x07, 0x09), regmap_reg_range(0x17, 0x17) };
-static const struct regmap_range regmap_volatile_table_short_no[] = { regmap_reg_range(0x00, 0x06), regmap_reg_range(0x0A, 0x16) };
+static const struct regmap_range regmap_volatile_table_short_yes[] = { regmap_reg_range(0x00, 0x00), regmap_reg_range(0x07, 0x09), regmap_reg_range(0x17, 0x17) };
+static const struct regmap_range regmap_volatile_table_short_no[] = { regmap_reg_range(0x01, 0x06), regmap_reg_range(0x0A, 0x16) };
 
 static const struct regmap_access_table regmap_volatile_table_short = {
 	.yes_ranges = regmap_volatile_table_short_yes,
-	.n_yes_ranges = 2,
+	.n_yes_ranges = 3,
 	.no_ranges = regmap_volatile_table_short_no,
 	.n_no_ranges = 2,
 };
@@ -90,10 +91,17 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
 		goto exit_regmapalloc;
 	}
+	chrdev_alloc(nrf24l01_dev);
 	unsigned int val = 0;
 	int ret = regmap_read(nrf24l01_dev->regmap_short, NRF24L01_REG_STATUS, &val);
 	printk(KERN_INFO "Read NRF24L01_REG_STATUS as %d with result %d\n", val, ret);
-	chrdev_alloc(nrf24l01_dev);
+	printk(KERN_INFO "Testing partregmap\n");
+	val = 1;
+	err = partreg_table_write(nrf24l01_dev->reg_table, 0, &val, 1);
+	printk(KERN_INFO "Wrote to partreg: %d\n", err);
+	val = 0;
+	err = partreg_table_read(nrf24l01_dev->reg_table, 0, &val, 1);
+	printk(KERN_INFO "Read back from partreg: %d, err: %d", val, err);
 	return 0;
 exit_regmapalloc:
 	regmap_exit(nrf24l01_dev->regmap_short);
