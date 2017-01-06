@@ -248,6 +248,18 @@ static struct partreg_template reg_setup_retr_ard = {
 	.value_range = &range_setup_retr_ard
 };
 
+static struct partreg_range range_rf_ch_rf_ch = partreg_reg_range(0, 0b01111111);
+static unsigned int mask_rf_ch_rf_ch = 0b01111111;
+
+static struct partreg_template reg_rf_ch_rf_ch = {
+    .reg = NRF24L01_REG_RF_CH,
+    .offset = 0,
+    .mask = &mask_rf_ch_rf_ch,
+    .len = 1,
+    .value_range = &range_rf_ch_rf_ch
+};
+
+
 static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_prim_rx,
 	&reg_config_pwr_up,
@@ -271,11 +283,12 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_setup_aw_aw,
 	&reg_setup_retr_arc,
 	&reg_setup_retr_ard,
+	&reg_rf_ch_rf_ch,
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 20,
+	.n_regs = 23,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
