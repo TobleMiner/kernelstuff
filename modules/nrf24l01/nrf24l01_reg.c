@@ -149,6 +149,72 @@ static struct partreg_template reg_en_aa_enaa_p5 = {
 	.value_range = &range_en_aa_enaa_p5
 };
 
+static struct partreg_range range_en_rxaddr_erx_p0 = partreg_reg_range(0, 1);
+static unsigned int mask_en_rxaddr_erx_p0 = 0b1;
+
+static struct partreg_template reg_en_rxaddr_erx_p0 = {
+	.reg = NRF24L01_REG_EN_RXADDR,
+	.offset = 0,
+	.mask = &mask_en_rxaddr_erx_p0,
+	.len = 1,
+	.value_range = &range_en_rxaddr_erx_p0
+};
+
+static struct partreg_range range_en_rxaddr_erx_p1 = partreg_reg_range(0, 1);
+static unsigned int mask_en_rxaddr_erx_p1 = 0b10;
+
+static struct partreg_template reg_en_rxaddr_erx_p1 = {
+	.reg = NRF24L01_REG_EN_RXADDR,
+	.offset = 1,
+	.mask = &mask_en_rxaddr_erx_p1,
+	.len = 1,
+	.value_range = &range_en_rxaddr_erx_p1
+};
+
+static struct partreg_range range_en_rxaddr_erx_p2 = partreg_reg_range(0, 1);
+static unsigned int mask_en_rxaddr_erx_p2 = 0b100;
+
+static struct partreg_template reg_en_rxaddr_erx_p2 = {
+	.reg = NRF24L01_REG_EN_RXADDR,
+	.offset = 2,
+	.mask = &mask_en_rxaddr_erx_p2,
+	.len = 1,
+	.value_range = &range_en_rxaddr_erx_p2
+};
+
+static struct partreg_range range_en_rxaddr_erx_p3 = partreg_reg_range(0, 1);
+static unsigned int mask_en_rxaddr_erx_p3 = 0b1000;
+
+static struct partreg_template reg_en_rxaddr_erx_p3 = {
+	.reg = NRF24L01_REG_EN_RXADDR,
+	.offset = 3,
+	.mask = &mask_en_rxaddr_erx_p3,
+	.len = 1,
+	.value_range = &range_en_rxaddr_erx_p3
+};
+
+static struct partreg_range range_en_rxaddr_erx_p4 = partreg_reg_range(0, 1);
+static unsigned int mask_en_rxaddr_erx_p4 = 0b10000;
+
+static struct partreg_template reg_en_rxaddr_erx_p4 = {
+	.reg = NRF24L01_REG_EN_RXADDR,
+	.offset = 4,
+	.mask = &mask_en_rxaddr_erx_p4,
+	.len = 1,
+	.value_range = &range_en_rxaddr_erx_p4
+};
+
+static struct partreg_range range_en_rxaddr_erx_p5 = partreg_reg_range(0, 1);
+static unsigned int mask_en_rxaddr_erx_p5 = 0b100000;
+
+static struct partreg_template reg_en_rxaddr_erx_p5 = {
+	.reg = NRF24L01_REG_EN_RXADDR,
+	.offset = 5,
+	.mask = &mask_en_rxaddr_erx_p5,
+	.len = 1,
+	.value_range = &range_en_rxaddr_erx_p5
+};
+
 static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_prim_rx,
 	&reg_config_pwr_up,
@@ -163,11 +229,17 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_en_aa_enaa_p3,
 	&reg_en_aa_enaa_p4,
 	&reg_en_aa_enaa_p5,
+	&reg_en_rxaddr_erx_p0,
+	&reg_en_rxaddr_erx_p1,
+	&reg_en_rxaddr_erx_p2,
+	&reg_en_rxaddr_erx_p3,
+	&reg_en_rxaddr_erx_p4,
+	&reg_en_rxaddr_erx_p5,
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 13,
+	.n_regs = 19,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
