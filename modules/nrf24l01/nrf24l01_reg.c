@@ -83,6 +83,72 @@ static struct partreg_template reg_config_mask_rx_dr = {
 	.value_range = &range_config_mask_rx_dr
 };
 
+static struct partreg_range range_en_aa_enaa_p0 = partreg_reg_range(0, 1);
+static unsigned int mask_en_aa_enaa_p0 = 0b1;
+
+static struct partreg_template reg_en_aa_enaa_p0 = {
+	.reg = NRF24L01_REG_EN_AA,
+	.offset = 0,
+	.mask = &mask_en_aa_enaa_p0,
+	.len = 1,
+	.value_range = &range_en_aa_enaa_p0
+};
+
+static struct partreg_range range_en_aa_enaa_p1 = partreg_reg_range(0, 1);
+static unsigned int mask_en_aa_enaa_p1 = 0b10;
+
+static struct partreg_template reg_en_aa_enaa_p1 = {
+	.reg = NRF24L01_REG_EN_AA,
+	.offset = 1,
+	.mask = &mask_en_aa_enaa_p1,
+	.len = 1,
+	.value_range = &range_en_aa_enaa_p1
+};
+
+static struct partreg_range range_en_aa_enaa_p2 = partreg_reg_range(0, 1);
+static unsigned int mask_en_aa_enaa_p2 = 0b100;
+
+static struct partreg_template reg_en_aa_enaa_p2 = {
+	.reg = NRF24L01_REG_EN_AA,
+	.offset = 2,
+	.mask = &mask_en_aa_enaa_p2,
+	.len = 1,
+	.value_range = &range_en_aa_enaa_p2
+};
+
+static struct partreg_range range_en_aa_enaa_p3 = partreg_reg_range(0, 1);
+static unsigned int mask_en_aa_enaa_p3 = 0b1000;
+
+static struct partreg_template reg_en_aa_enaa_p3 = {
+	.reg = NRF24L01_REG_EN_AA,
+	.offset = 3,
+	.mask = &mask_en_aa_enaa_p3,
+	.len = 1,
+	.value_range = &range_en_aa_enaa_p3
+};
+
+static struct partreg_range range_en_aa_enaa_p4 = partreg_reg_range(0, 1);
+static unsigned int mask_en_aa_enaa_p4 = 0b10000;
+
+static struct partreg_template reg_en_aa_enaa_p4 = {
+	.reg = NRF24L01_REG_EN_AA,
+	.offset = 4,
+	.mask = &mask_en_aa_enaa_p4,
+	.len = 1,
+	.value_range = &range_en_aa_enaa_p4
+};
+
+static struct partreg_range range_en_aa_enaa_p5 = partreg_reg_range(0, 1);
+static unsigned int mask_en_aa_enaa_p5 = 0b100000;
+
+static struct partreg_template reg_en_aa_enaa_p5 = {
+	.reg = NRF24L01_REG_EN_AA,
+	.offset = 5,
+	.mask = &mask_en_aa_enaa_p5,
+	.len = 1,
+	.value_range = &range_en_aa_enaa_p5
+};
+
 static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_prim_rx,
 	&reg_config_pwr_up,
@@ -91,11 +157,17 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_mask_max_rt,
 	&reg_config_mask_tx_ds,
 	&reg_config_mask_rx_dr,
+	&reg_en_aa_enaa_p0,
+	&reg_en_aa_enaa_p1,
+	&reg_en_aa_enaa_p2,
+	&reg_en_aa_enaa_p3,
+	&reg_en_aa_enaa_p4,
+	&reg_en_aa_enaa_p5,
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 2,
+	.n_regs = 13,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
