@@ -80,17 +80,23 @@ static int nrf24l01_probe(struct spi_device* spi)
 		goto exit_noalloc;
 	}
 	printk(KERN_INFO "Adding regmap...\n");
-	nrf24l01_dev->regmap_short = regmap_init(nrf24l01_dev, NULL, spi, &nrf24l01_regmap_short);
+	nrf24l01_dev->regmap_short = regmap_init(&spi->dev, NULL, nrf24l01_dev, &nrf24l01_regmap_short);
 	if(IS_ERR(nrf24l01_dev->regmap_short))
 	{
 		err = PTR_ERR(nrf24l01_dev->regmap_short);
 		goto exit_nrfalloc;
+	}
+	if((err = nrf24l01_create_partregs(nrf24l01_dev)) < 0)
+	{
+		goto exit_regmapalloc;
 	}
 	unsigned int val = 0;
 	int ret = regmap_read(nrf24l01_dev->regmap_short, NRF24L01_REG_STATUS, &val);
 	printk(KERN_INFO "Read NRF24L01_REG_STATUS as %d with result %d\n", val, ret);
 	chrdev_alloc(nrf24l01_dev);
 	return 0;
+exit_regmapalloc:
+	regmap_exit(nrf24l01_dev->regmap_short);
 exit_nrfalloc:
 	vfree(nrf24l01_dev);
 exit_noalloc:
@@ -101,6 +107,7 @@ static int nrf24l01_remove(struct spi_device* spi)
 {
 	printk(KERN_WARNING "nrf24l01_remove\n");
 	chrdev_free(nrf24l01_dev);
+	nrf24l01_free_partregs(nrf24l01_dev);
 	regmap_exit(nrf24l01_dev->regmap_short);
 	vfree(nrf24l01_dev);
 	return 0;

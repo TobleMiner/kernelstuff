@@ -80,3 +80,6 @@
 #define NRF24L01_ARD_4000US		0b1111
 
 #define NRF24L01_MASK_ARC		0b1111
+
+int nrf24l01_create_partregs(nrf24l01_t* nrf);
+void nrf24l01_free_partregs(nrf24l01_t* nrf);

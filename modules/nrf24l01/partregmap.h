@@ -57,3 +57,7 @@ int partreg_write(struct partreg* reg, unsigned int* value, unsigned int maxlen)
 int partreg_read(struct partreg* reg, unsigned int* value, unsigned int maxlen);
 int partreg_table_write(struct partreg_table* table, unsigned int reg, unsigned int* value, unsigned int maxlen);
 int partreg_table_read(struct partreg_table* table, unsigned int reg, unsigned int* value, unsigned int maxlen);
+struct partreg* partreg_create_reg(struct partreg_template* template, struct regmap* regmap, void* ctx);
+void partreg_free_reg(struct partreg* partreg);
+struct partreg_table* partreg_create_table(struct partreg_layout* layout, struct regmap* regmap, void* ctx);
+void partreg_free_table(struct partreg_table* table);

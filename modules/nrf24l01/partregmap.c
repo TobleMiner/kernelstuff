@@ -1,5 +1,6 @@
 #include <linux/errno.h>
 #include <linux/regmap.h>
+#include <linux/vmalloc.h>
 
 #include "partregmap.h"
 
@@ -105,4 +106,75 @@ int partreg_table_read(struct partreg_table* table, unsigned int reg, unsigned i
 	if(table->regs[reg] == NULL)
 		return -EINVAL;
 	return partreg_read(table->regs[reg], value, maxlen);
+}
+
+struct partreg* partreg_create_reg(struct partreg_template* template, struct regmap* regmap, void* ctx)
+{
+	struct partreg* partreg = vzalloc(sizeof(partreg));
+	if(!partreg)
+		return ERR_PTR(-ENOMEM);
+	partreg->name = template->name;
+	partreg->regmap = regmap;
+	partreg->reg = template->reg;
+	partreg->offset = template->offset;
+	partreg->mask = template->mask;
+	partreg->len = template->len;
+	partreg->ctx = ctx;
+	partreg->len_func = template->len_func;
+	partreg->reg_write = template->reg_write;
+	partreg->reg_read = template->reg_read;
+	partreg->value_range = template->value_range;
+	partreg->value_ranges = template->value_ranges;
+	return partreg;
+}
+
+void partreg_free_reg(struct partreg* partreg)
+{
+	vfree(partreg);
+}
+
+struct partreg_table* partreg_create_table(struct partreg_layout* layout, struct regmap* regmap, void* ctx)
+{
+	unsigned int i;
+	int err;
+	struct partreg_table* table = vmalloc(sizeof(partreg_layout));
+	if(!table)
+	{
+		err = -ENOMEM;
+		goto exit_noalloc;
+	}
+	table->n_regs = layout->n_regs;
+	table->regs = vmalloc(sizeof(partreg*) * table->n_regs);
+	if(!table->regs)
+	{
+		err = -ENOMEM;
+		goto exit_table;
+	}
+	for(i = 0; i < table->n_regs; i++)
+	{
+		table->regs[i] = partreg_create_reg(layout->regs[i], regmap, ctx);
+		if(IS_ERR(table->regs[i]))
+			goto exit_regs;
+	}
+	return table;
+exit_regs:
+	for(i--; i <= 0; i--)
+	{
+		partreg_free_reg(table->regs[i]);
+	}
+exit_table:
+	vfree(table);
+exit_noalloc:
+	return ERR_PTR(err);
+}
+
+void partreg_free_table(struct partreg_table* table)
+{
+	unsigned int i;
+	for(i = table->n_regs - 1; i <= 0; i--)
+	{
+		partreg_free_reg(table->regs[i]);
+	}
+	vfree(table->regs);
+	vfree(table);
 }

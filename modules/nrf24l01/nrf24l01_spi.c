@@ -52,8 +52,9 @@ int nrf24l01_write_short_reg_masked(void* ctx, unsigned int reg, unsigned int va
 
 int nrf24l01_read_short_reg(void* ctx, unsigned int reg, unsigned int* val)
 {
+	ssize_t err;
 	printk(KERN_INFO "Reading register %d with cmd %d\n", reg, NRF24L01_CMD_R_REGISTER | (u8)reg);
-	ssize_t err = spi_w8r8(((struct nrf24l01_t*)ctx)->spi, NRF24L01_CMD_R_REGISTER | (u8)reg);
+	err = spi_w8r8(((struct nrf24l01_t*)ctx)->spi, NRF24L01_CMD_R_REGISTER | (u8)reg);
 	if(err < 0)
 		return err;
 	*val = err;
@@ -62,7 +63,7 @@ int nrf24l01_read_short_reg(void* ctx, unsigned int reg, unsigned int* val)
 
 int nrf24l01_spi_write(struct spi_device* spi, unsigned char* data, unsigned int len)
 {
-	spi_write(spi, data, len);
+	return spi_write(spi, data, len);
 }
 
 int nrf24l01_write_reg(void* ctx, unsigned int reg, unsigned char* data, unsigned int len)
