@@ -385,11 +385,22 @@ static struct partreg_range range_observe_tx_plos_cnt = partreg_reg_range(0, 0b1
 static unsigned int mask_observe_tx_plos_cnt = 0b11110000;
 
 static struct partreg_template reg_observe_tx_plos_cnt = {
-    .reg = NRF24L01_REG_STATUS,
+    .reg = NRF24L01_REG_OBSERVE_TX,
     .offset = 4,
     .mask = &mask_observe_tx_plos_cnt,
     .len = 1,
     .value_range = &range_observe_tx_plos_cnt
+};
+
+static struct partreg_range range_rpd_rpd = partreg_reg_range(0, 0b1);
+static unsigned int mask_rpd_rpd = 0b11110000;
+
+static struct partreg_template reg_rpd_rpd = {
+    .reg = NRF24L01_REG_RPD,
+    .offset = 0,
+    .mask = &mask_rpd_rpd,
+    .len = 1,
+    .value_range = &range_rpd_rpd
 };
 
 static struct partreg_template* nrf24l01_regs[] = {
