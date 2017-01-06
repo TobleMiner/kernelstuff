@@ -1,3 +1,6 @@
+#ifndef _LINUX_PARTREGMAP_H_
+#define _LINUX_PARTREGMAP_H_
+
 typedef struct partreg_range {
 	unsigned int min_value;
 	unsigned int max_value;
@@ -61,3 +64,5 @@ struct partreg* partreg_create_reg(struct partreg_template* template, struct reg
 void partreg_free_reg(struct partreg* partreg);
 struct partreg_table* partreg_create_table(struct partreg_layout* layout, struct regmap* regmap, void* ctx);
 void partreg_free_table(struct partreg_table* table);
+
+#endif

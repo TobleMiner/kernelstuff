@@ -1,3 +1,8 @@
+#ifndef _NRF24L01_REG_H_
+#define _NRF24L01_REG_H_
+
+#include "nrf24l01_core.h"
+
 #define NRF24L01_REG_CONFIG			0x00
 #define NRF24L01_REG_EN_AA			0x01
 #define NRF24L01_REG_EN_RXADDR		0x02
@@ -81,5 +86,7 @@
 
 #define NRF24L01_MASK_ARC		0b1111
 
-int nrf24l01_create_partregs(nrf24l01_t* nrf);
-void nrf24l01_free_partregs(nrf24l01_t* nrf);
+int nrf24l01_create_partregs(struct nrf24l01_t* nrf);
+void nrf24l01_free_partregs(struct nrf24l01_t* nrf);
+
+#endif
