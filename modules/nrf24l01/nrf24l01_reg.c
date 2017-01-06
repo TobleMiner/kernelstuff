@@ -315,6 +315,61 @@ static struct partreg_template reg_rf_setup_cont_wave = {
     .value_range = &range_rf_setup_cont_wave
 };
 
+static struct partreg_range range_status_tx_full = partreg_reg_range(0, 1);
+static unsigned int mask_status_tx_full = 0b1;
+
+static struct partreg_template reg_status_tx_full = {
+    .reg = NRF24L01_REG_STATUS,
+    .offset = 0,
+    .mask = &mask_status_tx_full,
+    .len = 1,
+    .value_range = &range_status_tx_full
+};
+
+static struct partreg_range range_status_rx_p_no = partreg_reg_range(0, 0b111);
+static unsigned int mask_status_rx_p_no = 0b1110;
+
+static struct partreg_template reg_status_rx_p_no = {
+    .reg = NRF24L01_REG_STATUS,
+    .offset = 1,
+    .mask = &mask_status_rx_p_no,
+    .len = 1,
+    .value_range = &range_status_rx_p_no
+};
+
+static struct partreg_range range_status_max_rt = partreg_reg_range(0, 1);
+static unsigned int mask_status_max_rt = 0b10000;
+
+static struct partreg_template reg_status_max_rt = {
+    .reg = NRF24L01_REG_STATUS,
+    .offset = 4,
+    .mask = &mask_status_max_rt,
+    .len = 1,
+    .value_range = &range_status_max_rt
+};
+
+static struct partreg_range range_status_tx_ds = partreg_reg_range(0, 1);
+static unsigned int mask_status_tx_ds = 0b100000;
+
+static struct partreg_template reg_status_tx_ds = {
+    .reg = NRF24L01_REG_STATUS,
+    .offset = 5,
+    .mask = &mask_status_tx_ds,
+    .len = 1,
+    .value_range = &range_status_tx_ds
+};
+
+static struct partreg_range range_status_rx_dr = partreg_reg_range(0, 1);
+static unsigned int mask_status_rx_dr = 0b1000000;
+
+static struct partreg_template reg_status_rx_dr = {
+    .reg = NRF24L01_REG_STATUS,
+    .offset = 6,
+    .mask = &mask_status_rx_dr,
+    .len = 1,
+    .value_range = &range_status_rx_dr
+};
+
 static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_prim_rx,
 	&reg_config_pwr_up,
@@ -342,12 +397,17 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_rf_setup_rf_pwr,
 	&reg_rf_setup_rf_dr,
 	&reg_rf_setup_pll_lock,
-	&reg_rf_setup_cont_wave
+	&reg_rf_setup_cont_wave,
+	&reg_status_tx_full,
+	&reg_status_rx_p_no,
+	&reg_status_max_rt,
+	&reg_status_tx_ds,
+	&reg_status_rx_dr,
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 27,
+	.n_regs = 31,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
