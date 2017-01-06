@@ -259,6 +259,61 @@ static struct partreg_template reg_rf_ch_rf_ch = {
     .value_range = &range_rf_ch_rf_ch
 };
 
+static struct partreg_range range_rf_setup_rf_pwr = partreg_reg_range(0, 0b11);
+static unsigned int mask_rf_setup_rf_pwr = 0b110;
+
+static struct partreg_template reg_rf_setup_rf_pwr = {
+    .reg = NRF24L01_REG_RF_SETUP,
+    .offset = 1,
+    .mask = &mask_rf_setup_rf_pwr,
+    .len = 1,
+    .value_range = &range_rf_setup_rf_pwr
+};
+
+static struct partreg_range range_rf_setup_rf_dr_hi = partreg_reg_range(0, 0b001);
+static struct partreg_range range_rf_setup_rf_dr_lo = partreg_reg_range(0b100, 0b100);
+
+static struct partreg_range* range_rf_setup_rf_dr[] = {
+	&range_rf_setup_rf_dr_hi,
+	&range_rf_setup_rf_dr_lo
+};
+
+static struct partreg_range_table range_table_rf_setup_rf_dr = {
+	.ranges = range_rf_setup_rf_dr,
+	.n_ranges = 2
+};
+
+static unsigned int mask_rf_setup_rf_dr = 0b101000;
+
+static struct partreg_template reg_rf_setup_rf_dr = {
+    .reg = NRF24L01_REG_RF_SETUP,
+    .offset = 3,
+    .mask = &mask_rf_setup_rf_dr,
+    .len = 1,
+    .value_ranges = &range_table_rf_setup_rf_dr
+};
+
+static struct partreg_range range_rf_setup_pll_lock = partreg_reg_range(0, 1);
+static unsigned int mask_rf_setup_pll_lock = 0b10000;
+
+static struct partreg_template reg_rf_setup_pll_lock = {
+    .reg = NRF24L01_REG_RF_SETUP,
+    .offset = 4,
+    .mask = &mask_rf_setup_pll_lock,
+    .len = 1,
+    .value_range = &range_rf_setup_pll_lock
+};
+
+static struct partreg_range range_rf_setup_cont_wave = partreg_reg_range(0, 1);
+static unsigned int mask_rf_setup_cont_wave = 0b10000000;
+
+static struct partreg_template reg_rf_setup_cont_wave = {
+    .reg = NRF24L01_REG_RF_SETUP,
+    .offset = 7,
+    .mask = &mask_rf_setup_cont_wave,
+    .len = 1,
+    .value_range = &range_rf_setup_cont_wave
+};
 
 static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_prim_rx,
@@ -284,11 +339,15 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_setup_retr_arc,
 	&reg_setup_retr_ard,
 	&reg_rf_ch_rf_ch,
+	&reg_rf_setup_rf_pwr,
+	&reg_rf_setup_rf_dr,
+	&reg_rf_setup_pll_lock,
+	&reg_rf_setup_cont_wave
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 23,
+	.n_regs = 27,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
