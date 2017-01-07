@@ -36,8 +36,9 @@
                                 compatible = "nordicsemi,nrf24l01";
                                 spi-max-frequency = <500000>;
                                 reg = <1>;
-                                interrupts = <23 8>;
+                                interrupts = <18 2>;
                                 interrupt-parent = <&gpio>;
+                                nrf-ce = <17>;
                         };
 
                 };

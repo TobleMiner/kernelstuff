@@ -8,6 +8,7 @@ typedef struct nrf24l01_t {
 	int						chrdev_major;
 	struct class*			chrclass;
 	struct partreg_table*	reg_table;
+	unsigned 				gpio_ce;
 } nrf24l01_t;
 
 #endif

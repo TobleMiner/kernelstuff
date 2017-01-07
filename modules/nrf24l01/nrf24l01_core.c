@@ -4,6 +4,8 @@
 #include <linux/interrupt.h>
 #include <linux/regmap.h>
 #include <linux/vmalloc.h>
+#include <linux/gpio.h>
+#include <linux/of.h>
 
 #include "nrf24l01_core.h"
 #include "nrf24l01_reg.h"
@@ -70,11 +72,19 @@ static const struct regmap_config nrf24l01_regmap_short = {
 	.use_single_rw = 1
 };
 
+static irqreturn_t nrf24l01_irq(int irq, void* data)
+{
+	struct nrf24l01_t* nrf = data;
+	return IRQ_HANDLED;
+}
+
 static struct nrf24l01_t* nrf24l01_dev;
 
 static int nrf24l01_probe(struct spi_device* spi)
 {
 	int err = 0;
+	unsigned int irq_trigger;
+	void* of_gpio_ce;
 	printk(KERN_WARNING "nrf24l01_probe\n");
 	nrf24l01_dev = vzalloc(sizeof(nrf24l01_t));
 	nrf24l01_dev->spi = spi;
@@ -94,7 +104,37 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
 		goto exit_regmapalloc;
 	}
-	chrdev_alloc(nrf24l01_dev);
+	if((err = chrdev_alloc(nrf24l01_dev)) < 0)
+	{
+		goto exit_partregalloc;
+	}
+	irq_trigger = irq_get_trigger_type(spi->irq);
+	if(!irq_trigger)
+	{
+		dev_err(&spi->dev, "IRQ trigger type not set\n");
+		err = -EINVAL;
+		goto exit_chrdevalloc;
+	}
+	if((err = devm_request_irq(&spi->dev, spi->irq, nrf24l01_irq, irq_trigger, dev_name(&spi->dev), nrf24l01_dev)))
+	{
+		dev_err(&spi->dev, "Failed to allocate interrupt\n");
+		goto exit_chrdevalloc;
+	}
+	of_gpio_ce = of_get_property(spi->dev.of_node, "nrf-ce", NULL);
+	if(!of_gpio_ce)
+	{
+        dev_err(&spi->dev, "Chip Enable not specified\n");
+		err = -EINVAL;
+        goto exit_chrdevalloc;
+	}
+	nrf24l01_dev->gpio_ce = be32_to_cpup(of_gpio_ce);
+	printk(KERN_INFO "CE GPIO: %u\n", nrf24l01_dev->gpio_ce);
+	if((err = gpio_request(nrf24l01_dev->gpio_ce, "ce")))
+	{
+		dev_err(&spi->dev, "Allocation of GPIO%u failed\n", nrf24l01_dev->gpio_ce);
+		goto exit_chrdevalloc;
+	}
+	gpio_direction_output(nrf24l01_dev->gpio_ce, 0);
 	unsigned int val = 0;
 	int ret = regmap_read(nrf24l01_dev->regmap_short, NRF24L01_REG_STATUS, &val);
 	printk(KERN_INFO "Read NRF24L01_REG_STATUS as %d with result %d\n", val, ret);
@@ -124,6 +164,10 @@ static int nrf24l01_probe(struct spi_device* spi)
 	}
 	printk(KERN_INFO "\n");
 	return 0;
+exit_chrdevalloc:
+	chrdev_free(nrf24l01_dev);
+exit_partregalloc:
+	nrf24l01_free_partregs(nrf24l01_dev);
 exit_regmapalloc:
 	regmap_exit(nrf24l01_dev->regmap_short);
 exit_nrfalloc:
@@ -135,6 +179,7 @@ exit_noalloc:
 static int nrf24l01_remove(struct spi_device* spi)
 {
 	printk(KERN_WARNING "nrf24l01_remove\n");
+	gpio_free(nrf24l01_dev->gpio_ce);
 	chrdev_free(nrf24l01_dev);
 	nrf24l01_free_partregs(nrf24l01_dev);
 	regmap_exit(nrf24l01_dev->regmap_short);

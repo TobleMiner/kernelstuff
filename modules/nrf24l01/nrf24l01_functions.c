@@ -2,6 +2,7 @@
 
 #include "nrf24l01_core.h"
 #include "nrf24l01_reg.h"
+#include "nrf24l01_spi.h"
 #include "partregmap.h"
 
 int nrf24l01_set_channel(struct nrf24l01_t* nrf, unsigned int ch)
@@ -65,4 +66,22 @@ int nrf24l01_get_address_width(struct nrf24l01_t* nrf, unsigned int* width)
 		return -EINVAL; 
 	*width += 2;
 	return 0;
+}
+
+int nrf24l01_flush_rx(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_spi_flush_rx(nrf);
+}
+
+int nrf24l01_flush_tx(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_spi_flush_tx(nrf);
+}
+
+int nrf24l01_flush(struct nrf24l01_t* nrf)
+{
+	int err = nrf24l01_flush_rx(nrf);
+	if(err < 0)
+		return err;
+	return nrf24l01_flush_tx(nrf);
 }
