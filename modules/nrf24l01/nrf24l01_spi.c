@@ -66,15 +66,39 @@ int nrf24l01_spi_write(struct spi_device* spi, unsigned char* data, unsigned int
 	return spi_write(spi, data, len);
 }
 
-int nrf24l01_write_reg(void* ctx, unsigned int reg, unsigned char* data, unsigned int len)
+int nrf24l01_spi_write_reg(nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
 {
 	int err;
 	unsigned char* regwrite = vmalloc(len + 1);
-	if(IS_ERR(regwrite))
-		return PTR_ERR(regwrite);
+	if(!regwrite)
+		return -ENOMEM;
 	*regwrite = NRF24L01_CMD_W_REGISTER | (u8)reg;
 	memcpy(regwrite + 1, data, len);
-	err = nrf24l01_spi_write(((nrf24l01_t*)ctx)->spi, regwrite, len); 
+	err = nrf24l01_spi_write(nrf->spi, regwrite, len); 
 	vfree(regwrite);
 	return err;
+}
+
+int nrf24l01_spi_read_reg(nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
+{
+	int err;
+	unsigned char* read_buffer;
+	unsigned char* write_buffer = vzalloc(len + 1);
+	if(!write_buffer)
+		goto exit_noalloc;
+	*write_buffer = NRF24L01_CMD_W_REGISTER | (u8)reg;
+	read_buffer = vmalloc(len + 1);
+	if(!read_buffer)
+		goto exit_writealloc;
+	struct spi_transfer trans = {
+		.tx_buf = write_buffer,
+		.rx_buf = read_buffer,
+		.len = len + 1
+	};
+	err = spi_sync_transfer(nrf->spi, &trans, 1);
+	vfree(read_buffer);
+exit_writealloc:
+	vfree(write_buffer);
+exit_noalloc:
+	return err;	
 }
