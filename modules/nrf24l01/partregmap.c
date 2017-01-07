@@ -45,9 +45,11 @@ static int partreg_regmap_write(struct partreg* reg, unsigned int value)
 
 static int partreg_custom_read(struct partreg* reg, unsigned int* value, unsigned int maxlen)
 {
+	int err;
 	unsigned int len = reg->len;
 	if(reg->len_func != NULL)
-		len = reg->len_func(reg->ctx, reg->reg);
+		if((err = reg->len_func(reg->ctx, reg->reg, &len)) < 0)
+			return err;
 	len = min(len, maxlen);		
 	return reg->reg_read(reg->ctx, reg->reg, value, len);
 }
@@ -55,9 +57,11 @@ static int partreg_custom_read(struct partreg* reg, unsigned int* value, unsigne
 static int partreg_custom_write(struct partreg* reg, unsigned int* value, unsigned int maxlen)
 {
 	// Don't perform shifting/masking as we don't need it
+	int err;
 	unsigned int len = reg->len;
 	if(reg->len_func != NULL)
-		len = reg->len_func(reg->ctx, reg->reg);
+		if((err = reg->len_func(reg->ctx, reg->reg, &len)) < 0)
+			return err;
 	len = min(len, maxlen);		
 	return reg->reg_write(reg->ctx, reg->reg, value, len);
 }
