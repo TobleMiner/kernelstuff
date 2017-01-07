@@ -15,27 +15,29 @@
 
 enum nrf24l01_modules {nRF24L01, nRF24L01p};
 
-static const struct regmap_range regmap_wr_table_short_yes[] = { regmap_reg_range(0x00, 0x07), regmap_reg_range(0x0C, 0x0F), regmap_reg_range(0x11, 0x16) };
+static const struct regmap_range regmap_wr_table_short_yes[] = { regmap_reg_range(0x00, 0x07), regmap_reg_range(0x0C, 0x0F),
+	regmap_reg_range(0x11, 0x16), regmap_reg_range(0x1C, 0x1D) };
 static const struct regmap_range regmap_wr_table_short_no[] = { regmap_reg_range(0x08, 0x08), regmap_reg_range(0x17, 0x17) };
 
 static const struct regmap_access_table regmap_wr_table_short = {
 	.yes_ranges = regmap_wr_table_short_yes,
-	.n_yes_ranges = 3,
+	.n_yes_ranges = 4,
 	.no_ranges = regmap_wr_table_short_no,
 	.n_no_ranges = 2,
 };
 
-static const struct regmap_range regmap_rd_table_short_yes[] = { regmap_reg_range(0x00, 0x09), regmap_reg_range(0x0C, 0x0F), regmap_reg_range(0x11, 0x17) };
+static const struct regmap_range regmap_rd_table_short_yes[] = { regmap_reg_range(0x00, 0x09), regmap_reg_range(0x0C, 0x0F), 
+	regmap_reg_range(0x11, 0x17), regmap_reg_range(0x1C, 0x1D) };
 static const struct regmap_range regmap_rd_table_short_no[] = { regmap_reg_range(0x0A, 0x0B), regmap_reg_range(0x10, 0x10) };
 
 static const struct regmap_access_table regmap_rd_table_short = {
 	.yes_ranges = regmap_rd_table_short_yes,
-	.n_yes_ranges = 3,
+	.n_yes_ranges = 4,
 	.no_ranges = regmap_rd_table_short_no,
 	.n_no_ranges = 2
 };
 
-static const struct regmap_range regmap_volatile_table_short_yes[] = { regmap_reg_range(0x00, 0x00), regmap_reg_range(0x07, 0x09), regmap_reg_range(0x17, 0x17) };
+static const struct regmap_range regmap_volatile_table_short_yes[] = { regmap_reg_range(0x07, 0x09), regmap_reg_range(0x17, 0x17) };
 static const struct regmap_range regmap_volatile_table_short_no[] = { regmap_reg_range(0x01, 0x06), regmap_reg_range(0x0A, 0x16) };
 
 static const struct regmap_access_table regmap_volatile_table_short = {
