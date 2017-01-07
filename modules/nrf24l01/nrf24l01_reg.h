@@ -13,7 +13,7 @@
 #define NRF24L01_REG_STATUS			0x07
 #define NRF24L01_REG_OBSERVE_TX		0x08
 #define NRF24L01_REG_RPD			0x09
-#define NRF24L01_REG_RX_ADDR_PO 	0x0A
+#define NRF24L01_REG_RX_ADDR_P0 	0x0A
 #define NRF24L01_REG_RX_ADDR_P1 	0x0B
 #define NRF24L01_REG_RX_ADDR_P2 	0x0C
 #define NRF24L01_REG_RX_ADDR_P3 	0x0D
@@ -90,5 +90,9 @@
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf);
 void nrf24l01_free_partregs(struct nrf24l01_t* nrf);
+
+int nrf24l01_reg_rx_addr_write(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
+int nrf24l01_reg_rx_addr_read(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
+int nrf24l01_reg_get_addr_len(void* ctx, unsigned int reg, unsigned int* len);
 
 #endif
