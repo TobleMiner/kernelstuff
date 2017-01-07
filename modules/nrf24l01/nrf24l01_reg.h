@@ -86,6 +86,8 @@
 
 #define NRF24L01_MASK_ARC		0b1111
 
+#define NRF24L01_VREG_SETUP_AW_AW	19
+
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf);
 void nrf24l01_free_partregs(struct nrf24l01_t* nrf);
 
