@@ -51,11 +51,6 @@ typedef struct partreg_layout {
 	unsigned int n_regs;
 } partreg_layout;
 
-static int partreg_in_range(struct partreg* reg, unsigned int value);
-static int partreg_custom_read(struct partreg* reg, unsigned int* value, unsigned int maxlen);
-static int partreg_custom_write(struct partreg* reg, unsigned int* value, unsigned int maxlen);
-static int partreg_regmap_read(struct partreg* reg, unsigned int* value);
-static int partreg_regmap_write(struct partreg* reg, unsigned int value);
 int partreg_write(struct partreg* reg, unsigned int* value, unsigned int maxlen);
 int partreg_read(struct partreg* reg, unsigned int* value, unsigned int maxlen);
 int partreg_table_write(struct partreg_table* table, unsigned int reg, unsigned int* value, unsigned int maxlen);
