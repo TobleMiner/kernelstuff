@@ -585,7 +585,7 @@ static unsigned int mask_fifo_status_rx_full = 0b00000010;
 static struct partreg_template reg_fifo_status_rx_full = {
 	.name = "fifo_status_rx_full",
     .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 0,
+    .offset = 1,
     .mask = &mask_fifo_status_rx_full,
     .len = 1,
     .value_range = &range_fifo_status_rx_full
@@ -597,7 +597,7 @@ static unsigned int mask_fifo_status_tx_empty = 0b00010000;
 static struct partreg_template reg_fifo_status_tx_empty = {
 	.name = "fifo_status_tx_empty",
     .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 0,
+    .offset = 4,
     .mask = &mask_fifo_status_tx_empty,
     .len = 1,
     .value_range = &range_fifo_status_tx_empty
@@ -609,7 +609,7 @@ static unsigned int mask_fifo_status_tx_full = 0b00100000;
 static struct partreg_template reg_fifo_status_tx_full = {
 	.name = "fifo_status_tx_full",
     .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 0,
+    .offset = 5,
     .mask = &mask_fifo_status_tx_full,
     .len = 1,
     .value_range = &range_fifo_status_tx_full
@@ -621,12 +621,83 @@ static unsigned int mask_fifo_status_tx_reuse = 0b01000000;
 static struct partreg_template reg_fifo_status_tx_reuse = {
 	.name = "fifo_status_tx_reuse",
     .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 0,
+    .offset = 6,
     .mask = &mask_fifo_status_tx_reuse,
     .len = 1,
     .value_range = &range_fifo_status_tx_reuse
 };
 
+static struct partreg_range range_dynpd_dpl_p0 = partreg_reg_range(0, 1);
+static unsigned int mask_dynpd_dpl_p0 = 0b00000001;
+
+static struct partreg_template reg_dynpd_dpl_p0 = {
+	.name = "fifo_dynpd_dpl_p0",
+    .reg = NRF24L01_REG_DYNPD,
+    .offset = 0,
+    .mask = &mask_dynpd_dpl_p0,
+    .len = 1,
+    .value_range = &range_dynpd_dpl_p0
+};
+
+static struct partreg_range range_dynpd_dpl_p1 = partreg_reg_range(0, 1);
+static unsigned int mask_dynpd_dpl_p1 = 0b00000010;
+
+static struct partreg_template reg_dynpd_dpl_p1 = {
+	.name = "fifo_dynpd_dpl_p1",
+    .reg = NRF24L01_REG_DYNPD,
+    .offset = 1,
+    .mask = &mask_dynpd_dpl_p1,
+    .len = 1,
+    .value_range = &range_dynpd_dpl_p1
+};
+
+static struct partreg_range range_dynpd_dpl_p2 = partreg_reg_range(0, 1);
+static unsigned int mask_dynpd_dpl_p2 = 0b00000100;
+
+static struct partreg_template reg_dynpd_dpl_p2 = {
+	.name = "fifo_dynpd_dpl_p2",
+    .reg = NRF24L01_REG_DYNPD,
+    .offset = 2,
+    .mask = &mask_dynpd_dpl_p2,
+    .len = 1,
+    .value_range = &range_dynpd_dpl_p2
+};
+
+static struct partreg_range range_dynpd_dpl_p3 = partreg_reg_range(0, 1);
+static unsigned int mask_dynpd_dpl_p3 = 0b00001000;
+
+static struct partreg_template reg_dynpd_dpl_p3 = {
+	.name = "fifo_dynpd_dpl_p3",
+    .reg = NRF24L01_REG_DYNPD,
+    .offset = 3,
+    .mask = &mask_dynpd_dpl_p3,
+    .len = 1,
+    .value_range = &range_dynpd_dpl_p3
+};
+
+static struct partreg_range range_dynpd_dpl_p4 = partreg_reg_range(0, 1);
+static unsigned int mask_dynpd_dpl_p4 = 0b00010000;
+
+static struct partreg_template reg_dynpd_dpl_p4 = {
+	.name = "fifo_dynpd_dpl_p4",
+    .reg = NRF24L01_REG_DYNPD,
+    .offset = 4,
+    .mask = &mask_dynpd_dpl_p4,
+    .len = 1,
+    .value_range = &range_dynpd_dpl_p4
+};
+
+static struct partreg_range range_dynpd_dpl_p5 = partreg_reg_range(0, 1);
+static unsigned int mask_dynpd_dpl_p5 = 0b00100000;
+
+static struct partreg_template reg_dynpd_dpl_p5 = {
+	.name = "fifo_dynpd_dpl_p5",
+    .reg = NRF24L01_REG_DYNPD,
+    .offset = 5,
+    .mask = &mask_dynpd_dpl_p5,
+    .len = 1,
+    .value_range = &range_dynpd_dpl_p5
+};
 
 static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_prim_rx,
@@ -682,11 +753,17 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_fifo_status_tx_empty,
 	&reg_fifo_status_tx_full,
 	&reg_fifo_status_tx_reuse,
+	&reg_dynpd_dpl_p0,
+	&reg_dynpd_dpl_p1,
+	&reg_dynpd_dpl_p2,
+	&reg_dynpd_dpl_p3,
+	&reg_dynpd_dpl_p4,
+	&reg_dynpd_dpl_p5,
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 53,
+	.n_regs = 59,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
