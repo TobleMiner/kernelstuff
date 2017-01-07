@@ -96,6 +96,7 @@ int nrf24l01_spi_read_reg(nrf24l01_t* nrf, unsigned int reg, unsigned char* data
 		.len = len + 1
 	};
 	err = spi_sync_transfer(nrf->spi, &trans, 1);
+	memcpy(data, read_buffer + 1, len);
 	vfree(read_buffer);
 exit_writealloc:
 	vfree(write_buffer);
