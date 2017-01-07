@@ -67,12 +67,12 @@ int nrf24l01_read_short_reg(void* ctx, unsigned int reg, unsigned int* val)
 	return 0;
 }
 
-int nrf24l01_spi_write(struct spi_device* spi, unsigned char* data, unsigned int len)
+static int nrf24l01_spi_write(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
-	return spi_write(spi, data, len);
+	return spi_write(nrf->spi, data, len);
 }
 
-int nrf24l01_spi_cmd_write(struct nrf24l01_t* nrf, u8 cmd, unsigned char* data, unsigned int len)
+static int nrf24l01_spi_cmd_write(struct nrf24l01_t* nrf, u8 cmd, unsigned char* data, unsigned int len)
 {
 	int err;
 	unsigned char* regwrite = vmalloc(len + 1);
@@ -80,13 +80,13 @@ int nrf24l01_spi_cmd_write(struct nrf24l01_t* nrf, u8 cmd, unsigned char* data, 
 		return -ENOMEM;
 	*regwrite = cmd;
 	memcpy(regwrite + 1, data, len);
-	err = nrf24l01_spi_write(nrf->spi, regwrite, len + 1); 
+	err = nrf24l01_spi_write(nrf, regwrite, len + 1); 
 	vfree(regwrite);
 	return err;
 }
 
 // There is no read only mode
-int nrf24l01_spi_cmd_read(struct nrf24l01_t* nrf, u8 cmd, unsigned char* dest, unsigned int len)
+static int nrf24l01_spi_cmd_read(struct nrf24l01_t* nrf, u8 cmd, unsigned char* dest, unsigned int len)
 {
 	printk(KERN_INFO "Performing cmd read (%u bytes)\n", len);
 	int err;
@@ -121,4 +121,58 @@ int nrf24l01_spi_write_reg(struct nrf24l01_t* nrf, unsigned int reg, unsigned ch
 int nrf24l01_spi_read_reg(struct nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
 {
 	return nrf24l01_spi_cmd_read(nrf, NRF24L01_CMD_R_REGISTER | (u8)reg, data, len);
+}
+
+int nrf24l01_spi_read_rx_pld(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
+{
+	return nrf24l01_spi_cmd_read(nrf, NRF24L01_CMD_R_RX_PAYLOAD, data, len);
+}
+
+int nrf24l01_spi_write_tx_pld(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
+{
+	return nrf24l01_spi_cmd_write(nrf, NRF24L01_CMD_W_TX_PAYLOAD, data, len);
+}
+
+int nrf24l01_spi_flush_tx(struct nrf24l01_t* nrf)
+{
+	unsigned char flush_tx = NRF24L01_CMD_FLUSH_TX;
+	return nrf24l01_spi_write(nrf, &flush_tx, 1);
+}
+
+int nrf24l01_spi_flush_rx(struct nrf24l01_t* nrf)
+{
+	unsigned char flush_rx = NRF24L01_CMD_FLUSH_RX;
+	return nrf24l01_spi_write(nrf, &flush_rx, 1);
+}
+
+int nrf24l01_spi_reuse_tx_pl(struct nrf24l01_t* nrf)
+{
+	unsigned char reuse_tx_pl = NRF24L01_CMD_REUSE_TX_PL;
+	return nrf24l01_spi_write(nrf, &reuse_tx_pl, 1);
+}
+
+int nrf24l01_spi_read_rx_pl_width(struct nrf24l01_t* nrf, unsigned char* width)
+{
+	int err;
+	u8 cmd = NRF24L01_CMD_R_RX_PL_WID;
+	if((err = spi_w8r8(nrf->spi, cmd)) < 0)
+		return err;
+	*width = (unsigned char)err;
+	return err;
+}
+
+int nrf24l01_spi_write_ack_pld(struct nrf24l01_t* nrf, unsigned int pipe, unsigned char* data, unsigned int len)
+{
+	return nrf24l01_spi_cmd_write(nrf, NRF24L01_CMD_W_ACK_PAYLOAD | (u8)pipe, data, len);
+}
+
+int nrf24l01_spi_write_tx_pld_no_ack(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
+{
+	return nrf24l01_spi_cmd_write(nrf, NRF24L01_CMD_W_TX_PAYLOAD_NO_ACK, data, len);
+}
+
+int nrf24l01_spi_nop(struct nrf24l01_t* nrf)
+{
+    unsigned char nop = NRF24L01_CMD_NOP;
+    return nrf24l01_spi_write(nrf, &nop, 1);
 }
