@@ -72,29 +72,29 @@ int nrf24l01_spi_write(struct spi_device* spi, unsigned char* data, unsigned int
 	return spi_write(spi, data, len);
 }
 
-int nrf24l01_spi_write_reg(nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
+int nrf24l01_spi_cmd_write(struct nrf24l01_t* nrf, u8 cmd, unsigned char* data, unsigned int len)
 {
 	int err;
 	unsigned char* regwrite = vmalloc(len + 1);
 	if(!regwrite)
 		return -ENOMEM;
-	*regwrite = NRF24L01_CMD_W_REGISTER | (u8)reg;
+	*regwrite = cmd;
 	memcpy(regwrite + 1, data, len);
-	printk(KERN_INFO "Long register write (reg=%u,len=%u)\n", reg, len);
 	err = nrf24l01_spi_write(nrf->spi, regwrite, len + 1); 
 	vfree(regwrite);
 	return err;
 }
 
-int nrf24l01_spi_read_reg(nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
+// There is no read only mode
+int nrf24l01_spi_cmd_read(struct nrf24l01_t* nrf, u8 cmd, unsigned char* dest, unsigned int len)
 {
-	printk(KERN_INFO "Performing long register read (%u bytes)\n", len);
+	printk(KERN_INFO "Performing cmd read (%u bytes)\n", len);
 	int err;
 	unsigned char* read_buffer;
 	unsigned char* write_buffer = vzalloc(len + 1);
 	if(!write_buffer)
 		goto exit_noalloc;
-	*write_buffer = NRF24L01_CMD_R_REGISTER | (u8)reg;
+	*write_buffer = cmd;
 	read_buffer = vmalloc(len + 1);
 	if(!read_buffer)
 		goto exit_writealloc;
@@ -104,10 +104,21 @@ int nrf24l01_spi_read_reg(nrf24l01_t* nrf, unsigned int reg, unsigned char* data
 		.len = len + 1
 	};
 	err = spi_sync_transfer(nrf->spi, &trans, 1);
-	memcpy(data, read_buffer + 1, len);
+	memcpy(dest, read_buffer + 1, len);
 	vfree(read_buffer);
 exit_writealloc:
 	vfree(write_buffer);
 exit_noalloc:
-	return err;	
+	return err;		
+}
+
+int nrf24l01_spi_write_reg(struct nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
+{
+	printk(KERN_INFO "Long register write (reg=%u,len=%u)\n", reg, len);
+	return nrf24l01_spi_cmd_write(nrf, NRF24L01_CMD_W_REGISTER | (u8)reg, data, len);
+}
+
+int nrf24l01_spi_read_reg(struct nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
+{
+	return nrf24l01_spi_cmd_read(nrf, NRF24L01_CMD_R_REGISTER | (u8)reg, data, len);
 }
