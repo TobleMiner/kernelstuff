@@ -699,6 +699,42 @@ static struct partreg_template reg_dynpd_dpl_p5 = {
     .value_range = &range_dynpd_dpl_p5
 };
 
+static struct partreg_range range_feature_en_dyn_ack = partreg_reg_range(0, 1);
+static unsigned int mask_feature_en_dyn_ack = 0b00000001;
+
+static struct partreg_template reg_feature_en_dyn_ack = {
+	.name = "feature_en_dyn_ack",
+    .reg = NRF24L01_REG_FEATURE,
+    .offset = 0,
+    .mask = &mask_feature_en_dyn_ack,
+    .len = 1,
+    .value_range = &range_feature_en_dyn_ack
+};
+
+static struct partreg_range range_feature_en_ack_pay = partreg_reg_range(0, 1);
+static unsigned int mask_feature_en_ack_pay = 0b00000010;
+
+static struct partreg_template reg_feature_en_ack_pay = {
+	.name = "feature_en_ack_pay",
+    .reg = NRF24L01_REG_FEATURE,
+    .offset = 1,
+    .mask = &mask_feature_en_ack_pay,
+    .len = 1,
+    .value_range = &range_feature_en_ack_pay
+};
+
+static struct partreg_range range_feature_en_dpl = partreg_reg_range(0, 1);
+static unsigned int mask_feature_en_dpl = 0b00000100;
+
+static struct partreg_template reg_feature_en_dpl = {
+	.name = "feature_en_dpl",
+    .reg = NRF24L01_REG_FEATURE,
+    .offset = 2,
+    .mask = &mask_feature_en_dpl,
+    .len = 1,
+    .value_range = &range_feature_en_dpl
+};
+
 static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_prim_rx,
 	&reg_config_pwr_up,
@@ -759,11 +795,14 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_dynpd_dpl_p3,
 	&reg_dynpd_dpl_p4,
 	&reg_dynpd_dpl_p5,
+	&reg_feature_en_dyn_ack,
+	&reg_feature_en_ack_pay,
+	&reg_feature_en_dpl
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 59,
+	.n_regs = 62,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
