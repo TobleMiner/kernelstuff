@@ -93,8 +93,8 @@
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf);
 void nrf24l01_free_partregs(struct nrf24l01_t* nrf);
-int nrf24l01_reg_rx_addr_write(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
-int nrf24l01_reg_rx_addr_read(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
+int nrf24l01_reg_addr_write(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
+int nrf24l01_reg_addr_read(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
 int nrf24l01_reg_get_addr_len(void* ctx, unsigned int reg, unsigned int* len);
 
 #endif
