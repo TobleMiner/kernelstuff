@@ -10,6 +10,7 @@
 #include "nrf24l01_cmd.h"
 #include "nrf24l01_spi.h"
 #include "nrf24l01_chrdev.h"
+#include "nrf24l01_functions.h"
 #include "partregmap.h"
 
 enum nrf24l01_modules {nRF24L01, nRF24L01p};
@@ -102,6 +103,24 @@ static int nrf24l01_probe(struct spi_device* spi)
 	val = 0;
 	err = partreg_table_read(nrf24l01_dev->reg_table, 1, &val, 1);
 	printk(KERN_INFO "Read back from partreg: %d, err: %d", val, err);
+	printk(KERN_INFO "Setting address width to 4\n");
+	val = 4;
+	err = nrf24l01_set_address_width(nrf24l01_dev, val);
+	printk(KERN_INFO "Wrote address width, err: %d\n", err);
+	err = nrf24l01_get_address_width(nrf24l01_dev, &val);
+	printk(KERN_INFO "Read back address width: %u, err: %d\n", val, err);
+	unsigned char address[] = {0x42, 0x42, 0x42, 0x42, 0x55};
+	printk(KERN_INFO "Writing address\n");
+	err = partreg_table_write(nrf24l01_dev->reg_table, NRF24L01_VREG_RX_ADDR_P0, (unsigned int*) address, 5);
+	printk(KERN_INFO "Wrote address, err: %d\n", err);
+	printk(KERN_INFO "Reading back address\n");
+	err = partreg_table_read(nrf24l01_dev->reg_table, NRF24L01_VREG_RX_ADDR_P0, (unsigned int*) address, 5);
+	printk(KERN_INFO "Read back address: err=%d, address=", err);
+	for(val = 0; val < 5; val++)
+	{
+		printk(KERN_INFO "%x", address[val]);
+	}
+	printk(KERN_INFO "\n");
 	return 0;
 exit_regmapalloc:
 	regmap_exit(nrf24l01_dev->regmap_short);

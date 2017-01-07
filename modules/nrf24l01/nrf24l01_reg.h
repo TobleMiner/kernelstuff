@@ -86,11 +86,13 @@
 
 #define NRF24L01_MASK_ARC		0b1111
 
-#define NRF24L01_VREG_SETUP_AW_AW	19
+#define NRF24L01_VREG_SETUP_AW_AW		19
+#define NRF24L01_VREG_RF_CH_RF_CH		22
+#define	NRF24L01_VREG_RF_SETUP_RF_PWR	23
+#define NRF24L01_VREG_RX_ADDR_P0		35
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf);
 void nrf24l01_free_partregs(struct nrf24l01_t* nrf);
-
 int nrf24l01_reg_rx_addr_write(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
 int nrf24l01_reg_rx_addr_read(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
 int nrf24l01_reg_get_addr_len(void* ctx, unsigned int reg, unsigned int* len);

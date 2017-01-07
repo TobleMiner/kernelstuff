@@ -57,12 +57,14 @@ static int partreg_custom_read(struct partreg* reg, unsigned int* value, unsigne
 static int partreg_custom_write(struct partreg* reg, unsigned int* value, unsigned int maxlen)
 {
 	// Don't perform shifting/masking as we don't need it
+	printk(KERN_INFO "Using custom reg write func (reg=%u)\n", reg->reg);
 	int err;
 	unsigned int len = reg->len;
 	if(reg->len_func != NULL)
 		if((err = reg->len_func(reg->ctx, reg->reg, &len)) < 0)
 			return err;
 	len = min(len, maxlen);		
+	printk(KERN_INFO "Using custom reg write len (reg=%u,len=%u)\n", reg->reg, len);
 	return reg->reg_write(reg->ctx, reg->reg, value, len);
 }
 
@@ -85,6 +87,7 @@ int partreg_write(struct partreg* reg, unsigned int* value, unsigned int maxlen)
 		return partreg_custom_write(reg, value, maxlen);
 	else if(reg->regmap)
 		return partreg_regmap_write(reg, *value);
+	printk(KERN_WARNING "No valid register accessor configured (reg=%u)\n", reg->reg);
 	return -EINVAL;
 }
 
@@ -105,6 +108,7 @@ int partreg_table_write(struct partreg_table* table, unsigned int reg, unsigned 
 		return -EINVAL;
 	if(table->regs[reg] == NULL)
 		return -EINVAL;
+	printk(KERN_INFO "Found reg %u @%p\n", reg, table->regs[reg]);
 	return partreg_write(table->regs[reg], value, maxlen);
 }
 
