@@ -62,7 +62,7 @@ int nrf24l01_get_address_width(struct nrf24l01_t* nrf, unsigned int* width)
 	if(err < 0)
 		return err;
 	if(*width < 1 || *width > 3)
-		return -EIO; 
+		return -EINVAL; 
 	*width += 2;
 	return 0;
 }
