@@ -74,19 +74,21 @@ int nrf24l01_spi_write_reg(nrf24l01_t* nrf, unsigned int reg, unsigned char* dat
 		return -ENOMEM;
 	*regwrite = NRF24L01_CMD_W_REGISTER | (u8)reg;
 	memcpy(regwrite + 1, data, len);
-	err = nrf24l01_spi_write(nrf->spi, regwrite, len); 
+	printk(KERN_INFO "Long register write (reg=%u,len=%u)\n", reg, len);
+	err = nrf24l01_spi_write(nrf->spi, regwrite, len + 1); 
 	vfree(regwrite);
 	return err;
 }
 
 int nrf24l01_spi_read_reg(nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
 {
+	printk(KERN_INFO "Performing long register read (%u bytes)\n", len);
 	int err;
 	unsigned char* read_buffer;
 	unsigned char* write_buffer = vzalloc(len + 1);
 	if(!write_buffer)
 		goto exit_noalloc;
-	*write_buffer = NRF24L01_CMD_W_REGISTER | (u8)reg;
+	*write_buffer = NRF24L01_CMD_R_REGISTER | (u8)reg;
 	read_buffer = vmalloc(len + 1);
 	if(!read_buffer)
 		goto exit_writealloc;
