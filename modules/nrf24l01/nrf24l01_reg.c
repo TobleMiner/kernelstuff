@@ -3,7 +3,9 @@
 #include <linux/vmalloc.h>
 
 #include "nrf24l01_reg.h"
+#include "nrf24l01_spi.h"
 #include "nrf24l01_core.h"
+#include "nrf24l01_functions.h"
 #include "partregmap.h"
 
 static struct partreg_range range_config_prim_rx = partreg_reg_range(0, 1);
@@ -403,6 +405,14 @@ static struct partreg_template reg_rpd_rpd = {
     .value_range = &range_rpd_rpd
 };
 
+static struct partreg_template reg_rx_addr_p0 = {
+    .reg = NRF24L01_REG_RX_ADDR_P0,
+    .offset = 0,
+    .len_func = nrf24l01_reg_get_addr_len,
+	.reg_write = nrf24l01_reg_rx_addr_write,
+	.reg_read = nrf24l01_reg_rx_addr_read
+};
+
 static struct partreg_template* nrf24l01_regs[] = {
 	&reg_config_prim_rx,
 	&reg_config_pwr_up,
@@ -438,12 +448,13 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_status_rx_dr,
 	&reg_observe_tx_arc_cnt,
 	&reg_observe_tx_plos_cnt,
-	&reg_rpd_rpd
+	&reg_rpd_rpd,
+	&reg_rx_addr_p0
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 34,
+	.n_regs = 35,
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
@@ -457,4 +468,19 @@ int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
 void nrf24l01_free_partregs(nrf24l01_t* nrf)
 {
 	partreg_free_table(nrf->reg_table);
+}
+
+int nrf24l01_reg_rx_addr_read(void* ctx, unsigned int reg, unsigned int* data, unsigned int len)
+{
+	return nrf24l01_spi_read_reg((nrf24l01_t*)ctx, reg, (unsigned char*)data, len);
+}
+
+int nrf24l01_reg_rx_addr_write(void* ctx, unsigned int reg, unsigned int* data, unsigned int len)
+{
+	return nrf24l01_spi_write_reg((nrf24l01_t*)ctx, reg, (unsigned char*)data, len);
+}
+
+int nrf24l01_reg_get_addr_len(void* ctx, unsigned int reg, unsigned int* len)
+{
+	return nrf24l01_get_address_width((nrf24l01_t*) ctx, len);
 }
