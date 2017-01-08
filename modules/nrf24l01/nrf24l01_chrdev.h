@@ -1,9 +1,22 @@
 #ifndef _NRF24L01_CHRDEV_H_
 #define _NRF24L01_CHRDEV_H_
 
+#include <linux/device.h>
+#include <linux/cdev.h>
+#include <linux/mutex.h>
+
 #include "nrf24l01_core.h"
 
-int chrdev_alloc(nrf24l01_t* nrf);
-int chrdev_free(nrf24l01_t* nrf);
+typedef struct nrf24l01_chrdev {
+	struct nrf24l01_t*	nrf;
+	struct device*		dev;
+	struct cdev			cdev;
+	struct class*		class;
+	dev_t				devt;	
+	struct mutex		lock;
+} nrf24l01_chrdev;
+
+int chrdev_alloc(struct nrf24l01_t* nrf);
+void chrdev_free(struct nrf24l01_t* nrf);
 
 #endif
