@@ -85,3 +85,43 @@ int nrf24l01_flush(struct nrf24l01_t* nrf)
 		return err;
 	return nrf24l01_flush_tx(nrf);
 }
+
+int nrf24l01_set_pwr_up(struct nrf24l01_t* nrf, unsigned int state)
+{
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_PWR_UP, &state, 1);
+}
+
+int nrf24l01_pwr_up(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_set_pwr_up(nrf, 1);
+}
+
+int nrf24l01_pwr_down(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_set_pwr_up(nrf, 0);
+}
+
+int nrf24l01_get_pwr_state(struct nrf24l01_t* nrf, unsigned int* state)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_PWR_UP, state, 1);
+}
+
+int nrf24l01_set_prim_rx(struct nrf24l01_t* nrf, unsigned int state)
+{
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_PRIM_RX, &state, 1);
+}
+
+int nrf24l01_set_rx(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_set_prim_rx(nrf, 1);
+}
+
+int nrf24l01_set_tx(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_set_prim_rx(nrf, 0);
+}
+
+int nrf24l01_get_prim_rx(struct nrf24l01_t* nrf, unsigned int* state)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_PRIM_RX, state, 1);
+}
