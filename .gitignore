@@ -34,3 +34,4 @@ modules.builtin
 *.gdb
 *.dtb
 *.dtbo
+*.dto
