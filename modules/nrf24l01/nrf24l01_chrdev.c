@@ -90,6 +90,7 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 	}
 	nrfchr->nrf = nrf;
 	nrf->chrdev = nrfchr;
+	mutex_init(&nrfchr->lock);
 	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, NRF24L01_CHRDEV_NAME)))
 		goto exit_nrfchralloc;
 	nrfchr->class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
