@@ -1,3 +1,4 @@
+#include <linux/gpio.h>
 #include <linux/regmap.h>
 
 #include "nrf24l01_core.h"
@@ -70,12 +71,20 @@ int nrf24l01_get_address_width(struct nrf24l01_t* nrf, unsigned int* width)
 
 int nrf24l01_flush_rx(struct nrf24l01_t* nrf)
 {
-	return nrf24l01_spi_flush_rx(nrf);
+	int err;
+	mutex_lock(nrf->m_rx_path);
+	err = nrf24l01_spi_flush_rx(nrf);
+	mutex_unlock(nrf->m_rx_path);
+	return err;
 }
 
 int nrf24l01_flush_tx(struct nrf24l01_t* nrf)
 {
-	return nrf24l01_spi_flush_tx(nrf);
+	int err;
+	mutex_lock(nrf->m_tx_path);
+	err = nrf24l01_spi_flush_tx(nrf);
+	mutex_unlock(nrf->m_tx_path);
+	return err;
 }
 
 int nrf24l01_flush(struct nrf24l01_t* nrf)
@@ -149,3 +158,9 @@ int nrf24l01_get_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned i
 {
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_TX_ADDR, (unsigned int*)addr, len);
 }
+
+void nrf24l01_set_ce(struct nrf24l01_t* nrf, unsigned int state)
+{
+	gpio_set_value(nrf->gpio_ce, state);
+}
+

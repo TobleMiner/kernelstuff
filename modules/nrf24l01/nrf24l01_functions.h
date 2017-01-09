@@ -24,5 +24,9 @@ int nrf24l01_set_rx_addr(struct nrf24l01_t* nrf, unsigned int* pipe, unsigned ch
 int nrf24l01_get_rx_addr(struct nrf24l01_t* nrf, unsigned int* pipe, unsigned char* addr, unsigned int len);
 int nrf24l01_set_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned int len);
 int nrf24l01_get_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned int len);
+void nrf24l01_set_ce(struct nrf24l01_t* nrf, unsigned int state);
+
+#define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)
+#define NRF24L01_CE_LO(nrf) nrf24l01_set_ce(nrf, 0)
 
 #endif
