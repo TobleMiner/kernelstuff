@@ -2,7 +2,6 @@
 #include <linux/fs.h>
 #include <linux/device.h>
 #include <linux/sysfs.h>
-#include <linux/llist.h>
 #include <linux/cdev.h>
 #include <linux/errno.h>
 #include <linux/err.h>
