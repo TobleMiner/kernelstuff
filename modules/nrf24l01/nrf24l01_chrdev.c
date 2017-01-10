@@ -16,6 +16,8 @@
 static int dev_open(struct inode* inodep, struct file *filep)
 {
 	struct nrf24l01_t* nrf = ((struct nrf24l01_chrdev*)container_of(inodep->i_cdev, struct nrf24l01_chrdev, cdev))->nrf;
+	if(!mutex_trylock(&nrf->chrdev->lock))
+		return -EBUSY;
 	filep->private_data = nrf;
 	return 0;
 }
@@ -34,6 +36,8 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 
 static int dev_release(struct inode *inodep, struct file *filep)
 {
+	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
+	mutex_unlock(&nrf->chrdev->lock);
 	return 0;
 }
 

@@ -20,6 +20,8 @@ int nrf24l01_set_prim_rx(struct nrf24l01_t* nrf, unsigned int state);
 int nrf24l01_set_rx(struct nrf24l01_t* nrf);
 int nrf24l01_set_tx(struct nrf24l01_t* nrf);
 int nrf24l01_get_prim_rx(struct nrf24l01_t* nrf, unsigned int* state);
+int nrf24l01_set_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int width);
+int nrf24l01_get_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* width);
 int nrf24l01_set_rx_addr(struct nrf24l01_t* nrf, unsigned int* pipe, unsigned char* addr, unsigned int len);
 int nrf24l01_get_rx_addr(struct nrf24l01_t* nrf, unsigned int* pipe, unsigned char* addr, unsigned int len);
 int nrf24l01_set_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned int len);
