@@ -5,8 +5,6 @@
 #include <linux/cdev.h>
 #include <linux/mutex.h>
 
-#include "nrf24l01_core.h"
-
 typedef struct nrf24l01_chrdev {
 	struct nrf24l01_t*	nrf;
 	struct device*		dev;

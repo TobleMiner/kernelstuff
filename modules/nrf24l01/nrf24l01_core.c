@@ -6,6 +6,7 @@
 #include <linux/vmalloc.h>
 #include <linux/gpio.h>
 #include <linux/of.h>
+#include <linux/wait.h>
 
 #include "nrf24l01_core.h"
 #include "nrf24l01_reg.h"
@@ -75,6 +76,7 @@ static const struct regmap_config nrf24l01_regmap_short = {
 static irqreturn_t nrf24l01_irq(int irq, void* data)
 {
 	struct nrf24l01_t* nrf = data;
+	wake_up_interruptible(&nrf->worker.queue);
 	return IRQ_HANDLED;
 }
 
@@ -110,6 +112,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
 		goto exit_partregalloc;
 	}
+	init_waitqueue_head(&nrf24l01_dev->worker.queue);
 	irq_trigger = irq_get_trigger_type(spi->irq);
 	if(!irq_trigger)
 	{

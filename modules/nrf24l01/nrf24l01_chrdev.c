@@ -16,7 +16,7 @@
 static int dev_open(struct inode* inodep, struct file *filep)
 {
 	struct nrf24l01_t* nrf = ((struct nrf24l01_chrdev*)container_of(inodep->i_cdev, struct nrf24l01_chrdev, cdev))->nrf;
-	if(!mutex_trylock(&nrf->chrdev->lock))
+	if(!mutex_trylock(&nrf->chrdev.lock))
 		return -EBUSY;
 	filep->private_data = nrf;
 	return 0;
@@ -37,7 +37,7 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 static int dev_release(struct inode *inodep, struct file *filep)
 {
 	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
-	mutex_unlock(&nrf->chrdev->lock);
+	mutex_unlock(&nrf->chrdev.lock);
 	return 0;
 }
 
@@ -85,17 +85,11 @@ static struct attribute_group* attribute_groups[] = {
 int chrdev_alloc(struct nrf24l01_t* nrf)
 {
 	int err;
-	struct nrf24l01_chrdev* nrfchr = vmalloc(sizeof(nrf24l01_chrdev));
-	if(!nrfchr)
-	{
-		err = -ENOMEM;
-		goto exit_noalloc;
-	}
+	struct nrf24l01_chrdev* nrfchr = &nrf->chrdev;
 	nrfchr->nrf = nrf;
-	nrf->chrdev = nrfchr;
 	mutex_init(&nrfchr->lock);
 	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, NRF24L01_CHRDEV_NAME)))
-		goto exit_nrfchralloc;
+		goto exit_noalloc;
 	nrfchr->class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
 	if(IS_ERR(nrfchr->class))
     {
@@ -120,18 +114,15 @@ exit_unregclass:
 	class_destroy(nrfchr->class);
 exit_unregchrdev:
 	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
-exit_nrfchralloc:
-	vfree(nrfchr);
 exit_noalloc:
 	return err;
 }
 
 void chrdev_free(struct nrf24l01_t* nrf)
 {
-	cdev_del(&nrf->chrdev->cdev);
-	device_destroy(nrf->chrdev->class, nrf->chrdev->devt);
-	class_unregister(nrf->chrdev->class);
-	class_destroy(nrf->chrdev->class);
-	unregister_chrdev_region(MAJOR(nrf->chrdev->devt), 1);
-	vfree(nrf->chrdev);
+	cdev_del(&nrf->chrdev.cdev);
+	device_destroy(nrf->chrdev.class, nrf->chrdev.devt);
+	class_unregister(nrf->chrdev.class);
+	class_destroy(nrf->chrdev.class);
+	unregister_chrdev_region(MAJOR(nrf->chrdev.devt), 1);
 }
