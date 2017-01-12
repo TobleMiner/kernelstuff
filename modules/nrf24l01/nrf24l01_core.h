@@ -6,6 +6,7 @@
 #include <linux/spi/spi.h>
 #include <linux/mutex.h>
 #include <linux/wait.h>
+#include <linux/types.h>
 
 #include "partregmap.h"
 #include "nrf24l01_chrdev.h"
@@ -20,8 +21,8 @@ typedef struct nrf24l01_t {
 	struct nrf24l01_worker	worker;
 	struct mutex			m_rx_path;
 	struct mutex			m_tx_path;
-	wait_queue_head_t		rx_queue;
-	wait_queue_head_t		tx_queue;
+	struct semaphore		rx;
+	struct semaphore		tx;
 } nrf24l01_t;
 
 #endif

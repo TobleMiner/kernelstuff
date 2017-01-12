@@ -1,5 +1,6 @@
 #include <linux/gpio.h>
 #include <linux/regmap.h>
+#include <linux/kernel.h>
 
 #include "nrf24l01_core.h"
 #include "nrf24l01_reg.h"
@@ -8,6 +9,7 @@
 
 int nrf24l01_set_channel(struct nrf24l01_t* nrf, unsigned int ch)
 {
+	printk(KERN_INFO "Calling table write\n");
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_RF_CH_RF_CH, &ch, 1);
 }
 
@@ -178,6 +180,46 @@ int nrf24l01_get_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned i
 void nrf24l01_set_ce(struct nrf24l01_t* nrf, unsigned int state)
 {
 	gpio_set_value(nrf->gpio_ce, state);
+}
+
+int nrf24l01_get_status_rx_dr(struct nrf24l01_t* nrf, unsigned int* status)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_RX_DR, status, 1);
+}
+
+int nrf24l01_set_status_rx_dr(struct nrf24l01_t* nrf, unsigned int status)
+{
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_STATUS_RX_DR, &status, 1);
+}
+
+int nrf24l01_get_status_tx_ds(struct nrf24l01_t* nrf, unsigned int* status)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_TX_DS, status, 1);
+}
+
+int nrf24l01_set_status_tx_ds(struct nrf24l01_t* nrf, unsigned int status)
+{
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_STATUS_TX_DS, &status, 1);
+}
+
+int nrf24l01_get_status_max_rt(struct nrf24l01_t* nrf, unsigned int* status)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_MAX_RT, status, 1);
+}
+
+int nrf24l01_set_status_max_rt(struct nrf24l01_t* nrf, unsigned int status)
+{
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_STATUS_MAX_RT, &status, 1);
+}
+
+int nrf24l01_get_status_rx_p_no(struct nrf24l01_t* nrf, unsigned int* status)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_RX_P_NO, status, 1);
+}
+
+int nrf24l01_get_status_tx_full(struct nrf24l01_t* nrf, unsigned int* status)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_TX_FULL, status, 1);
 }
 
 int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)

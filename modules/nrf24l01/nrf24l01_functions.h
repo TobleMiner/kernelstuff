@@ -27,6 +27,15 @@ int nrf24l01_get_rx_addr(struct nrf24l01_t* nrf, unsigned int* pipe, unsigned ch
 int nrf24l01_set_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned int len);
 int nrf24l01_get_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned int len);
 void nrf24l01_set_ce(struct nrf24l01_t* nrf, unsigned int state);
+int nrf24l01_get_status_rx_dr(struct nrf24l01_t* nrf, unsigned int* status);
+int nrf24l01_set_status_rx_dr(struct nrf24l01_t* nrf, unsigned int status);
+int nrf24l01_get_status_tx_ds(struct nrf24l01_t* nrf, unsigned int* status);
+int nrf24l01_set_status_tx_ds(struct nrf24l01_t* nrf, unsigned int status);
+int nrf24l01_get_status_max_rt(struct nrf24l01_t* nrf, unsigned int* status);
+int nrf24l01_set_status_max_rt(struct nrf24l01_t* nrf, unsigned int status);
+int nrf24l01_get_status_rx_p_no(struct nrf24l01_t* nrf, unsigned int* status);
+int nrf24l01_get_status_tx_full(struct nrf24l01_t* nrf, unsigned int* status);
+int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len);
 
 #define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)
 #define NRF24L01_CE_LO(nrf) nrf24l01_set_ce(nrf, 0)

@@ -7,6 +7,7 @@
 #include <linux/gpio.h>
 #include <linux/of.h>
 #include <linux/wait.h>
+#include <linux/semaphore.h>
 
 #include "nrf24l01_core.h"
 #include "nrf24l01_reg.h"
@@ -14,6 +15,7 @@
 #include "nrf24l01_spi.h"
 #include "nrf24l01_chrdev.h"
 #include "nrf24l01_functions.h"
+#include "nrf24l01_worker.h"
 #include "partregmap.h"
 
 enum nrf24l01_modules {nRF24L01, nRF24L01p};
@@ -76,7 +78,7 @@ static const struct regmap_config nrf24l01_regmap_short = {
 static irqreturn_t nrf24l01_irq(int irq, void* data)
 {
 	struct nrf24l01_t* nrf = data;
-	wake_up_interruptible(&nrf->worker.queue);
+	up(&nrf->worker.sema);
 	return IRQ_HANDLED;
 }
 
@@ -112,17 +114,11 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
 		goto exit_partregalloc;
 	}
-	init_waitqueue_head(&nrf24l01_dev->worker.queue);
-	irq_trigger = irq_get_trigger_type(spi->irq);
-	if(!irq_trigger)
+	sema_init(&nrf24l01_dev->rx, 0);
+	sema_init(&nrf24l01_dev->tx, 1);
+	if((err = nrf24l01_create_worker(nrf24l01_dev)))
 	{
-		dev_err(&spi->dev, "IRQ trigger type not set\n");
-		err = -EINVAL;
-		goto exit_chrdevalloc;
-	}
-	if((err = devm_request_irq(&spi->dev, spi->irq, nrf24l01_irq, irq_trigger, dev_name(&spi->dev), nrf24l01_dev)))
-	{
-		dev_err(&spi->dev, "Failed to allocate interrupt\n");
+		dev_err(&spi->dev, "Failed to create worker thread\n");
 		goto exit_chrdevalloc;
 	}
 	of_gpio_ce = of_get_property(spi->dev.of_node, "nrf-ce", NULL);
@@ -130,16 +126,29 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
         dev_err(&spi->dev, "Chip Enable not specified\n");
 		err = -EINVAL;
-        goto exit_chrdevalloc;
+        goto exit_workeralloc;
 	}
 	nrf24l01_dev->gpio_ce = be32_to_cpup(of_gpio_ce);
 	printk(KERN_INFO "CE GPIO: %u\n", nrf24l01_dev->gpio_ce);
 	if((err = gpio_request(nrf24l01_dev->gpio_ce, "ce")))
 	{
 		dev_err(&spi->dev, "Allocation of GPIO%u failed\n", nrf24l01_dev->gpio_ce);
-		goto exit_chrdevalloc;
+		goto exit_workeralloc;
 	}
 	gpio_direction_output(nrf24l01_dev->gpio_ce, 0);
+	irq_trigger = irq_get_trigger_type(spi->irq);
+	if(!irq_trigger)
+	{
+		dev_err(&spi->dev, "IRQ trigger type not set\n");
+		err = -EINVAL;
+		goto exit_gpioalloc;
+	}
+	if((err = devm_request_irq(&spi->dev, spi->irq, nrf24l01_irq, irq_trigger, dev_name(&spi->dev), nrf24l01_dev)))
+	{
+		dev_err(&spi->dev, "Failed to allocate interrupt\n");
+		goto exit_gpioalloc;
+	}
+	
 	unsigned int val = 0;
 	int ret = regmap_read(nrf24l01_dev->regmap_short, NRF24L01_REG_STATUS, &val);
 	printk(KERN_INFO "Read NRF24L01_REG_STATUS as %d with result %d\n", val, ret);
@@ -169,6 +178,10 @@ static int nrf24l01_probe(struct spi_device* spi)
 	}
 	printk(KERN_INFO "\n");
 	return 0;
+exit_gpioalloc:
+	gpio_free(nrf24l01_dev->gpio_ce);
+exit_workeralloc:
+	nrf24l01_destroy_worker(nrf24l01_dev);
 exit_chrdevalloc:
 	chrdev_free(nrf24l01_dev);
 exit_partregalloc:
@@ -184,6 +197,7 @@ exit_noalloc:
 static int nrf24l01_remove(struct spi_device* spi)
 {
 	printk(KERN_WARNING "nrf24l01_remove\n");
+	nrf24l01_destroy_worker(nrf24l01_dev);
 	gpio_free(nrf24l01_dev->gpio_ce);
 	chrdev_free(nrf24l01_dev);
 	nrf24l01_free_partregs(nrf24l01_dev);
