@@ -222,7 +222,51 @@ int nrf24l01_get_status_tx_full(struct nrf24l01_t* nrf, unsigned int* status)
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_TX_FULL, status, 1);
 }
 
+/*int nrf24l01_get_pld_width(struct nrf24l01_t* nrf, unsigned int* width)
+{
+	Get width via R_RX_PL_WID cmd	
+}*/
+
+int nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
+{
+	int err;
+	unsigned int pipe_no, payload_width;
+	mutex_lock(&nrf->m_rx_path);
+	if((err = down_interruptible(&nrf->rx)))
+	{
+		goto exit_err;
+	}
+	if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
+	{
+		goto exit_err;
+	}
+	if(pipe_no == 0b111)
+	{
+		err = -EINVAL;
+		goto exit_err;
+	}
+	if((err = nrf24l01_get_pld_width(nrf, pipe_no, &payload_width)))
+	{
+		goto exit_err;
+	}
+	len = max(payload_width, len);
+	if((err = nrf24l01_spi_read_rx_pld(nrf, data, len)))
+	{
+		goto exit_err;
+	}
+	if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
+	{
+		goto exit_err;
+	}
+	if(pipe_no != 0b111)
+		up(&nrf->rx);
+	err = 0;
+exit_err:
+	mutex_unlock(&nrf->m_rx_path);
+	return err;
+}
+
 int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
-
+	return 0;
 }

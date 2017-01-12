@@ -14,7 +14,6 @@
 
 int nrf24l01_create_worker(struct nrf24l01_t* nrf)
 {
-	int err;
 	sema_init(&nrf->worker.sema, 0);
 	nrf->worker.thread = kthread_run(nrf24l01_worker_do_work, nrf, "nrf_worker");
 	if(IS_ERR(nrf->worker.thread))
