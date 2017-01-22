@@ -149,10 +149,14 @@ static int nrf24l01_probe(struct spi_device* spi)
 		dev_err(&spi->dev, "Failed to allocate interrupt\n");
 		goto exit_gpioalloc;
 	}
+	NRF24L01_CE_LO(nrf24l01_dev);
+	nrf24l01_pwr_down(nrf24l01_dev);
+	nrf24l01_flush(nrf24l01_dev);
+	nrf24l01_set_status_max_rt(nrf24l01_dev, 1);	
+	nrf24l01_set_status_rx_dr(nrf24l01_dev, 1);
+	nrf24l01_set_status_tx_ds(nrf24l01_dev, 1);
 
 	unsigned int val = 1;
-	nrf24l01_flush(nrf24l01_dev);
-	nrf24l01_set_status_max_rt(nrf24l01_dev, val);	
 	int ret = regmap_read(nrf24l01_dev->regmap_short, NRF24L01_REG_STATUS, &val);
 	printk(KERN_INFO "Read NRF24L01_REG_STATUS as %d with result %d\n", val, ret);
 	printk(KERN_INFO "Testing partregmap\n");
