@@ -29,7 +29,7 @@ static int dev_open(struct inode* inodep, struct file *filep)
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
 {
 	unsigned long lenoffset;
-	ssize_t err;
+	ssize_t err, readlen;
 	char* data;
 	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
 	data = vmalloc(len);
@@ -38,11 +38,14 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 		err = -ENOMEM;
 		goto exit_err;
 	}
-	if((err = nrf24l01_read_packet(nrf, data, (unsigned int) len)))
+	if((readlen = nrf24l01_read_packet(nrf, data, (unsigned int) len)) < 0)
+	{
+		err = readlen;
 		goto exit_dataalloc;
+	}
 	if((lenoffset = copy_to_user(buffer, data, len)))
 		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to userspace\n", lenoffset, len);
-	err = len;
+	err = readlen;
 exit_dataalloc:
 	vfree(data);
 exit_err:

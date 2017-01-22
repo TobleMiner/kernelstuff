@@ -336,9 +336,9 @@ int nrf24l01_set_tx(struct nrf24l01_t* nrf)
 }
 
 // TODO: Implement non blocking version
-int nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
+ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
-	int err;
+	size_t err;
 	unsigned int pipe_no, payload_width;
 	// TODO: claim rxtx state mutex here and hold it until function exit
 	nrf24l01_set_rx(nrf);
@@ -371,7 +371,7 @@ tryagain:
 	{
 		goto exit_err_mutex;
 	}
-	err = 0;
+	err = payload_width;
 exit_err_mutex:
 	mutex_unlock(&nrf->m_rx_path);
 exit_err:
