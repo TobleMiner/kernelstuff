@@ -160,9 +160,309 @@ static struct attribute_group group_pipe0 = {
 	.name = "pipe0"
 };
 
+static struct device_attribute attr_pipe1_pw = {
+	.attr = {
+		.name = "payloadwidth",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_payload_width_pipe1,
+	.store = nrf24l01_sysfs_store_payload_width_pipe1
+};
+
+static struct device_attribute attr_pipe1_addr = {
+	.attr = {
+		.name = "address",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_address_pipe1,
+	.store = nrf24l01_sysfs_store_address_pipe1
+};
+
+static struct device_attribute attr_pipe1_state = {
+	.attr = {
+		.name = "enable",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enable_pipe1,
+	.store = nrf24l01_sysfs_store_enable_pipe1
+};
+
+static struct device_attribute attr_pipe1_dpl = {
+	.attr = {
+		.name = "dynamicpayload",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_dynpd_pipe1,
+	.store = nrf24l01_sysfs_store_dynpd_pipe1
+};
+
+static struct device_attribute attr_pipe1_enaa = {
+	.attr = {
+		.name = "autoack",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enaa_pipe1,
+	.store = nrf24l01_sysfs_store_enaa_pipe1
+};
+
+static struct attribute* attr_pipe1[] = {
+	&attr_pipe1_pw.attr,
+	&attr_pipe1_addr.attr,
+	&attr_pipe1_state.attr,
+	&attr_pipe1_dpl.attr,
+	&attr_pipe1_enaa.attr,
+	NULL
+};
+
+static struct attribute_group group_pipe1 = {
+	.attrs = attr_pipe1,
+	.name = "pipe1"
+};
+
+static struct device_attribute attr_pipe2_pw = {
+	.attr = {
+		.name = "payloadwidth",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_payload_width_pipe2,
+	.store = nrf24l01_sysfs_store_payload_width_pipe2
+};
+
+static struct device_attribute attr_pipe2_addr = {
+	.attr = {
+		.name = "address",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_address_pipe2,
+	.store = nrf24l01_sysfs_store_address_pipe2
+};
+
+static struct device_attribute attr_pipe2_state = {
+	.attr = {
+		.name = "enable",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enable_pipe2,
+	.store = nrf24l01_sysfs_store_enable_pipe2
+};
+
+static struct device_attribute attr_pipe2_dpl = {
+	.attr = {
+		.name = "dynamicpayload",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_dynpd_pipe2,
+	.store = nrf24l01_sysfs_store_dynpd_pipe2
+};
+
+static struct device_attribute attr_pipe2_enaa = {
+	.attr = {
+		.name = "autoack",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enaa_pipe2,
+	.store = nrf24l01_sysfs_store_enaa_pipe2
+};
+
+static struct attribute* attr_pipe2[] = {
+	&attr_pipe2_pw.attr,
+	&attr_pipe2_addr.attr,
+	&attr_pipe2_state.attr,
+	&attr_pipe2_dpl.attr,
+	&attr_pipe2_enaa.attr,
+	NULL
+};
+
+static struct attribute_group group_pipe2 = {
+	.attrs = attr_pipe2,
+	.name = "pipe2"
+};
+
+static struct device_attribute attr_pipe3_pw = {
+	.attr = {
+		.name = "payloadwidth",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_payload_width_pipe3,
+	.store = nrf24l01_sysfs_store_payload_width_pipe3
+};
+
+static struct device_attribute attr_pipe3_addr = {
+	.attr = {
+		.name = "address",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_address_pipe3,
+	.store = nrf24l01_sysfs_store_address_pipe3
+};
+
+static struct device_attribute attr_pipe3_state = {
+	.attr = {
+		.name = "enable",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enable_pipe3,
+	.store = nrf24l01_sysfs_store_enable_pipe3
+};
+
+static struct device_attribute attr_pipe3_dpl = {
+	.attr = {
+		.name = "dynamicpayload",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_dynpd_pipe3,
+	.store = nrf24l01_sysfs_store_dynpd_pipe3
+};
+
+static struct device_attribute attr_pipe3_enaa = {
+	.attr = {
+		.name = "autoack",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enaa_pipe3,
+	.store = nrf24l01_sysfs_store_enaa_pipe3
+};
+
+static struct attribute* attr_pipe3[] = {
+	&attr_pipe3_pw.attr,
+	&attr_pipe3_addr.attr,
+	&attr_pipe3_state.attr,
+	&attr_pipe3_dpl.attr,
+	&attr_pipe3_enaa.attr,
+	NULL
+};
+
+static struct attribute_group group_pipe3 = {
+	.attrs = attr_pipe3,
+	.name = "pipe3"
+};
+
+static struct device_attribute attr_pipe4_pw = {
+	.attr = {
+		.name = "payloadwidth",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_payload_width_pipe4,
+	.store = nrf24l01_sysfs_store_payload_width_pipe4
+};
+
+static struct device_attribute attr_pipe4_addr = {
+	.attr = {
+		.name = "address",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_address_pipe4,
+	.store = nrf24l01_sysfs_store_address_pipe4
+};
+
+static struct device_attribute attr_pipe4_state = {
+	.attr = {
+		.name = "enable",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enable_pipe4,
+	.store = nrf24l01_sysfs_store_enable_pipe4
+};
+
+static struct device_attribute attr_pipe4_dpl = {
+	.attr = {
+		.name = "dynamicpayload",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_dynpd_pipe4,
+	.store = nrf24l01_sysfs_store_dynpd_pipe4
+};
+
+static struct device_attribute attr_pipe4_enaa = {
+	.attr = {
+		.name = "autoack",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enaa_pipe4,
+	.store = nrf24l01_sysfs_store_enaa_pipe4
+};
+
+static struct attribute* attr_pipe4[] = {
+	&attr_pipe4_pw.attr,
+	&attr_pipe4_addr.attr,
+	&attr_pipe4_state.attr,
+	&attr_pipe4_dpl.attr,
+	&attr_pipe4_enaa.attr,
+	NULL
+};
+
+static struct attribute_group group_pipe4 = {
+	.attrs = attr_pipe4,
+	.name = "pipe4"
+};
+
+static struct device_attribute attr_pipe5_pw = {
+	.attr = {
+		.name = "payloadwidth",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_payload_width_pipe5,
+	.store = nrf24l01_sysfs_store_payload_width_pipe5
+};
+
+static struct device_attribute attr_pipe5_addr = {
+	.attr = {
+		.name = "address",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_address_pipe5,
+	.store = nrf24l01_sysfs_store_address_pipe5
+};
+
+static struct device_attribute attr_pipe5_state = {
+	.attr = {
+		.name = "enable",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enable_pipe5,
+	.store = nrf24l01_sysfs_store_enable_pipe5
+};
+
+static struct device_attribute attr_pipe5_dpl = {
+	.attr = {
+		.name = "dynamicpayload",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_dynpd_pipe5,
+	.store = nrf24l01_sysfs_store_dynpd_pipe5
+};
+
+static struct device_attribute attr_pipe5_enaa = {
+	.attr = {
+		.name = "autoack",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_enaa_pipe5,
+	.store = nrf24l01_sysfs_store_enaa_pipe5
+};
+
+static struct attribute* attr_pipe5[] = {
+	&attr_pipe5_pw.attr,
+	&attr_pipe5_addr.attr,
+	&attr_pipe5_state.attr,
+	&attr_pipe5_dpl.attr,
+	&attr_pipe5_enaa.attr,
+	NULL
+};
+
+static struct attribute_group group_pipe5 = {
+	.attrs = attr_pipe5,
+	.name = "pipe5"
+};
+
 static struct attribute_group* attribute_groups[] = {
 	&group_rf,
 	&group_pipe0,
+	&group_pipe1,
+	&group_pipe2,
+	&group_pipe3,
+	&group_pipe4,
+	&group_pipe5,
 	NULL
 };
 
