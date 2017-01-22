@@ -88,7 +88,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 {
 	int err = 0;
 	unsigned int irq_trigger;
-	void* of_gpio_ce;
+	const void* of_gpio_ce;
 	printk(KERN_WARNING "nrf24l01_probe\n");
 	nrf24l01_dev = vzalloc(sizeof(nrf24l01_t));
 	if(IS_ERR(nrf24l01_dev))
