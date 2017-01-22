@@ -153,6 +153,7 @@
 #define NRF24L01_VREG_FEATURE_EN_ACK_PAY	60
 #define NRF24L01_VREG_FEATURE_EN_DPL		61
 
+#define NRF24L01_RX_P_NO_EMPTY				0b111
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf);
 void nrf24l01_free_partregs(struct nrf24l01_t* nrf);
