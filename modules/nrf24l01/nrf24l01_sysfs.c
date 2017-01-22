@@ -427,3 +427,97 @@ ssize_t nrf24l01_sysfs_store_dynpd_pipe5(struct device* dev, struct device_attri
 {
 	return nrf24l01_sysfs_store_dynpd(dev, buf, count, 5);
 }
+
+static ssize_t nrf24l01_sysfs_show_enaa(struct device* dev, char* buf, unsigned int pipe)
+{
+	ssize_t err;
+	unsigned int state;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	if((err = nrf24l01_get_enaa(nrf, pipe, &state)))
+		goto exit_err;
+	return sprintf(buf, "%u\n", state);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_show_enaa_pipe0(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enaa(dev, buf, 0);
+}
+
+ssize_t nrf24l01_sysfs_show_enaa_pipe1(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enaa(dev, buf, 1);
+}
+
+ssize_t nrf24l01_sysfs_show_enaa_pipe2(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enaa(dev, buf, 2);
+}
+
+ssize_t nrf24l01_sysfs_show_enaa_pipe3(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enaa(dev, buf, 3);
+}
+
+ssize_t nrf24l01_sysfs_show_enaa_pipe4(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enaa(dev, buf, 4);
+}
+
+ssize_t nrf24l01_sysfs_show_enaa_pipe5(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enaa(dev, buf, 5);
+}
+
+static ssize_t nrf24l01_sysfs_store_enaa(struct device* dev, const char* buf, size_t count, unsigned int pipe)
+{
+	ssize_t err;
+	unsigned int state;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	char* str = nrf24l01_sanitize_string(buf, count);
+	if(!str)
+	{
+		err = -ENOMEM;
+		goto exit_err;
+	}
+	if((err = kstrtouint(str, 10, &state)))
+		goto exit_stralloc;
+	if((err = nrf24l01_set_enaa(nrf, pipe, state)))
+		goto exit_stralloc;
+	err = count;
+exit_stralloc:
+	vfree(str);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_store_enaa_pipe0(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enaa(dev, buf, count, 0);
+}
+
+ssize_t nrf24l01_sysfs_store_enaa_pipe1(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enaa(dev, buf, count, 1);
+}
+
+ssize_t nrf24l01_sysfs_store_enaa_pipe2(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enaa(dev, buf, count, 2);
+}
+
+ssize_t nrf24l01_sysfs_store_enaa_pipe3(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enaa(dev, buf, count, 3);
+}
+
+ssize_t nrf24l01_sysfs_store_enaa_pipe4(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enaa(dev, buf, count, 4);
+}
+
+ssize_t nrf24l01_sysfs_store_enaa_pipe5(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enaa(dev, buf, count, 5);
+}

@@ -211,6 +211,20 @@ int nrf24l01_get_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* 
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, state, 1);
 }
 
+int nrf24l01_set_enaa(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int autoack)
+{
+	if(pipe > 5)
+		return -EINVAL;
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_EN_AA_ENAA_P0 + pipe, &autoack, 1);
+}
+
+int nrf24l01_get_enaa(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* autoack)
+{
+	if(pipe > 5)
+		return -EINVAL;
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_EN_AA_ENAA_P0 + pipe, autoack, 1);
+}
+
 int nrf24l01_set_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned int len)
 {
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_TX_ADDR, (unsigned int*)addr, len);

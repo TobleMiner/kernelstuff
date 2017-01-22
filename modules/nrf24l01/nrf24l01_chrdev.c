@@ -142,8 +142,8 @@ static struct device_attribute attr_pipe0_enaa = {
 		.name = "autoack",
 		.mode = 0644
 	},
-	.show = NULL,
-	.store = NULL
+	.show = nrf24l01_sysfs_show_enaa_pipe0,
+	.store = nrf24l01_sysfs_store_enaa_pipe0
 };
 
 static struct attribute* attr_pipe0[] = {
