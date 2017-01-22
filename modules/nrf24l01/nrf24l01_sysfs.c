@@ -239,3 +239,97 @@ ssize_t nrf24l01_sysfs_store_payload_width_pipe5(struct device* dev, struct devi
 {
 	return nrf24l01_sysfs_store_payload_width(dev, buf, count, 5);
 }
+
+static ssize_t nrf24l01_sysfs_show_enable(struct device* dev, char* buf, unsigned int pipe)
+{
+	ssize_t err;
+	unsigned int state;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	if((err = nrf24l01_get_en_rxaddr(nrf, pipe, &state)))
+		goto exit_err;
+	return sprintf(buf, "%u\n", state);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_show_enable_pipe0(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enable(dev, buf, 0);
+}
+
+ssize_t nrf24l01_sysfs_show_enable_pipe1(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enable(dev, buf, 1);
+}
+
+ssize_t nrf24l01_sysfs_show_enable_pipe2(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enable(dev, buf, 2);
+}
+
+ssize_t nrf24l01_sysfs_show_enable_pipe3(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enable(dev, buf, 3);
+}
+
+ssize_t nrf24l01_sysfs_show_enable_pipe4(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enable(dev, buf, 4);
+}
+
+ssize_t nrf24l01_sysfs_show_enable_pipe5(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_enable(dev, buf, 5);
+}
+
+static ssize_t nrf24l01_sysfs_store_enable(struct device* dev, const char* buf, size_t count, unsigned int pipe)
+{
+	ssize_t err;
+	unsigned int state;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	char* str = nrf24l01_sanitize_string(buf, count);
+	if(!str)
+	{
+		err = -ENOMEM;
+		goto exit_err;
+	}
+	if((err = kstrtouint(str, 10, &state)))
+		goto exit_stralloc;
+	if((err = nrf24l01_set_en_rxaddr(nrf, pipe, state)))
+		goto exit_stralloc;
+	err = count;
+exit_stralloc:
+	vfree(str);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_store_enable_pipe0(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enable(dev, buf, count, 0);
+}
+
+ssize_t nrf24l01_sysfs_store_enable_pipe1(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enable(dev, buf, count, 1);
+}
+
+ssize_t nrf24l01_sysfs_store_enable_pipe2(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enable(dev, buf, count, 2);
+}
+
+ssize_t nrf24l01_sysfs_store_enable_pipe3(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enable(dev, buf, count, 3);
+}
+
+ssize_t nrf24l01_sysfs_store_enable_pipe4(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enable(dev, buf, count, 4);
+}
+
+ssize_t nrf24l01_sysfs_store_enable_pipe5(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_enable(dev, buf, count, 5);
+}

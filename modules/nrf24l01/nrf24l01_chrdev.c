@@ -124,8 +124,8 @@ static struct device_attribute attr_pipe0_state = {
 		.name = "enable",
 		.mode = 0644
 	},
-	.show = NULL,
-	.store = NULL
+	.show = nrf24l01_sysfs_show_enable_pipe0,
+	.store = nrf24l01_sysfs_store_enable_pipe0
 };
 
 static struct device_attribute attr_pipe0_dpl = {
