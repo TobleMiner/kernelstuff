@@ -12,6 +12,7 @@
 #include "nrf24l01_core.h"
 #include "nrf24l01_functions.h"
 #include "nrf24l01_sysfs.h"
+#include "nrf24l01_reg.h"
 
 #define NRF24L01_CHRDEV_NAME "nrf24l01"
 #define NRF24L01_CHRDEV_CLASS "nrf24"
@@ -100,11 +101,60 @@ static struct attribute_group group_rf = {
 	.name = "rf"
 };
 
-static struct attribute_group* attribute_groups[] = {
-	&group_rf,
+static struct device_attribute attr_pipe0_pw = {
+	.attr = {
+		.name = "payloadwidth",
+		.mode = 0644
+	},
+	.show = NULL,
+	.store = NULL
+};
+
+static struct device_attribute attr_pipe0_addr = {
+	.attr = {
+		.name = "address",
+		.mode = 0644
+	},
+	.show = nrf24l01_sysfs_show_address_pipe0,
+	.store = NULL
+};
+
+static struct device_attribute attr_pipe0_state = {
+	.attr = {
+		.name = "enable",
+		.mode = 0644
+	},
+	.show = NULL,
+	.store = NULL
+};
+
+static struct device_attribute attr_pipe0_dpl = {
+	.attr = {
+		.name = "dynamicpayload",
+		.mode = 0644
+	},
+	.show = NULL,
+	.store = NULL
+};
+
+static struct attribute* attr_pipe0[] = {
+	&attr_pipe0_pw.attr,
+	&attr_pipe0_addr.attr,
+	&attr_pipe0_state.attr,
+	&attr_pipe0_dpl.attr,
 	NULL
 };
 
+static struct attribute_group group_pipe0 = {
+	.attrs = attr_pipe0,
+	.name = "pipe0"
+};
+
+static struct attribute_group* attribute_groups[] = {
+	&group_rf,
+	&group_pipe0,
+	NULL
+};
 
 int chrdev_alloc(struct nrf24l01_t* nrf)
 {

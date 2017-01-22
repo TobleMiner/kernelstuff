@@ -43,6 +43,8 @@ int nrf24l01_set_rx(struct nrf24l01_t* nrf);
 int nrf24l01_set_tx(struct nrf24l01_t* nrf);
 int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len);
 int nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len);
+int nrf24l01_set_address_u64(struct nrf24l01_t* nrf, u64 addr, unsigned int pipe);
+int nrf24l01_get_address_u64(struct nrf24l01_t* nrf, u64* addr, unsigned int pipe);
 
 #define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)
 #define NRF24L01_CE_LO(nrf) nrf24l01_set_ce(nrf, 0)

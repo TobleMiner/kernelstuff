@@ -72,6 +72,31 @@ int nrf24l01_get_address_width(struct nrf24l01_t* nrf, unsigned int* width)
 	return 0;
 }
 
+int nrf24l01_set_address_u64(struct nrf24l01_t* nrf, u64 addr, unsigned int pipe)
+{
+	int err;
+	if(pipe <= 1)
+		err = partreg_table_write(nrf->reg_table, NRF24L01_VREG_RX_ADDR_P0 + pipe, (unsigned int*) &addr, 5);
+	else if(pipe <= 5)
+		err = partreg_table_write(nrf->reg_table, NRF24L01_VREG_RX_ADDR_P0 + pipe, (unsigned int*) &addr, 1);
+	else
+		return -EINVAL;
+	return err;
+}
+
+int nrf24l01_get_address_u64(struct nrf24l01_t* nrf, u64* addr, unsigned int pipe)
+{
+	int err;
+	if(pipe <= 1)
+		err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_RX_ADDR_P0 + pipe, (unsigned int*) addr, 5);
+	else if(pipe <= 5)
+		err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_RX_ADDR_P0 + pipe, (unsigned int*) addr, 1);
+	else
+		return -EINVAL;
+	return err;
+}
+
+
 int nrf24l01_flush_rx(struct nrf24l01_t* nrf)
 {
 	int err;

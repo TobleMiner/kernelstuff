@@ -155,6 +155,8 @@
 
 #define NRF24L01_RX_P_NO_EMPTY				0b111
 
+#define NRF24L01_N_PIPES					6
+
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf);
 void nrf24l01_free_partregs(struct nrf24l01_t* nrf);
 int nrf24l01_reg_addr_write(void* ctx, unsigned int reg, unsigned int* data, unsigned int len);
