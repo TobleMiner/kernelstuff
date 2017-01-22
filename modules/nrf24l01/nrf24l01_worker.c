@@ -45,7 +45,6 @@ static int nrf24l01_worker_do_work(void* ctx)
 			continue;
 		}
 		printk(KERN_INFO "Event!\n");
-		mutex_lock(&nrf->m_rx_path);
 		if((err = nrf24l01_get_status_rx_dr(nrf, &data)))
 		{
 			dev_err(&nrf->spi->dev, "Failed to get rx_dr flag\n");
@@ -54,8 +53,6 @@ static int nrf24l01_worker_do_work(void* ctx)
 		{
 			wake_up_interruptible(&nrf->rx_queue);
 		}
-		mutex_unlock(&nrf->m_rx_path);
-		mutex_lock(&nrf->m_tx_path);
 		if((err = nrf24l01_get_status_tx_ds(nrf, &data)))
 		{
 			dev_err(&nrf->spi->dev, "Failed to get tx_ds flag\n");
@@ -83,7 +80,6 @@ static int nrf24l01_worker_do_work(void* ctx)
 			}
 			wake_up_interruptible(&nrf->tx_queue);
 		}
-		mutex_unlock(&nrf->m_tx_path);
 //		usleep_range(500000, 1000000);
 	}
 	return 0;
