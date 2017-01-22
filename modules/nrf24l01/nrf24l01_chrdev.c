@@ -106,8 +106,8 @@ static struct device_attribute attr_pipe0_pw = {
 		.name = "payloadwidth",
 		.mode = 0644
 	},
-	.show = NULL,
-	.store = NULL
+	.show = nrf24l01_sysfs_show_payload_width_pipe0,
+	.store = nrf24l01_sysfs_store_payload_width_pipe0
 };
 
 static struct device_attribute attr_pipe0_addr = {

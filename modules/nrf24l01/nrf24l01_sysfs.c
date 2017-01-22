@@ -7,7 +7,7 @@
 #include "nrf24l01_functions.h"
 #include "nrf24l01_sysfs.h"
 
-static char* nrf24l01_sanitize_string(char* data, size_t len)
+static char* nrf24l01_sanitize_string(const char* data, size_t len)
 {
 	char* str = vzalloc(len + 1);
 	if(!str)
@@ -146,3 +146,96 @@ ssize_t nrf24l01_sysfs_store_address_pipe5(struct device* dev, struct device_att
 	return nrf24l01_sysfs_store_address(dev, buf, count, 5);
 }
 
+static ssize_t nrf24l01_sysfs_show_payload_width(struct device* dev, char* buf, unsigned int pipe)
+{
+	ssize_t err;
+	unsigned int width;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	if((err = nrf24l01_get_pld_width(nrf, pipe, &width)))
+		goto exit_err;
+	return sprintf(buf, "%u\n", width);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_show_payload_width_pipe0(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_payload_width(dev, buf, 0);
+}
+
+ssize_t nrf24l01_sysfs_show_payload_width_pipe1(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_payload_width(dev, buf, 1);
+}
+
+ssize_t nrf24l01_sysfs_show_payload_width_pipe2(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_payload_width(dev, buf, 2);
+}
+
+ssize_t nrf24l01_sysfs_show_payload_width_pipe3(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_payload_width(dev, buf, 3);
+}
+
+ssize_t nrf24l01_sysfs_show_payload_width_pipe4(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_payload_width(dev, buf, 4);
+}
+
+ssize_t nrf24l01_sysfs_show_payload_width_pipe5(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	return nrf24l01_sysfs_show_payload_width(dev, buf, 5);
+}
+
+static ssize_t nrf24l01_sysfs_store_payload_width(struct device* dev, const char* buf, size_t count, unsigned int pipe)
+{
+	ssize_t err;
+	unsigned int width;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	char* str = nrf24l01_sanitize_string(buf, count);
+	if(!str)
+	{
+		err = -ENOMEM;
+		goto exit_err;
+	}
+	if((err = kstrtouint(str, 10, &width)))
+		goto exit_stralloc;
+	if((err = nrf24l01_set_pld_width(nrf, pipe, width)))
+		goto exit_stralloc;
+	err = count;
+exit_stralloc:
+	vfree(str);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_store_payload_width_pipe0(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_payload_width(dev, buf, count, 0);
+}
+
+ssize_t nrf24l01_sysfs_store_payload_width_pipe1(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_payload_width(dev, buf, count, 1);
+}
+
+ssize_t nrf24l01_sysfs_store_payload_width_pipe2(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_payload_width(dev, buf, count, 2);
+}
+
+ssize_t nrf24l01_sysfs_store_payload_width_pipe3(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_payload_width(dev, buf, count, 3);
+}
+
+ssize_t nrf24l01_sysfs_store_payload_width_pipe4(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_payload_width(dev, buf, count, 4);
+}
+
+ssize_t nrf24l01_sysfs_store_payload_width_pipe5(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_payload_width(dev, buf, count, 5);
+}
