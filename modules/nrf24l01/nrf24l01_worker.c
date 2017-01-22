@@ -70,11 +70,16 @@ static int nrf24l01_worker_do_work(void* ctx)
 		}
 		if(data)
 		{
-			dev_warn(&nrf->spi->dev, "Maximum number of retransmissions reached. Dropping packet\n");
-			data = 1;
-			if((err = nrf24l01_set_status_max_rt(nrf, data)))
+			dev_warn(&nrf->spi->dev, "Maximum number of retransmissions reached. Dropping tx fifo\n");
+			if((err = nrf24l01_set_status_max_rt(nrf, 1)))
 			{
-				dev_err(&nrf->spi->dev, "Failed to reset max_rt flag");
+				dev_err(&nrf->spi->dev, "Failed to reset max_rt flag\n");
+			}
+			// Flush tx fifo to get rid of packet stuck in there with max_rt set
+			// TODO: Switch to pulling CE low until nex W_TX_PAYLAOD
+			if((err = nrf24l01_flush_tx(nrf)))
+			{
+				dev_err(&nrf->spi->dev, "Failed to flush tx fifo");
 			}
 			wake_up_interruptible(&nrf->tx_queue);
 		}
