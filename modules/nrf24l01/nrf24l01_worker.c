@@ -52,7 +52,7 @@ static int nrf24l01_worker_do_work(void* ctx)
 		}
 		if(data)
 		{
-			up(&nrf->rx);
+			wake_up_interruptible(&nrf->rx_queue);
 		}
 		mutex_unlock(&nrf->m_rx_path);
 		mutex_lock(&nrf->m_tx_path);
@@ -62,7 +62,7 @@ static int nrf24l01_worker_do_work(void* ctx)
 		}
 		if(data)
 		{
-			up(&nrf->tx);
+			wake_up_interruptible(&nrf->tx_queue);
 		}
 		if((err = nrf24l01_get_status_max_rt(nrf, &data)))
 		{
@@ -76,7 +76,7 @@ static int nrf24l01_worker_do_work(void* ctx)
 			{
 				dev_err(&nrf->spi->dev, "Failed to reset max_rt flag");
 			}
-			up(&nrf->tx);
+			wake_up_interruptible(&nrf->tx_queue);
 		}
 		mutex_unlock(&nrf->m_tx_path);
 //		usleep_range(500000, 1000000);

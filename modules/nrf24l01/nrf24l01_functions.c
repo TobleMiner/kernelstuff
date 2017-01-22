@@ -5,6 +5,7 @@
 #include "nrf24l01_core.h"
 #include "nrf24l01_reg.h"
 #include "nrf24l01_spi.h"
+#include "nrf24l01_functions.h"
 #include "partregmap.h"
 
 int nrf24l01_set_channel(struct nrf24l01_t* nrf, unsigned int ch)
@@ -227,42 +228,64 @@ int nrf24l01_get_status_tx_full(struct nrf24l01_t* nrf, unsigned int* status)
 	Get width via R_RX_PL_WID cmd	
 }*/
 
+int nrf24l01_get_vreg_or_fail_short(struct nrf24l01_t* nrf, int vreg, int ntries)
+{
+	int err, tries = 0;
+	unsigned int data;
+	while(++tries <= ntries)
+	{
+		err = partreg_table_read(nrf->reg_table, vreg, &data, 1);
+		if(err)
+			dev_warn(&nrf->spi->dev, "Critical register read failed. Try %d of %d\n", tries, ntries);
+		else
+			return data;
+	}
+	dev_err(&nrf->spi->dev, "Critical register read failed!\n");
+	return err;
+}
+
+int nrf24l01_get_rx_p_no_or_fail(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_get_vreg_or_fail_short(nrf, NRF24L01_VREG_STATUS_RX_P_NO, NRF24L01_VREG_TRIES);
+}
+
 int nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
 	int err;
 	unsigned int pipe_no, payload_width;
-	mutex_lock(&nrf->m_rx_path);
-	if((err = down_interruptible(&nrf->rx)))
+tryagain:
+	if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_rx_p_no_or_fail(nrf) != NRF24L01_RX_P_NO_EMPTY)))
 	{
 		goto exit_err;
 	}
+	mutex_lock(&nrf->m_rx_path);
 	if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
 	{
-		goto exit_err;
+		goto exit_err_mutex;
 	}
-	if(pipe_no == 0b111)
+	if(pipe_no == NRF24L01_RX_P_NO_EMPTY)
 	{
-		err = -EINVAL;
-		goto exit_err;
+		mutex_unlock(&nrf->m_rx_path);
+		goto tryagain;
 	}
 	if((err = nrf24l01_get_pld_width(nrf, pipe_no, &payload_width)))
 	{
-		goto exit_err;
+		goto exit_err_mutex;
 	}
-	len = max(payload_width, len);
-	if((err = nrf24l01_spi_read_rx_pld(nrf, data, len)))
+	if(len < payload_width)
 	{
-		goto exit_err;
+		dev_err(&nrf->spi->dev, "Packet read length too short. Should be >= %u, is %u\n", payload_width, len);
+		err = -EINVAL;
+		goto exit_err_mutex;
 	}
-	if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
+	if((err = nrf24l01_spi_read_rx_pld(nrf, data, payload_width)))
 	{
-		goto exit_err;
+		goto exit_err_mutex;
 	}
-	if(pipe_no != 0b111)
-		up(&nrf->rx);
 	err = 0;
-exit_err:
+exit_err_mutex:
 	mutex_unlock(&nrf->m_rx_path);
+exit_err:
 	return err;
 }
 
