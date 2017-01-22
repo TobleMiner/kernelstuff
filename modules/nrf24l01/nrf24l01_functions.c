@@ -323,7 +323,7 @@ int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned i
 	}	
 	nrf24l01_set_tx(nrf);
 tryagain:
-	if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_tx_full_or_fail(nrf) != 1)))
+	if((err = wait_event_interruptible(nrf->tx_queue, nrf24l01_get_tx_full_or_fail(nrf) != 1)))
 	{
 		goto exit_err;
 	}
