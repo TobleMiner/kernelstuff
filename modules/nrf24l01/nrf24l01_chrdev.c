@@ -27,7 +27,7 @@ static int dev_open(struct inode* inodep, struct file *filep)
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
 {
 	unsigned long lenoffset;
-	int err;
+	ssize_t err;
 	char* data;
 	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
 	data = vmalloc(len);
@@ -40,6 +40,7 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 		goto exit_dataalloc;
 	if((lenoffset = copy_to_user(buffer, data, len)))
 		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to userspace\n", lenoffset, len);
+	err = len;
 exit_dataalloc:
 	vfree(data);
 exit_err:
@@ -49,7 +50,7 @@ exit_err:
 static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
 {
 	unsigned long lenoffset;
-	int err;
+	ssize_t err;
 	char* data;
 	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
 	data = vmalloc(len);
@@ -60,7 +61,9 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 	}
 	if((lenoffset = copy_from_user(data, buffer, len)))
 		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to kernelspace\n", lenoffset, len);
-	err = nrf24l01_send_packet(nrf, data, (unsigned int) len);
+	if((err = nrf24l01_send_packet(nrf, data, (unsigned int) len)))
+		goto exit_dataalloc;
+	err = len;
 exit_dataalloc:
 	vfree(data);
 exit_err:
