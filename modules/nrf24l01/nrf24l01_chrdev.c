@@ -33,6 +33,7 @@ static int dev_open(struct inode* inodep, struct file *filep)
 		err = -ENOMEM;
 		goto exit_mutex;
 	}
+	session->chrdev = &nrf->chrdev;
 	filep->private_data = session;
 	return 0;
 exit_mutex:
