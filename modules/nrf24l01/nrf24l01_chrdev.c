@@ -108,10 +108,14 @@ static struct attribute_group group_rf = {
 
 static DEVICE_ATTR(address_width, 0644, nrf24l01_sysfs_show_addr_width, nrf24l01_sysfs_store_addr_width);
 static DEVICE_ATTR(pwr_up, 0644, nrf24l01_sysfs_show_pwr_up, nrf24l01_sysfs_store_pwr_up);
+static DEVICE_ATTR(gpio_ce, 0644, NULL, nrf24l01_sysfs_store_pwr_up);
+static DEVICE_ATTR(crc, 0644, nrf24l01_sysfs_show_crc, nrf24l01_sysfs_store_crc);
 
 static struct attribute* attr_general[] = {
 	&dev_attr_address_width.attr,
 	&dev_attr_pwr_up.attr,
+	&dev_attr_gpio_ce.attr,
+	&dev_attr_crc.attr,
 	NULL
 };
 

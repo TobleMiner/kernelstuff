@@ -624,3 +624,70 @@ exit_err:
     return err;
 }
 
+ssize_t nrf24l01_sysfs_store_ce(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+    ssize_t err;
+    unsigned int ce;
+    nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+    char* str = nrf24l01_sanitize_string(buf, count);
+    if(!str)
+    {
+        err = -ENOMEM;
+        goto exit_err;
+    }
+    if((err = kstrtouint(str, 10, &ce)))
+	{
+        goto exit_stralloc;
+	}
+	switch(ce)
+	{
+		case 0:
+			NRF24L01_CE_LO(nrf);
+			break;
+		case 1:
+			NRF24L01_CE_HI(nrf);
+			break;
+		default:
+			err = -EINVAL;
+			goto exit_stralloc;
+	}
+    err = count;
+exit_stralloc:
+    vfree(str);
+exit_err:
+    return err;
+}
+
+ssize_t nrf24l01_sysfs_show_crc(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	ssize_t err;
+	unsigned int crc;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	if((err = nrf24l01_get_crc(nrf, &crc)))
+		goto exit_err;
+	return sprintf(buf, "%u\n", crc);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_store_crc(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+    ssize_t err;
+    unsigned int crc;
+    nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+    char* str = nrf24l01_sanitize_string(buf, count);
+    if(!str)
+    {
+        err = -ENOMEM;
+        goto exit_err;
+    }
+    if((err = kstrtouint(str, 10, &crc)))
+        goto exit_stralloc;
+    if((err = nrf24l01_set_crc(nrf, crc)))
+        goto exit_stralloc;
+    err = count;
+exit_stralloc:
+    vfree(str);
+exit_err:
+    return err;
+}

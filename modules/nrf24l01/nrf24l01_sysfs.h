@@ -71,5 +71,8 @@ ssize_t nrf24l01_sysfs_show_pwr_up(struct device* dev, struct device_attribute* 
 ssize_t nrf24l01_sysfs_store_pwr_up(struct device* dev, struct device_attribute* attr, const char* buf, size_t count);
 ssize_t nrf24l01_sysfs_show_dr(struct device* dev, struct device_attribute* attr, char* buf);
 ssize_t nrf24l01_sysfs_store_dr(struct device* dev, struct device_attribute* attr, const char* buf, size_t count);
+ssize_t nrf24l01_sysfs_store_ce(struct device* dev, struct device_attribute* attr, const char* buf, size_t count);
+ssize_t nrf24l01_sysfs_show_crc(struct device* dev, struct device_attribute* attr, char* buf);
+ssize_t nrf24l01_sysfs_store_crc(struct device* dev, struct device_attribute* attr, const char* buf, size_t count);
 
 #endif

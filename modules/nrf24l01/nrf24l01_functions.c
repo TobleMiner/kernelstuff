@@ -51,6 +51,42 @@ int nrf24l01_get_dr(struct nrf24l01_t* nrf, unsigned int* dr)
 	return 0;
 }
 
+int nrf24l01_set_crc(struct nrf24l01_t* nrf, unsigned int crc)
+{
+	int err;
+	unsigned int one = 1;
+	if(crc == 0)
+	{
+		if((err = partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_EN_CRC, &crc, 1)))
+			goto exit_err;
+	}
+	else if(crc < 3)
+	{
+		crc--;
+		if((err = partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_EN_CRC, &one, 1)))
+			goto exit_err;
+		err = partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_CRCO, &crc, 1);
+	}
+	else
+		err = -EINVAL;
+exit_err:
+	return err;
+}
+
+int nrf24l01_get_crc(struct nrf24l01_t* nrf, unsigned int* crc)
+{
+	int err;
+	if((err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_EN_CRC, crc, 1)))
+		goto exit_err;
+	if(*crc == 0)
+		goto exit_err;
+	if((err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_CRCO, crc, 1)))
+		goto exit_err;
+	*crc++;
+exit_err:
+	return err;
+}
+
 int nrf24l01_set_tx_power(struct nrf24l01_t* nrf, int tx_pwr)
 {
 	unsigned int pwr;
