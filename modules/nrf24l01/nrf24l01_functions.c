@@ -19,6 +19,38 @@ int nrf24l01_get_channel(struct nrf24l01_t* nrf, unsigned int* ch)
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_RF_CH_RF_CH, ch, 1);
 }
 
+int nrf24l01_set_dr(struct nrf24l01_t* nrf, int dr)
+{
+	switch(dr)
+	{
+		case 250:
+			dr = 0b100;
+			break;
+		case 1000:
+			dr = 0b000;
+			break;
+		case 2000:
+			dr = 0b001;
+			break;
+		default:
+			return -EINVAL;
+	}
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_RF_SETUP_RF_DR, &dr, 1);
+}
+
+int nrf24l01_get_dr(struct nrf24l01_t* nrf, unsigned int* dr)
+{
+	unsigned int dr_reg;
+	int err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_RF_SETUP_RF_DR, &dr_reg, 1);
+	if(err)
+		return err;
+	if(dr_reg & 0b100)
+		*dr = 250;
+	else
+		*dr = 1000 + dr_reg * 1000;
+	return 0;
+}
+
 int nrf24l01_set_tx_power(struct nrf24l01_t* nrf, int tx_pwr)
 {
 	unsigned int pwr;
@@ -138,7 +170,7 @@ int nrf24l01_pwr_down(struct nrf24l01_t* nrf)
 	return nrf24l01_set_pwr_up(nrf, 0);
 }
 
-int nrf24l01_get_pwr_state(struct nrf24l01_t* nrf, unsigned int* state)
+int nrf24l01_get_pwr_up(struct nrf24l01_t* nrf, unsigned int* state)
 {
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_PWR_UP, state, 1);
 }

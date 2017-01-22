@@ -92,18 +92,32 @@ static struct file_operations fops =
 
 static DEVICE_ATTR(txpower, 0644, NULL, NULL);
 static DEVICE_ATTR(channel, 0644, nrf24l01_sysfs_show_channel, nrf24l01_sysfs_store_channel);
-static DEVICE_ATTR(address_width, 0644, nrf24l01_sysfs_show_addr_width, nrf24l01_sysfs_store_addr_width);
+static DEVICE_ATTR(datarate, 0644, nrf24l01_sysfs_show_dr, nrf24l01_sysfs_store_dr);
 
 static struct attribute* attr_rf[] = {
 	&dev_attr_txpower.attr,
 	&dev_attr_channel.attr,
-	&dev_attr_address_width.attr,
+	&dev_attr_datarate.attr,
 	NULL
 };
 
 static struct attribute_group group_rf = {
 	.attrs = attr_rf,
 	.name = "rf"
+};
+
+static DEVICE_ATTR(address_width, 0644, nrf24l01_sysfs_show_addr_width, nrf24l01_sysfs_store_addr_width);
+static DEVICE_ATTR(pwr_up, 0644, nrf24l01_sysfs_show_pwr_up, nrf24l01_sysfs_store_pwr_up);
+
+static struct attribute* attr_general[] = {
+	&dev_attr_address_width.attr,
+	&dev_attr_pwr_up.attr,
+	NULL
+};
+
+static struct attribute_group group_general = {
+	.attrs = attr_general,
+	.name = NULL
 };
 
 static struct device_attribute attr_pipe0_pw = {
@@ -461,6 +475,7 @@ static struct attribute_group group_pipe5 = {
 };
 
 static struct attribute_group* attribute_groups[] = {
+	&group_general,
 	&group_rf,
 	&group_pipe0,
 	&group_pipe1,

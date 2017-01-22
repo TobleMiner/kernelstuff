@@ -67,5 +67,9 @@ ssize_t nrf24l01_sysfs_store_enaa_pipe4(struct device* dev, struct device_attrib
 ssize_t nrf24l01_sysfs_store_enaa_pipe5(struct device* dev, struct device_attribute* attr, const char* buf, size_t count);
 ssize_t nrf24l01_sysfs_show_addr_width(struct device* dev, struct device_attribute* attr, char* buf);
 ssize_t nrf24l01_sysfs_store_addr_width(struct device* dev, struct device_attribute* attr, const char* buf, size_t count);
+ssize_t nrf24l01_sysfs_show_pwr_up(struct device* dev, struct device_attribute* attr, char* buf);
+ssize_t nrf24l01_sysfs_store_pwr_up(struct device* dev, struct device_attribute* attr, const char* buf, size_t count);
+ssize_t nrf24l01_sysfs_show_dr(struct device* dev, struct device_attribute* attr, char* buf);
+ssize_t nrf24l01_sysfs_store_dr(struct device* dev, struct device_attribute* attr, const char* buf, size_t count);
 
 #endif

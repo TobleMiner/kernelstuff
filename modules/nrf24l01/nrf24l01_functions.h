@@ -17,7 +17,7 @@ int nrf24l01_flush(struct nrf24l01_t* nrf);
 int nrf24l01_set_pwr_up(struct nrf24l01_t* nrf, unsigned int state);
 int nrf24l01_pwr_up(struct nrf24l01_t* nrf);
 int nrf24l01_pwr_down(struct nrf24l01_t* nrf);
-int nrf24l01_get_pwr_state(struct nrf24l01_t* nrf, unsigned int* state);
+int nrf24l01_get_pwr_up(struct nrf24l01_t* nrf, unsigned int* state);
 int nrf24l01_set_prim_rx(struct nrf24l01_t* nrf, unsigned int state);
 int nrf24l01_get_prim_rx(struct nrf24l01_t* nrf, unsigned int* state);
 int nrf24l01_set_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int width);
@@ -51,6 +51,8 @@ int nrf24l01_set_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int s
 int nrf24l01_get_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* state);
 int nrf24l01_set_enaa(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int autoack);
 int nrf24l01_get_enaa(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* autoack);
+int nrf24l01_set_dr(struct nrf24l01_t* nrf, int dr);
+int nrf24l01_get_dr(struct nrf24l01_t* nrf, unsigned int* dr);
 
 
 #define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)
