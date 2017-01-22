@@ -21,6 +21,7 @@ typedef struct nrf24l01_t {
 	struct nrf24l01_worker	worker;
 	struct mutex			m_rx_path;
 	struct mutex			m_tx_path;
+	struct mutex			m_rxtx;
 	wait_queue_head_t		rx_queue;
 	wait_queue_head_t		tx_queue;
 } nrf24l01_t;

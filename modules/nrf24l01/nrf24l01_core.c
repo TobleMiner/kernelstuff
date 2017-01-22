@@ -99,6 +99,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	nrf24l01_dev->spi = spi;
 	mutex_init(&nrf24l01_dev->m_rx_path);
 	mutex_init(&nrf24l01_dev->m_tx_path);
+	mutex_init(&nrf24l01_dev->m_rxtx);
 	printk(KERN_INFO "Adding regmap...\n");
 	nrf24l01_dev->regmap_short = regmap_init(&spi->dev, NULL, nrf24l01_dev, &nrf24l01_regmap_short);
 	if(IS_ERR(nrf24l01_dev->regmap_short))
