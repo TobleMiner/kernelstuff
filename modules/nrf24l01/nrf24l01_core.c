@@ -114,8 +114,8 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
 		goto exit_partregalloc;
 	}
-	sema_init(&nrf24l01_dev->rx, 0);
-	sema_init(&nrf24l01_dev->tx, 1);
+	init_waitqueue_head(&nrf24l01_dev->rx_queue);
+	init_waitqueue_head(&nrf24l01_dev->tx_queue);
 	if((err = nrf24l01_create_worker(nrf24l01_dev)))
 	{
 		dev_err(&spi->dev, "Failed to create worker thread\n");
