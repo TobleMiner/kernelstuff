@@ -57,7 +57,7 @@ static ssize_t nrf24l01_sysfs_show_address(struct device* dev, char* buf, unsign
 		if((err = nrf24l01_get_address_width(nrf, &addr_width)))
 			return err;
 		char fmt[10];
-		sprintf(fmt, "%%0%ullX\n", addr_width);
+		sprintf(fmt, "%%0%ullX\n", addr_width * 2);
 		return sprintf(buf, fmt, addr);
 	}
 	else
