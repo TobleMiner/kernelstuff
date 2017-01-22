@@ -123,16 +123,6 @@ int nrf24l01_set_prim_rx(struct nrf24l01_t* nrf, unsigned int state)
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_PRIM_RX, &state, 1);
 }
 
-int nrf24l01_set_rx(struct nrf24l01_t* nrf)
-{
-	return nrf24l01_set_prim_rx(nrf, 1);
-}
-
-int nrf24l01_set_tx(struct nrf24l01_t* nrf)
-{
-	return nrf24l01_set_prim_rx(nrf, 0);
-}
-
 int nrf24l01_get_prim_rx(struct nrf24l01_t* nrf, unsigned int* state)
 {
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_PRIM_RX, state, 1);
@@ -249,10 +239,42 @@ int nrf24l01_get_rx_p_no_or_fail(struct nrf24l01_t* nrf)
 	return nrf24l01_get_vreg_or_fail_short(nrf, NRF24L01_VREG_STATUS_RX_P_NO, NRF24L01_VREG_TRIES);
 }
 
+int nrf24l01_get_tx_full_or_fail(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_get_vreg_or_fail_short(nrf, NRF24L01_VREG_STATUS_TX_FULL, NRF24L01_VREG_TRIES);
+}
+
+int nrf24l01_set_rxtx(struct nrf24l01_t* nrf, int state)
+{
+	int err;
+	NRF24L01_CE_LO(nrf);
+	if((err = nrf24l01_pwr_down(nrf)))
+		return err;
+	if((err = nrf24l01_set_prim_rx(nrf, state)))
+		return err;
+	if((err = nrf24l01_pwr_up(nrf)))
+		return err;
+	NRF24L01_CE_HI(nrf);
+	return 0;
+}
+
+int nrf24l01_set_rx(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_set_rxtx(nrf, 1);
+}
+
+int nrf24l01_set_tx(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_set_rxtx(nrf, 0);
+}
+
+// TODO: Implement non blocking version
 int nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
 	int err;
 	unsigned int pipe_no, payload_width;
+	// TODO: claim rxtx state mutex here and hold it until function exit
+	nrf24l01_set_rx(nrf);
 tryagain:
 	if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_rx_p_no_or_fail(nrf) != NRF24L01_RX_P_NO_EMPTY)))
 	{
@@ -289,7 +311,39 @@ exit_err:
 	return err;
 }
 
+// TODO: Basically same as read_packet
 int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
-	return 0;
+	int err;
+	unsigned int tx_full;
+	if(len > 32)
+	{
+		err = -EINVAL;
+		goto exit_err;
+	}	
+	nrf24l01_set_tx(nrf);
+tryagain:
+	if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_tx_full_or_fail(nrf) != 1)))
+	{
+		goto exit_err;
+	}
+	mutex_lock(&nrf->m_tx_path);
+	if((err = nrf24l01_get_status_tx_full(nrf, &tx_full)))
+	{
+		goto exit_err_mutex;
+	}
+	if(tx_full == 1)
+	{
+		mutex_unlock(&nrf->m_tx_path);
+		goto tryagain;
+	}
+	if((err = nrf24l01_spi_write_tx_pld(nrf, data, len)))
+	{
+		goto exit_err_mutex;
+	}
+	err = 0;
+exit_err_mutex:
+	mutex_unlock(&nrf->m_tx_path);
+exit_err:
+	return err;
 }
