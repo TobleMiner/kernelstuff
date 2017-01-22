@@ -6,6 +6,7 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/string.h>
+#include <linux/uaccess.h>
 
 #include "nrf24l01_chrdev.h"
 #include "nrf24l01_core.h"
@@ -25,14 +26,45 @@ static int dev_open(struct inode* inodep, struct file *filep)
 
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
 {
+	unsigned long lenoffset;
+	int err;
+	char* data;
 	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
-	printk(KERN_INFO "CS is on gpio %u\n", nrf->gpio_ce);
-	return 0;
+	data = vmalloc(len);
+	if(!data)
+	{
+		err = -ENOMEM;
+		goto exit_err;
+	}
+	if((err = nrf24l01_read_packet(nrf, data, (unsigned int) len)))
+		goto exit_dataalloc;
+	if((lenoffset = copy_to_user(buffer, data, len)))
+		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to userspace\n", lenoffset, len);
+exit_dataalloc:
+	vfree(data);
+exit_err:
+	return err;
 }
 
 static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
 {
-	return 0;
+	unsigned long lenoffset;
+	int err;
+	char* data;
+	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
+	data = vmalloc(len);
+	if(!data)
+	{
+		err = -ENOMEM;
+		goto exit_err;
+	}
+	if((lenoffset = copy_from_user(data, buffer, len)))
+		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to kernelspace\n", lenoffset, len);
+	err = nrf24l01_send_packet(nrf, data, (unsigned int) len);
+exit_dataalloc:
+	vfree(data);
+exit_err:
+	return err;
 }
 
 static int dev_release(struct inode *inodep, struct file *filep)
