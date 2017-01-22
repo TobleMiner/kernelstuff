@@ -80,7 +80,6 @@ static int nrf24l01_worker_do_work(void* ctx)
 			}
 			wake_up_interruptible(&nrf->tx_queue);
 		}
-//		usleep_range(500000, 1000000);
 	}
 	return 0;
 }
