@@ -12,20 +12,6 @@
 #include "nrf24l01_worker.h"
 #include "nrf24l01_functions.h"
 
-int nrf24l01_create_worker(struct nrf24l01_t* nrf)
-{
-	sema_init(&nrf->worker.sema, 0);
-	nrf->worker.thread = kthread_run(nrf24l01_worker_do_work, nrf, "nrf_worker");
-	if(IS_ERR(nrf->worker.thread))
-		return PTR_ERR(nrf->worker.thread);
-	return 0;
-}
-
-int nrf24l01_destroy_worker(struct nrf24l01_t* nrf)
-{
-	return kthread_stop(nrf->worker.thread);
-}
-
 static int nrf24l01_worker_do_work(void* ctx)
 {
 	int err;
@@ -90,4 +76,18 @@ static int nrf24l01_worker_do_work(void* ctx)
 		}
 	}
 	return 0;
+}
+
+int nrf24l01_create_worker(struct nrf24l01_t* nrf)
+{
+	sema_init(&nrf->worker.sema, 0);
+	nrf->worker.thread = kthread_run(nrf24l01_worker_do_work, nrf, "nrf_worker");
+	if(IS_ERR(nrf->worker.thread))
+		return PTR_ERR(nrf->worker.thread);
+	return 0;
+}
+
+int nrf24l01_destroy_worker(struct nrf24l01_t* nrf)
+{
+	return kthread_stop(nrf->worker.thread);
 }
