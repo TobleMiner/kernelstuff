@@ -19,11 +19,26 @@
 
 static int dev_open(struct inode* inodep, struct file *filep)
 {
+	int err;
+	struct nrf24l01_chrdev_session* session;
 	struct nrf24l01_t* nrf = ((struct nrf24l01_chrdev*)container_of(inodep->i_cdev, struct nrf24l01_chrdev, cdev))->nrf;
 	if(!mutex_trylock(&nrf->chrdev.lock))
-		return -EBUSY;
-	filep->private_data = nrf;
+	{
+		err = -EBUSY;
+		goto exit_err;
+	}
+	session = vmalloc(sizeof(struct nrf24l01_chrdev_session));
+	if(!session)
+	{
+		err = -ENOMEM;
+		goto exit_mutex;
+	}
+	filep->private_data = session;
 	return 0;
+exit_mutex:
+	mutex_unlock(&nrf->chrdev.lock);
+exit_err:
+	return err;
 }
 
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
@@ -31,7 +46,10 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 	unsigned long lenoffset;
 	ssize_t err, readlen;
 	char* data;
-	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
+	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
+	struct nrf24l01_t* nrf = session->chrdev->nrf;
+	if(session->read_offset > 0)
+		return 0;
 	data = vmalloc(len);
 	if(!data)
 	{
@@ -45,6 +63,7 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 	}
 	if((lenoffset = copy_to_user(buffer, data, len)))
 		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to userspace\n", lenoffset, len);
+	session->read_offset += readlen;
 	err = readlen;
 exit_dataalloc:
 	vfree(data);
@@ -57,7 +76,8 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 	unsigned long lenoffset;
 	ssize_t err;
 	char* data;
-	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
+	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
+	struct nrf24l01_t* nrf = session->chrdev->nrf;
 	data = vmalloc(len);
 	if(!data)
 	{
@@ -77,8 +97,10 @@ exit_err:
 
 static int dev_release(struct inode *inodep, struct file *filep)
 {
-	struct nrf24l01_t* nrf = (struct nrf24l01_t*)filep->private_data;
+	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
+	struct nrf24l01_t* nrf = session->chrdev->nrf;
 	mutex_unlock(&nrf->chrdev.lock);
+	vfree(session);
 	return 0;
 }
 
@@ -108,7 +130,7 @@ static struct attribute_group group_rf = {
 
 static DEVICE_ATTR(address_width, 0644, nrf24l01_sysfs_show_addr_width, nrf24l01_sysfs_store_addr_width);
 static DEVICE_ATTR(pwr_up, 0644, nrf24l01_sysfs_show_pwr_up, nrf24l01_sysfs_store_pwr_up);
-static DEVICE_ATTR(gpio_ce, 0644, NULL, nrf24l01_sysfs_store_pwr_up);
+static DEVICE_ATTR(gpio_ce, 0644, NULL, nrf24l01_sysfs_store_ce);
 static DEVICE_ATTR(crc, 0644, nrf24l01_sysfs_show_crc, nrf24l01_sysfs_store_crc);
 static DEVICE_ATTR(tx_address, 0644, nrf24l01_sysfs_show_tx_address, nrf24l01_sysfs_store_tx_address);
 

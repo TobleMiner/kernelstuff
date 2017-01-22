@@ -47,11 +47,15 @@ static int nrf24l01_worker_do_work(void* ctx)
 		printk(KERN_INFO "Event!\n");
 		if((err = nrf24l01_get_status_rx_dr(nrf, &data)))
 		{
-			dev_err(&nrf->spi->dev, "Failed to get rx_dr flag\n");
+			dev_err(&nrf->spi->dev, "Failed to get rx_dr flag: %d\n", err);
 		}
 		if(data)
 		{
 			wake_up_interruptible(&nrf->rx_queue);
+			if((err = nrf24l01_set_status_rx_dr(nrf, 1)))
+			{
+				dev_err(&nrf->spi->dev, "Failed to clear rx_dr flag: %d\n", err);
+			}
 		}
 		if((err = nrf24l01_get_status_tx_ds(nrf, &data)))
 		{
@@ -60,6 +64,10 @@ static int nrf24l01_worker_do_work(void* ctx)
 		if(data)
 		{
 			wake_up_interruptible(&nrf->tx_queue);
+			if((err = nrf24l01_set_status_tx_ds(nrf, 1)))
+			{
+				dev_err(&nrf->spi->dev, "Failed to clear tx_ds flag: %d\n", err);
+			}
 		}
 		if((err = nrf24l01_get_status_max_rt(nrf, &data)))
 		{
