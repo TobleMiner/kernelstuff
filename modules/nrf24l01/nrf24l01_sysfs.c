@@ -7,6 +7,15 @@
 #include "nrf24l01_functions.h"
 #include "nrf24l01_sysfs.h"
 
+static char* nrf24l01_sanitize_string(char* data, size_t len)
+{
+	char* str = vzalloc(len + 1);
+	if(!str)
+		return str;
+	memcpy(str, data, len + 1);
+	return str;
+}
+
 ssize_t nrf24l01_sysfs_show_channel(struct device* dev, struct device_attribute* attr, char* buf)
 {
 	unsigned int channel;
@@ -21,12 +30,11 @@ ssize_t nrf24l01_sysfs_store_channel(struct device* dev, struct device_attribute
 {
 	unsigned int channel;
 	ssize_t err;
-	char* buff = vzalloc(count + 1);
+	char* buff = nrf24l01_sanitize_string(buf, count);
 	if(!buff)
 		return -ENOMEM;
-	memcpy(buff, buf, count);
 	if((err = kstrtouint(buff, 10, &channel)))
-		goto exit_buffalloc;;	
+		goto exit_buffalloc;
 	err = nrf24l01_set_channel(((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf, channel);	
 	if(err)
 		goto exit_buffalloc;
@@ -49,11 +57,11 @@ static ssize_t nrf24l01_sysfs_show_address(struct device* dev, char* buf, unsign
 		if((err = nrf24l01_get_address_width(nrf, &addr_width)))
 			return err;
 		char fmt[10];
-		sprintf(fmt, "%%0%uXu", addr_width);
+		sprintf(fmt, "%%0%ullX\n", addr_width);
 		return sprintf(buf, fmt, addr);
 	}
 	else
-		return sprintf(buf, "%02Xu", addr);
+		return sprintf(buf, "%02llX\n", addr);
 }
 
 ssize_t nrf24l01_sysfs_show_address_pipe0(struct device* dev, struct device_attribute* attr, char* buf)
@@ -85,3 +93,56 @@ ssize_t nrf24l01_sysfs_show_address_pipe5(struct device* dev, struct device_attr
 {
 	return nrf24l01_sysfs_show_address(dev, buf, 5);
 }
+
+static ssize_t nrf24l01_sysfs_store_address(struct device* dev, const char* buf, size_t count, unsigned int pipe)
+{
+	ssize_t err;
+	u64 addr;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	char* str = nrf24l01_sanitize_string(buf, count);
+	if(!str)
+	{
+		err = -ENOMEM;
+		goto exit_err;
+	}
+	if((err = kstrtou64(str, 16, &addr)))
+		goto exit_stralloc;
+	if((err = nrf24l01_set_address_u64(nrf, addr, pipe)))
+		goto exit_stralloc;
+	err = count;
+exit_stralloc:
+	vfree(str);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_store_address_pipe0(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_address(dev, buf, count, 0);
+}
+
+ssize_t nrf24l01_sysfs_store_address_pipe1(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_address(dev, buf, count, 1);
+}
+
+ssize_t nrf24l01_sysfs_store_address_pipe2(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_address(dev, buf, count, 2);
+}
+
+ssize_t nrf24l01_sysfs_store_address_pipe3(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_address(dev, buf, count, 3);
+}
+
+ssize_t nrf24l01_sysfs_store_address_pipe4(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_address(dev, buf, count, 4);
+}
+
+ssize_t nrf24l01_sysfs_store_address_pipe5(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+	return nrf24l01_sysfs_store_address(dev, buf, count, 5);
+}
+

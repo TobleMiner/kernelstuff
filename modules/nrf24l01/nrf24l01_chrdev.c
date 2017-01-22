@@ -116,7 +116,7 @@ static struct device_attribute attr_pipe0_addr = {
 		.mode = 0644
 	},
 	.show = nrf24l01_sysfs_show_address_pipe0,
-	.store = NULL
+	.store = nrf24l01_sysfs_store_address_pipe0
 };
 
 static struct device_attribute attr_pipe0_state = {
