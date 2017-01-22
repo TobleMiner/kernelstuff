@@ -12,7 +12,7 @@ static char* nrf24l01_sanitize_string(const char* data, size_t len)
 	char* str = vzalloc(len + 1);
 	if(!str)
 		return str;
-	memcpy(str, data, len + 1);
+	memcpy(str, data, len);
 	return str;
 }
 
