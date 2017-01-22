@@ -615,7 +615,7 @@ ssize_t nrf24l01_sysfs_store_dr(struct device* dev, struct device_attribute* att
     }
     if((err = kstrtouint(str, 10, &dr)))
         goto exit_stralloc;
-    if((err = nrf24l01_set_pwr_up(nrf, dr)))
+    if((err = nrf24l01_set_dr(nrf, dr)))
         goto exit_stralloc;
     err = count;
 exit_stralloc:
