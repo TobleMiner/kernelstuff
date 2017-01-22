@@ -89,10 +89,12 @@ static struct file_operations fops =
 
 static DEVICE_ATTR(txpower, 0644, NULL, NULL);
 static DEVICE_ATTR(channel, 0644, nrf24l01_sysfs_show_channel, nrf24l01_sysfs_store_channel);
+static DEVICE_ATTR(address_width, 0644, nrf24l01_sysfs_show_addr_width, nrf24l01_sysfs_store_addr_width);
 
 static struct attribute* attr_rf[] = {
 	&dev_attr_txpower.attr,
 	&dev_attr_channel.attr,
+	&dev_attr_address_width.attr,
 	NULL
 };
 

@@ -521,3 +521,38 @@ ssize_t nrf24l01_sysfs_store_enaa_pipe5(struct device* dev, struct device_attrib
 {
 	return nrf24l01_sysfs_store_enaa(dev, buf, count, 5);
 }
+
+ssize_t nrf24l01_sysfs_show_addr_width(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	ssize_t err;
+	unsigned int width;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	if((err = nrf24l01_get_address_width(nrf, &width)))
+		goto exit_err;
+	return sprintf(buf, "%u\n", width);
+exit_err:
+	return err;
+}
+
+ssize_t nrf24l01_sysfs_store_addr_width(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+    ssize_t err;
+    unsigned int width;
+    nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+    char* str = nrf24l01_sanitize_string(buf, count);
+    if(!str)
+    {
+        err = -ENOMEM;
+        goto exit_err;
+    }
+    if((err = kstrtouint(str, 10, &width)))
+        goto exit_stralloc;
+    if((err = nrf24l01_set_address_width(nrf, width)))
+        goto exit_stralloc;
+    err = count;
+exit_stralloc:
+    vfree(str);
+exit_err:
+    return err;
+}
+
