@@ -11,6 +11,7 @@
 #include "nrf24l01_chrdev.h"
 #include "nrf24l01_core.h"
 #include "nrf24l01_functions.h"
+#include "nrf24l01_sysfs.h"
 
 #define NRF24L01_CHRDEV_NAME "nrf24l01"
 #define NRF24L01_CHRDEV_CLASS "nrf24"
@@ -85,37 +86,8 @@ static struct file_operations fops =
    .release = dev_release	
 };
 
-static ssize_t show_channel(struct device* dev, struct device_attribute* attr, char* buf)
-{
-	unsigned int channel;
-	int err;
-	if((err = nrf24l01_get_channel(((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf, &channel)))
-		return err;
-	printk(KERN_INFO "Got channel %d\n", channel);
-	return sprintf(buf, "%d\n", channel);
-}
-
-static ssize_t store_channel(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
-{
-	unsigned int channel;
-	ssize_t err;
-	char* buff = vzalloc(count + 1);
-	if(!buff)
-		return -ENOMEM;
-	memcpy(buff, buf, count);
-	if((err = kstrtouint(buff, 10, &channel)))
-		goto exit_buffalloc;;	
-	err = nrf24l01_set_channel(((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf, channel);	
-	if(err)
-		goto exit_buffalloc;
-	return count;
-exit_buffalloc:
-	vfree(buff);
-	return err;
-}
-
 static DEVICE_ATTR(txpower, 0644, NULL, NULL);
-static DEVICE_ATTR(channel, 0644, show_channel, store_channel);
+static DEVICE_ATTR(channel, 0644, nrf24l01_sysfs_show_channel, nrf24l01_sysfs_store_channel);
 
 static struct attribute* attr_rf[] = {
 	&dev_attr_txpower.attr,
