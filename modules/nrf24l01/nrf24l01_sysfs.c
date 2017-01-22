@@ -691,3 +691,41 @@ exit_stralloc:
 exit_err:
     return err;
 }
+
+ssize_t nrf24l01_sysfs_show_tx_address(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	int err;
+	unsigned int addr_width;
+	u64 addr = 0;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	if((err = nrf24l01_get_tx_address_u64(nrf, &addr)))
+		return err;
+	if((err = nrf24l01_get_address_width(nrf, &addr_width)))
+		return err;
+	char fmt[10];
+	sprintf(fmt, "%%0%ullX\n", addr_width * 2);
+	return sprintf(buf, fmt, addr);
+}
+
+ssize_t nrf24l01_sysfs_store_tx_address(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
+{
+    ssize_t err;
+    u64 addr;
+    nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+    char* str = nrf24l01_sanitize_string(buf, count);
+    if(!str)
+    {
+        err = -ENOMEM;
+        goto exit_err;
+    }
+    if((err = kstrtou64(str, 16, &addr)))
+        goto exit_stralloc;
+    if((err = nrf24l01_set_tx_address_u64(nrf, addr)))
+        goto exit_stralloc;
+    err = count;
+exit_stralloc:
+    vfree(str);
+exit_err:
+    return err;
+}
+

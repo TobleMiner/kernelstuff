@@ -110,12 +110,14 @@ static DEVICE_ATTR(address_width, 0644, nrf24l01_sysfs_show_addr_width, nrf24l01
 static DEVICE_ATTR(pwr_up, 0644, nrf24l01_sysfs_show_pwr_up, nrf24l01_sysfs_store_pwr_up);
 static DEVICE_ATTR(gpio_ce, 0644, NULL, nrf24l01_sysfs_store_pwr_up);
 static DEVICE_ATTR(crc, 0644, nrf24l01_sysfs_show_crc, nrf24l01_sysfs_store_crc);
+static DEVICE_ATTR(tx_address, 0644, nrf24l01_sysfs_show_tx_address, nrf24l01_sysfs_store_tx_address);
 
 static struct attribute* attr_general[] = {
 	&dev_attr_address_width.attr,
 	&dev_attr_pwr_up.attr,
 	&dev_attr_gpio_ce.attr,
 	&dev_attr_crc.attr,
+	&dev_attr_tx_address.attr,
 	NULL
 };
 

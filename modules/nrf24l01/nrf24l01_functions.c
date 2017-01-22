@@ -82,7 +82,7 @@ int nrf24l01_get_crc(struct nrf24l01_t* nrf, unsigned int* crc)
 		goto exit_err;
 	if((err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_CRCO, crc, 1)))
 		goto exit_err;
-	*crc++;
+	*crc += 1;
 exit_err:
 	return err;
 }
@@ -162,6 +162,16 @@ int nrf24l01_get_address_u64(struct nrf24l01_t* nrf, u64* addr, unsigned int pip
 	else
 		return -EINVAL;
 	return err;
+}
+
+int nrf24l01_set_tx_address_u64(struct nrf24l01_t* nrf, u64 addr)
+{
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_TX_ADDR, (unsigned int*) &addr, 5);
+}
+
+int nrf24l01_get_tx_address_u64(struct nrf24l01_t* nrf, u64* addr)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_TX_ADDR, (unsigned int*) addr, 5);
 }
 
 
