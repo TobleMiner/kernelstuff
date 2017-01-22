@@ -47,6 +47,9 @@ int nrf24l01_set_address_u64(struct nrf24l01_t* nrf, u64 addr, unsigned int pipe
 int nrf24l01_get_address_u64(struct nrf24l01_t* nrf, u64* addr, unsigned int pipe);
 int nrf24l01_set_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int state);
 int nrf24l01_get_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* state);
+int nrf24l01_set_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int state);
+int nrf24l01_get_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* state);
+
 
 #define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)
 #define NRF24L01_CE_LO(nrf) nrf24l01_set_ce(nrf, 0)

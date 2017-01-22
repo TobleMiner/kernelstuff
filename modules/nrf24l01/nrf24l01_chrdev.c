@@ -133,6 +133,15 @@ static struct device_attribute attr_pipe0_dpl = {
 		.name = "dynamicpayload",
 		.mode = 0644
 	},
+	.show = nrf24l01_sysfs_show_dynpd_pipe0,
+	.store = nrf24l01_sysfs_store_dynpd_pipe0
+};
+
+static struct device_attribute attr_pipe0_enaa = {
+	.attr = {
+		.name = "autoack",
+		.mode = 0644
+	},
 	.show = NULL,
 	.store = NULL
 };
@@ -142,6 +151,7 @@ static struct attribute* attr_pipe0[] = {
 	&attr_pipe0_addr.attr,
 	&attr_pipe0_state.attr,
 	&attr_pipe0_dpl.attr,
+	&attr_pipe0_enaa.attr,
 	NULL
 };
 
