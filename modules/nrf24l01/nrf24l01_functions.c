@@ -174,7 +174,6 @@ int nrf24l01_get_tx_address_u64(struct nrf24l01_t* nrf, u64* addr)
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_TX_ADDR, (unsigned int*) addr, 5);
 }
 
-
 int nrf24l01_flush_rx(struct nrf24l01_t* nrf)
 {
 	int err;
@@ -297,6 +296,8 @@ int nrf24l01_set_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int s
 		return -EINVAL;
 	if(state != 0 && (err = nrf24l01_set_feature_dynpd(nrf, 1)))
 		goto exit_err;
+	if(state != 0 && (err = nrf24l01_set_enaa(nrf, pipe, 1)))
+		goto exit_err;
 	err = partreg_table_write(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, &state, 1);
 exit_err:
 	return err;
@@ -305,12 +306,14 @@ exit_err:
 int nrf24l01_get_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* state)
 {
 	int err;
-	unsigned int en_dpl;
+	unsigned int en_dpl, en_aa;
 	if(pipe > 5)
 		return -EINVAL;
 	if((err = nrf24l01_get_feature_dynpd(nrf, &en_dpl)))
 		goto exit_err;
-	if(en_dpl == 0)
+	if((err = nrf24l01_get_enaa(nrf, pipe, &en_aa)))
+		goto exit_err;
+	if(!en_dpl || !en_aa)
 	{
 		*state = 0;
 		goto exit_err;		
@@ -466,14 +469,17 @@ tryagain:
 		mutex_unlock(&nrf->m_rx_path);
 		goto tryagain;
 	}
+	printk(KERN_INFO "Got payload in pipe %u\n", pipe_no);
 	if((err = nrf24l01_get_dynpd(nrf, pipe_no, &dyn_pld)))
 	{
+		dev_err(&nrf->spi->dev, "Failed to determine pipe payload type (dynamic/fixed size): %d\n", err);
 		goto exit_err_mutex;
 	}
 	if(dyn_pld)
 	{
 		if((err = nrf24l01_get_dyn_pld_width(nrf, &payload_width))) // TODO: Scrap rx fifo if payload_width > 32
 		{
+			dev_err(&nrf->spi->dev, "Payload size read failed: %d\n", err);
 			goto exit_err_mutex;
 		}
 	}
@@ -486,7 +492,7 @@ tryagain:
 	}
 	if(len < payload_width)
 	{
-		dev_err(&nrf->spi->dev, "Packet read length too short. Should be >= %u, is %u\n", payload_width, len);
+		dev_err(&nrf->spi->dev, "Packet read buffer too short. Should be >= %u, is %u\n", payload_width, len);
 		err = -EINVAL;
 		goto exit_err_mutex;
 	}
