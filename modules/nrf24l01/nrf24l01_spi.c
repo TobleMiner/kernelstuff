@@ -39,7 +39,7 @@ static char nrf24l01_reg_masks[] = {
 	NRF24L01_REG_MASK_FEATURE
 };
 
-#define NRF24L01_NUM_REGS 24
+#define NRF24L01_NUM_REGS 30
 
 
 int nrf24l01_write_short_reg(void* ctx, unsigned int reg, unsigned int val)
