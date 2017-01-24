@@ -479,7 +479,6 @@ ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsign
 	size_t err;
 	unsigned int pipe_no, payload_width, dyn_pld;
 	// TODO: claim rxtx state mutex here and hold it until function exit
-	nrf24l01_set_rx(nrf);
 tryagain:
 	if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_rx_p_no_or_fail(nrf) != NRF24L01_RX_P_NO_EMPTY)))
 	{
