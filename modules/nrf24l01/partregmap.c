@@ -39,8 +39,10 @@ static int partreg_regmap_write(struct partreg* reg, unsigned int value)
 		printk(KERN_INFO "partregmap: mask: %u\n", *reg->mask);
 		value &= *reg->mask;
 		printk(KERN_INFO "partregmap: value & mask: %u\n", value);
+		return regmap_write_bits(reg->regmap, reg->reg, *reg->mask, value);
 	}
-	return regmap_write_bits(reg->regmap, reg->reg, *reg->mask, value);
+	else
+		return regmap_write(reg->regmap, reg->reg, value);
 }
 
 static int partreg_custom_read(struct partreg* reg, unsigned int* value, unsigned int maxlen)
