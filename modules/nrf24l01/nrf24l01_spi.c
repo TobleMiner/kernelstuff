@@ -158,7 +158,7 @@ int nrf24l01_spi_read_rx_pl_width(struct nrf24l01_t* nrf, unsigned int* width)
 	if((err = spi_w8r8(nrf->spi, cmd)) < 0)
 		return err;
 	*width = (unsigned int)err;
-	return err;
+	return 0;
 }
 
 int nrf24l01_spi_write_ack_pld(struct nrf24l01_t* nrf, unsigned int pipe, unsigned char* data, unsigned int len)
