@@ -174,20 +174,30 @@ int nrf24l01_get_tx_address_u64(struct nrf24l01_t* nrf, u64* addr)
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_TX_ADDR, (unsigned int*) addr, 5);
 }
 
+static int nrf24l01_flush_rx_(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_spi_flush_rx(nrf);
+}
+
 int nrf24l01_flush_rx(struct nrf24l01_t* nrf)
 {
 	int err;
 	mutex_lock(&nrf->m_rx_path);
-	err = nrf24l01_spi_flush_rx(nrf);
+	err = nrf24l01_flush_rx_(nrf);
 	mutex_unlock(&nrf->m_rx_path);
 	return err;
+}
+
+static int nrf24l01_flush_tx_(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_spi_flush_tx(nrf);
 }
 
 int nrf24l01_flush_tx(struct nrf24l01_t* nrf)
 {
 	int err;
 	mutex_lock(&nrf->m_tx_path);
-	err = nrf24l01_spi_flush_tx(nrf);
+	err = nrf24l01_flush_tx_(nrf);
 	mutex_unlock(&nrf->m_tx_path);
 	return err;
 }
@@ -392,10 +402,16 @@ int nrf24l01_get_status_tx_full(struct nrf24l01_t* nrf, unsigned int* status)
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_TX_FULL, status, 1);
 }
 
-/*int nrf24l01_get_pld_width(struct nrf24l01_t* nrf, unsigned int* width)
+int nrf24l01_get_fifo_tx_full(struct nrf24l01_t* nrf, unsigned int* status)
 {
-	Get width via R_RX_PL_WID cmd	
-}*/
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_FIFO_STATUS_TX_FULL, status, 1);
+}
+
+int nrf24l01_get_fifo_tx_empty(struct nrf24l01_t* nrf, unsigned int* status)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_FIFO_STATUS_TX_EMPTY, status, 1);
+}
+
 
 int nrf24l01_get_vreg_or_fail_short(struct nrf24l01_t* nrf, int vreg, int ntries)
 {
@@ -423,14 +439,24 @@ int nrf24l01_get_tx_full_or_fail(struct nrf24l01_t* nrf)
 	return nrf24l01_get_vreg_or_fail_short(nrf, NRF24L01_VREG_STATUS_TX_FULL, NRF24L01_VREG_TRIES);
 }
 
+int nrf24l01_get_rxtx(struct nrf24l01_t* nrf, int* state)
+{
+	return nrf24l01_get_prim_rx(nrf, state);
+}
+
 int nrf24l01_set_rxtx(struct nrf24l01_t* nrf, int state)
 {
-	int err;
-	NRF24L01_CE_LO(nrf);
-	if((err = nrf24l01_pwr_down(nrf)))
+	int err, cstate;
+	if((err = nrf24l01_get_rxtx(nrf, &state)))
 		return err;
-	if((err = nrf24l01_set_prim_rx(nrf, state)))
-		return err;
+	if(state != cstate)
+	{
+		NRF24L01_CE_LO(nrf);
+		if((err = nrf24l01_pwr_down(nrf)))
+			return err;
+		if((err = nrf24l01_set_prim_rx(nrf, state)))
+			return err;
+	}
 	if((err = nrf24l01_pwr_up(nrf)))
 		return err;
 	NRF24L01_CE_HI(nrf);
@@ -477,9 +503,20 @@ tryagain:
 	}
 	if(dyn_pld)
 	{
-		if((err = nrf24l01_get_dyn_pld_width(nrf, &payload_width))) // TODO: Scrap rx fifo if payload_width > 32
+		if((err = nrf24l01_get_dyn_pld_width(nrf, &payload_width)))
 		{
 			dev_err(&nrf->spi->dev, "Payload size read failed: %d\n", err);
+			goto exit_err_mutex;
+		}
+		if(payload_width > 32)
+		{
+			dev_err(&nrf->spi->dev, "Payload size is > 32, flushing rx fifo\n");
+			if((err = nrf24l01_flush_rx_(nrf)))
+			{
+				dev_err(&nrf->spi->dev, "Failed to flush rx fifo: %d\n", err);
+				goto exit_err_mutex;
+			}
+			err = -EIO;
 			goto exit_err_mutex;
 		}
 	}
@@ -517,7 +554,6 @@ int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned i
 		err = -EINVAL;
 		goto exit_err;
 	}	
-	nrf24l01_set_tx(nrf);
 tryagain:
 	if((err = wait_event_interruptible(nrf->tx_queue, nrf24l01_get_tx_full_or_fail(nrf) != 1)))
 	{
@@ -532,6 +568,10 @@ tryagain:
 	{
 		mutex_unlock(&nrf->m_tx_path);
 		goto tryagain;
+	}
+	if((err = nrf24l01_set_tx(nrf)))
+	{
+		goto exit_err_mutex;
 	}
 	if((err = nrf24l01_spi_write_tx_pld(nrf, data, len)))
 	{

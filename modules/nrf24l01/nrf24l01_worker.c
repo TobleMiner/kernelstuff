@@ -54,6 +54,18 @@ static int nrf24l01_worker_do_work(void* ctx)
 			{
 				dev_err(&nrf->spi->dev, "Failed to clear tx_ds flag: %d\n", err);
 			}
+			mutex_lock(&nrf->m_tx_path);
+			if((err = nrf24l01_get_fifo_tx_empty(nrf, &data)))
+			{
+				dev_err(&nrf->spi->dev, "Failed to check fifo status\n");
+				goto tx_fifo_empty_mutex;
+			}
+			if(data)
+			{
+				nrf24l01_set_rx(nrf);
+			}
+tx_fifo_empty_mutex:
+			mutex_unlock(&nrf->m_tx_path);
 		}
 		if((err = nrf24l01_get_status_max_rt(nrf, &data)))
 		{
@@ -72,6 +84,9 @@ static int nrf24l01_worker_do_work(void* ctx)
 			{
 				dev_err(&nrf->spi->dev, "Failed to flush tx fifo");
 			}
+			mutex_lock(&nrf->m_tx_path);
+			nrf24l01_set_rx(nrf);
+			mutex_unlock(&nrf->m_tx_path);
 			wake_up_interruptible(&nrf->tx_queue);
 		}
 	}

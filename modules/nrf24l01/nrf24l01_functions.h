@@ -58,6 +58,8 @@ int nrf24l01_set_crc(struct nrf24l01_t* nrf, unsigned int crc);
 int nrf24l01_get_crc(struct nrf24l01_t* nrf, unsigned int* crc);
 int nrf24l01_set_tx_address_u64(struct nrf24l01_t* nrf, u64 addr);
 int nrf24l01_get_tx_address_u64(struct nrf24l01_t* nrf, u64* addr);
+int nrf24l01_get_fifo_tx_full(struct nrf24l01_t* nrf, unsigned int* status);
+int nrf24l01_get_fifo_tx_empty(struct nrf24l01_t* nrf, unsigned int* status);
 
 
 #define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)

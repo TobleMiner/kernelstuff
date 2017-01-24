@@ -156,6 +156,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	nrf24l01_set_status_max_rt(nrf24l01_dev, 1);	
 	nrf24l01_set_status_rx_dr(nrf24l01_dev, 1);
 	nrf24l01_set_status_tx_ds(nrf24l01_dev, 1);
+	nrf24l01_set_rx(nrf24l01_dev);
 
 	return 0;
 exit_gpioalloc:
