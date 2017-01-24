@@ -151,13 +151,13 @@ int nrf24l01_spi_reuse_tx_pl(struct nrf24l01_t* nrf)
 	return nrf24l01_spi_write(nrf, &reuse_tx_pl, 1);
 }
 
-int nrf24l01_spi_read_rx_pl_width(struct nrf24l01_t* nrf, unsigned char* width)
+int nrf24l01_spi_read_rx_pl_width(struct nrf24l01_t* nrf, unsigned int* width)
 {
 	int err;
 	u8 cmd = NRF24L01_CMD_R_RX_PL_WID;
 	if((err = spi_w8r8(nrf->spi, cmd)) < 0)
 		return err;
-	*width = (unsigned char)err;
+	*width = (unsigned int)err;
 	return err;
 }
 

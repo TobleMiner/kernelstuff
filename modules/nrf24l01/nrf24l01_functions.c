@@ -231,7 +231,7 @@ int nrf24l01_get_prim_rx(struct nrf24l01_t* nrf, unsigned int* state)
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_PRIM_RX, state, 1);
 }
 
-int nrf24l01_set_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int width)
+int nrf24l01_set_pipe_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int width)
 {
 	if(pipe > 5)
 		return -EINVAL;
@@ -240,11 +240,16 @@ int nrf24l01_set_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned i
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_RX_PW_P0 + pipe, &width, 1);
 }
 
-int nrf24l01_get_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* width)
+int nrf24l01_get_pipe_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* width)
 {
 	if(pipe > 5)
 		return -EINVAL;
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_RX_PW_P0 + pipe, width, 1);	
+}
+
+int nrf24l01_get_dyn_pld_width(struct nrf24l01_t* nrf, unsigned int* width)
+{
+	return nrf24l01_spi_read_rx_pl_width(nrf, width);
 }
 
 int nrf24l01_set_rx_addr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned char* addr, unsigned int len)
@@ -275,18 +280,44 @@ int nrf24l01_get_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned i
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_EN_RXADDR_ERX_P0 + pipe, state, 1);
 }
 
+static int nrf24l01_set_feature_dynpd(struct nrf24l01_t* nrf, unsigned int state)
+{
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_FEATURE_EN_DPL, &state, 1);
+}
+
+static int nrf24l01_get_feature_dynpd(struct nrf24l01_t* nrf, unsigned int* state)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_FEATURE_EN_DPL, state, 1);
+}
+
 int nrf24l01_set_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int state)
 {
+	int err;
 	if(pipe > 5)
 		return -EINVAL;
-	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, &state, 1);
+	if(state != 0 && (err = nrf24l01_set_feature_dynpd(nrf, 1)))
+		goto exit_err;
+	err = partreg_table_write(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, &state, 1);
+exit_err:
+	return err;
 }
 
 int nrf24l01_get_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* state)
 {
+	int err;
+	unsigned int en_dpl;
 	if(pipe > 5)
 		return -EINVAL;
-	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, state, 1);
+	if((err = nrf24l01_get_feature_dynpd(nrf, &en_dpl)))
+		goto exit_err;
+	if(en_dpl == 0)
+	{
+		state = 0;
+		goto exit_err;		
+	}
+	err =  partreg_table_read(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, state, 1);
+exit_err:
+	return err;
 }
 
 int nrf24l01_set_enaa(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int autoack)
@@ -417,7 +448,7 @@ int nrf24l01_set_tx(struct nrf24l01_t* nrf)
 ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
 	size_t err;
-	unsigned int pipe_no, payload_width;
+	unsigned int pipe_no, payload_width, dyn_pld;
 	// TODO: claim rxtx state mutex here and hold it until function exit
 	nrf24l01_set_rx(nrf);
 tryagain:
@@ -435,9 +466,23 @@ tryagain:
 		mutex_unlock(&nrf->m_rx_path);
 		goto tryagain;
 	}
-	if((err = nrf24l01_get_pld_width(nrf, pipe_no, &payload_width)))
+	if((err = nrf24l01_get_dynpd(nrf, pipe_no, &dyn_pld)))
 	{
 		goto exit_err_mutex;
+	}
+	if(dyn_pld)
+	{
+		if((err = nrf24l01_get_dyn_pld_width(nrf, &payload_width))) // TODO: Scrap rx fifo if payload_width > 32
+		{
+			goto exit_err_mutex;
+		}
+	}
+	else
+	{
+		if((err = nrf24l01_get_pipe_pld_width(nrf, pipe_no, &payload_width)))
+		{
+			goto exit_err_mutex;
+		}
 	}
 	if(len < payload_width)
 	{

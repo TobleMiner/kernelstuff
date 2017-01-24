@@ -151,7 +151,7 @@ static ssize_t nrf24l01_sysfs_show_payload_width(struct device* dev, char* buf, 
 	ssize_t err;
 	unsigned int width;
 	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
-	if((err = nrf24l01_get_pld_width(nrf, pipe, &width)))
+	if((err = nrf24l01_get_pipe_pld_width(nrf, pipe, &width)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", width);
 exit_err:
@@ -201,7 +201,7 @@ static ssize_t nrf24l01_sysfs_store_payload_width(struct device* dev, const char
 	}
 	if((err = kstrtouint(str, 10, &width)))
 		goto exit_stralloc;
-	if((err = nrf24l01_set_pld_width(nrf, pipe, width)))
+	if((err = nrf24l01_set_pipe_pld_width(nrf, pipe, width)))
 		goto exit_stralloc;
 	err = count;
 exit_stralloc:
