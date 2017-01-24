@@ -447,7 +447,7 @@ int nrf24l01_get_rxtx(struct nrf24l01_t* nrf, int* state)
 int nrf24l01_set_rxtx(struct nrf24l01_t* nrf, int state)
 {
 	int err, cstate;
-	if((err = nrf24l01_get_rxtx(nrf, &state)))
+	if((err = nrf24l01_get_rxtx(nrf, &cstate)))
 		return err;
 	if(state != cstate)
 	{
