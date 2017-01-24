@@ -43,23 +43,24 @@ static const struct regmap_access_table regmap_rd_table_short = {
 };
 
 static const struct regmap_range regmap_volatile_table_short_yes[] = { regmap_reg_range(0x07, 0x09), regmap_reg_range(0x17, 0x17) };
-static const struct regmap_range regmap_volatile_table_short_no[] = { regmap_reg_range(0x01, 0x06), regmap_reg_range(0x0A, 0x16) };
+static const struct regmap_range regmap_volatile_table_short_no[] = { regmap_reg_range(0x01, 0x06), regmap_reg_range(0x0A, 0x16),
+	regmap_reg_range(0x1C, 0x1D)};
 
 static const struct regmap_access_table regmap_volatile_table_short = {
 	.yes_ranges = regmap_volatile_table_short_yes,
-	.n_yes_ranges = 3,
+	.n_yes_ranges = 2,
 	.no_ranges = regmap_volatile_table_short_no,
-	.n_no_ranges = 2,
+	.n_no_ranges = 3,
 };
 
 static const struct regmap_range regmap_precious_table_short_yes[] = { regmap_reg_range(0x17, 0x17) };
-static const struct regmap_range regmap_precious_table_short_no[] = { regmap_reg_range(0x00, 0x16) };
+static const struct regmap_range regmap_precious_table_short_no[] = { regmap_reg_range(0x00, 0x16), regmap_reg_range(0x1C, 0x1D)};
 
 static const struct regmap_access_table regmap_precious_table_short = {
 	.yes_ranges = regmap_precious_table_short_yes,
 	.n_yes_ranges = 1,
 	.no_ranges = regmap_precious_table_short_no,
-	.n_no_ranges = 1
+	.n_no_ranges = 2
 };
 
 static const struct regmap_config nrf24l01_regmap_short = {
