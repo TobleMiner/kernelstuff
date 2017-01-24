@@ -312,10 +312,10 @@ int nrf24l01_get_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* 
 		goto exit_err;
 	if(en_dpl == 0)
 	{
-		state = 0;
+		*state = 0;
 		goto exit_err;		
 	}
-	err =  partreg_table_read(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, state, 1);
+	err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, state, 1);
 exit_err:
 	return err;
 }
