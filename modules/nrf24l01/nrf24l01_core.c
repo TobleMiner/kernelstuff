@@ -150,13 +150,15 @@ static int nrf24l01_probe(struct spi_device* spi)
 		dev_err(&spi->dev, "Failed to allocate interrupt\n");
 		goto exit_gpioalloc;
 	}
+	nrf24l01_dev->mode_flags |= NRF24L01_MODE_LOW_PWR;
 	NRF24L01_CE_LO(nrf24l01_dev);
 	nrf24l01_pwr_down(nrf24l01_dev);
 	nrf24l01_flush(nrf24l01_dev);
 	nrf24l01_set_status_max_rt(nrf24l01_dev, 1);	
 	nrf24l01_set_status_rx_dr(nrf24l01_dev, 1);
 	nrf24l01_set_status_tx_ds(nrf24l01_dev, 1);
-	nrf24l01_set_rx(nrf24l01_dev);
+	if(!nrf24l01_get_mode_low_pwr(nrf24l01_dev))
+		nrf24l01_set_rx(nrf24l01_dev);
 
 	return 0;
 exit_gpioalloc:
