@@ -89,7 +89,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 {
 	int err = 0;
 	unsigned int irq_trigger;
-	const void* of_gpio_ce;
+	const void* of_gpio_ce, of_nrf_mode;
 	printk(KERN_WARNING "nrf24l01_probe\n");
 	nrf24l01_dev = vzalloc(sizeof(nrf24l01_t));
 	if(IS_ERR(nrf24l01_dev))
@@ -116,6 +116,12 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
 		goto exit_partregalloc;
 	}
+	of_nrf_mode = of_get_property(spi->dev.of_node, "nrf-mode", NULL);
+	if(!of_nrf_mode)
+	{
+        dev_warn(&spi->dev, "Mode not specified\n");
+	}
+	nrf24l01_dev->mode_flags = be32_to_cpup(of_nrf_mode);
 	init_waitqueue_head(&nrf24l01_dev->rx_queue);
 	init_waitqueue_head(&nrf24l01_dev->tx_queue);
 	if((err = nrf24l01_create_worker(nrf24l01_dev)))
@@ -150,7 +156,6 @@ static int nrf24l01_probe(struct spi_device* spi)
 		dev_err(&spi->dev, "Failed to allocate interrupt\n");
 		goto exit_gpioalloc;
 	}
-	nrf24l01_dev->mode_flags |= NRF24L01_MODE_LOW_PWR;
 	NRF24L01_CE_LO(nrf24l01_dev);
 	nrf24l01_pwr_down(nrf24l01_dev);
 	nrf24l01_flush(nrf24l01_dev);
