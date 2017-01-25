@@ -60,6 +60,8 @@ int nrf24l01_set_tx_address_u64(struct nrf24l01_t* nrf, u64 addr);
 int nrf24l01_get_tx_address_u64(struct nrf24l01_t* nrf, u64* addr);
 int nrf24l01_get_fifo_tx_full(struct nrf24l01_t* nrf, unsigned int* status);
 int nrf24l01_get_fifo_tx_empty(struct nrf24l01_t* nrf, unsigned int* status);
+int nrf24l01_get_mode(struct nrf24l01_t* nrf, unsigned int mode);
+int nrf24l01_get_mode_low_pwr(struct nrf24l01_t* nrf);
 
 
 #define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)

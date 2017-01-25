@@ -62,7 +62,32 @@ static int nrf24l01_worker_do_work(void* ctx)
 			}
 			if(data)
 			{
-				nrf24l01_set_rx(nrf);
+				if(nrf24l01_get_mode_low_pwr(nrf))
+				{
+					mutex_lock(&nrf->m_rx_path);
+					if(nrf->num_readers > 0)
+					{
+						if((err = nrf24l01_set_rx(nrf)))
+						{
+							dev_err(&nrf->spi->dev, "Failed to set nrf to RX: %d\n", err);
+						}
+					}
+					else
+					{
+						if((err = nrf24l01_pwr_down(nrf)))
+						{
+							dev_err(&nrf->spi->dev, "Failed to power down nrf: %d\n", err);
+						}
+					}
+					mutex_unlock(&nrf->m_rx_path);
+				}
+				else
+				{
+					if((err = nrf24l01_set_rx(nrf)))
+					{
+						dev_err(&nrf->spi->dev, "Failed to set nrf to RX: %d\n", err);
+					}
+				}
 			}
 tx_fifo_empty_mutex:
 			mutex_unlock(&nrf->m_tx_path);
@@ -85,7 +110,32 @@ tx_fifo_empty_mutex:
 				dev_err(&nrf->spi->dev, "Failed to flush tx fifo");
 			}
 			mutex_lock(&nrf->m_tx_path);
-			nrf24l01_set_rx(nrf);
+			if(nrf24l01_get_mode_low_pwr(nrf))
+			{
+				mutex_lock(&nrf->m_rx_path);
+				if(nrf->num_readers > 0)
+				{
+					if((err = nrf24l01_set_rx(nrf)))
+					{
+						dev_err(&nrf->spi->dev, "Failed to set nrf to RX: %d\n", err);
+					}
+				}
+				else
+				{
+					if((err = nrf24l01_pwr_down(nrf)))
+					{
+						dev_err(&nrf->spi->dev, "Failed to power down nrf: %d\n", err);
+					}
+				}
+				mutex_unlock(&nrf->m_rx_path);
+			}
+			else
+			{
+				if((err = nrf24l01_set_rx(nrf)))
+				{
+					dev_err(&nrf->spi->dev, "Failed to set nrf to RX: %d\n", err);
+				}
+			}
 			mutex_unlock(&nrf->m_tx_path);
 			wake_up_interruptible(&nrf->tx_queue);
 		}

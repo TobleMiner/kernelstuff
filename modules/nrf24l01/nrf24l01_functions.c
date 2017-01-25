@@ -8,6 +8,16 @@
 #include "nrf24l01_functions.h"
 #include "partregmap.h"
 
+int nrf24l01_get_mode(struct nrf24l01_t* nrf, unsigned int mode)
+{
+	return nrf->mode_flags & mode;
+}
+
+int nrf24l01_get_mode_low_pwr(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_get_mode(nrf, NRF24L01_MODE_LOW_PWR);
+}
+
 int nrf24l01_set_channel(struct nrf24l01_t* nrf, unsigned int ch)
 {
 	printk(KERN_INFO "Calling table write\n");
@@ -477,8 +487,22 @@ int nrf24l01_set_tx(struct nrf24l01_t* nrf)
 ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
 	size_t err;
-	unsigned int pipe_no, payload_width, dyn_pld;
-	// TODO: claim rxtx state mutex here and hold it until function exit
+	unsigned int pipe_no, payload_width, dyn_pld, fifo_status;
+	if(nrf24l01_get_mode_low_pwr(nrf))
+	{
+		mutex_lock(&nrf->m_rx_path);
+		nrf->num_readers++;
+		mutex_unlock(&nrf->m_rx_path);
+		mutex_lock(&nrf->m_tx_path);
+		if((err = nrf24l01_get_fifo_tx_empty(nrf, &fifo_status)))
+		{
+			mutex_unlock(&nrf->m_tx_path);
+			goto exit_err;
+		}
+		if(fifo_status)
+			nrf24l01_set_rx(nrf);
+		mutex_unlock(&nrf->m_tx_path);
+	}
 tryagain:
 	if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_rx_p_no_or_fail(nrf) != NRF24L01_RX_P_NO_EMPTY)))
 	{
@@ -540,6 +564,12 @@ tryagain:
 exit_err_mutex:
 	mutex_unlock(&nrf->m_rx_path);
 exit_err:
+	if(nrf24l01_get_mode_low_pwr(nrf))
+	{
+		mutex_lock(&nrf->m_rx_path);
+		nrf->num_readers--;
+		mutex_unlock(&nrf->m_rx_path);
+	}
 	return err;
 }
 

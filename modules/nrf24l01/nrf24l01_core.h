@@ -24,6 +24,10 @@ typedef struct nrf24l01_t {
 	struct mutex			m_rxtx;
 	wait_queue_head_t		rx_queue;
 	wait_queue_head_t		tx_queue;
+	unsigned int			num_readers;
+	unsigned int			mode_flags;
 } nrf24l01_t;
+
+#define NRF24L01_MODE_LOW_PWR	0b1
 
 #endif
