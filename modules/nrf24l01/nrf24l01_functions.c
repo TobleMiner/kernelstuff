@@ -483,6 +483,42 @@ int nrf24l01_set_tx(struct nrf24l01_t* nrf)
 	return nrf24l01_set_rxtx(nrf, 0);
 }
 
+static void nrf24l01_reader_inc(struct nrf24l01_t* nrf)
+{
+	mutex_lock(&nrf->m_rx_path);
+	nrf->num_readers++;
+	mutex_unlock(&nrf->m_rx_path);
+}
+
+static int nrf24l01_reader_dec(struct nrf24l01_t* nrf)
+{
+	int err;
+	unsigned int fifo_status;
+	mutex_lock(&nrf->m_rx_path);
+	nrf->num_readers--;
+	if(nrf->num_readers == 0)
+	{
+		mutex_lock(&nrf->m_tx_path);
+		if((err = nrf24l01_get_fifo_tx_empty(nrf, &fifo_status)))
+		{
+			mutex_unlock(&nrf->m_tx_path);
+			goto exit_mutex;
+		}
+		if(fifo_status)
+		{
+			if((err = nrf24l01_pwr_down(nrf)))
+			{
+				mutex_unlock(&nrf->m_tx_path);
+				goto exit_mutex;
+			}
+		}
+		mutex_unlock(&nrf->m_tx_path);			
+	}
+exit_mutex:
+	mutex_unlock(&nrf->m_rx_path);
+	return err;
+}
+
 // TODO: Implement non blocking version
 ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
 {
@@ -490,9 +526,7 @@ ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsign
 	unsigned int pipe_no, payload_width, dyn_pld, fifo_status;
 	if(nrf24l01_get_mode_low_pwr(nrf))
 	{
-		mutex_lock(&nrf->m_rx_path);
-		nrf->num_readers++;
-		mutex_unlock(&nrf->m_rx_path);
+		nrf24l01_reader_inc(nrf);
 		mutex_lock(&nrf->m_tx_path);
 		if((err = nrf24l01_get_fifo_tx_empty(nrf, &fifo_status)))
 		{
@@ -572,30 +606,10 @@ exit_err_mutex:
 exit_err:
 	if(nrf24l01_get_mode_low_pwr(nrf))
 	{
-		mutex_lock(&nrf->m_rx_path);
-		nrf->num_readers--;
-		if(nrf->num_readers == 0)
+		if((cleanup_err = nrf24l01_reader_dec(nrf)))
 		{
-			mutex_lock(&nrf->m_tx_path);
-			if((cleanup_err = nrf24l01_get_fifo_tx_empty(nrf, &fifo_status)))
-			{
-				mutex_unlock(&nrf->m_tx_path);
-				err = cleanup_err;
-				goto exit_mutex;
-			}
-			if(fifo_status)
-			{
-				if((cleanup_err = nrf24l01_pwr_down(nrf)))
-				{
-					mutex_unlock(&nrf->m_tx_path);
-					err = cleanup_err;
-					goto exit_mutex;
-				}
-			}
-			mutex_unlock(&nrf->m_tx_path);			
+			err = cleanup_err;
 		}
-exit_mutex:
-		mutex_unlock(&nrf->m_rx_path);
 	}
 	return err;
 }
