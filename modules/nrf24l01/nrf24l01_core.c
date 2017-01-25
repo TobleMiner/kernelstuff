@@ -126,6 +126,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
 		nrf24l01_dev->mode_flags = be32_to_cpup(of_nrf_mode);
 	}
+	dev_info(&spi->dev, "nrf mode: %u\n", nrf24l01_dev->mode_flags);
 	init_waitqueue_head(&nrf24l01_dev->rx_queue);
 	init_waitqueue_head(&nrf24l01_dev->tx_queue);
 	if((err = nrf24l01_create_worker(nrf24l01_dev)))
