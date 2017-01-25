@@ -120,7 +120,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	of_nrf_mode = of_get_property(spi->dev.of_node, "nrf-mode", NULL);
 	if(!of_nrf_mode)
 	{
-        dev_warn(&spi->dev, "Mode not specified\n");
+        dev_warn(&spi->dev, "Mode not specified, defaulting to 0\n");
 	}
 	else
 	{
