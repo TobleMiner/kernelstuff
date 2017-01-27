@@ -21,13 +21,18 @@ typedef struct nrf24l01_t {
 	struct nrf24l01_worker	worker;
 	struct mutex			m_rx_path;
 	struct mutex			m_tx_path;
-	struct mutex			m_rxtx;
+	struct mutex			m_state;
 	wait_queue_head_t		rx_queue;
 	wait_queue_head_t		tx_queue;
 	unsigned int			num_readers;
 	unsigned int			mode_flags;
 } nrf24l01_t;
 
-#define NRF24L01_MODE_LOW_PWR	0b1
+// Don't idle in RX mode rxing all the time but do so only if there are readers active
+#define NRF24L01_MODE_LOW_PWR				0b00000001
+// Use a state transition not defined in the state diagram in NRF24L01+ spec
+#define NRF24L01_MODE_NON_CANON_STANDBY		0b00000010
+// Forces the module into lower power power down mode instead of standby
+#define NRF24L01_MODE_PWR_DOWN_NOT_STANDBY	0b00000100
 
 #endif

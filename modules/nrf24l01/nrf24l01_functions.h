@@ -62,8 +62,17 @@ int nrf24l01_get_fifo_tx_full(struct nrf24l01_t* nrf, unsigned int* status);
 int nrf24l01_get_fifo_tx_empty(struct nrf24l01_t* nrf, unsigned int* status);
 int nrf24l01_get_mode(struct nrf24l01_t* nrf, unsigned int mode);
 int nrf24l01_get_mode_low_pwr(struct nrf24l01_t* nrf);
+int nrf24l01_set_pwr_up_(struct nrf24l01_t* nrf, unsigned int state);
+int nrf24l01_pwr_up_(struct nrf24l01_t* nrf);
+int nrf24l01_pwr_down_(struct nrf24l01_t* nrf);
+int nrf24l01_get_pwr_up_(struct nrf24l01_t* nrf, unsigned int* state);
+int nrf24l01_get_prim_rx_(struct nrf24l01_t* nrf, unsigned int* state);
+int nrf24l01_get_rxtx_(struct nrf24l01_t* nrf, int* state);
+void nrf24l01_set_ce_(struct nrf24l01_t* nrf, unsigned int state);
+int nrf24l01_shutdown(struct nrf24l01_t* nrf);
 
-
+#define NRF24L01_CE_HI_(nrf) nrf24l01_set_ce_(nrf, 1)
+#define NRF24L01_CE_LO_(nrf) nrf24l01_set_ce_(nrf, 0)
 #define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)
 #define NRF24L01_CE_LO(nrf) nrf24l01_set_ce(nrf, 0)
 

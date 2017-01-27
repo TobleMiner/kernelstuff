@@ -18,6 +18,16 @@ int nrf24l01_get_mode_low_pwr(struct nrf24l01_t* nrf)
 	return nrf24l01_get_mode(nrf, NRF24L01_MODE_LOW_PWR);
 }
 
+int nrf24l01_get_mode_non_canon_standby(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_get_mode(nrf, NRF24L01_MODE_NON_CANON_STANDBY);
+}
+
+int nrf24l01_get_mode_pwr_down_not_standby(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_get_mode(nrf, NRF24L01_MODE_PWR_DOWN_NOT_STANDBY);
+}
+
 int nrf24l01_set_channel(struct nrf24l01_t* nrf, unsigned int ch)
 {
 	printk(KERN_INFO "Calling table write\n");
@@ -220,9 +230,23 @@ int nrf24l01_flush(struct nrf24l01_t* nrf)
 	return nrf24l01_flush_tx(nrf);
 }
 
-int nrf24l01_set_pwr_up(struct nrf24l01_t* nrf, unsigned int state)
+int nrf24l01_set_pwr_up_(struct nrf24l01_t* nrf, unsigned int state)
 {
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_PWR_UP, &state, 1);
+}
+
+int nrf24l01_set_pwr_up(struct nrf24l01_t* nrf, unsigned int state)
+{
+	int err;
+	mutex_lock(&nrf->m_state);
+	err = nrf24l01_set_pwr_up_(nrf, state);
+	mutex_unlock(&nrf->m_state);
+	return err;
+}
+
+int nrf24l01_pwr_up_(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_set_pwr_up_(nrf, 1);
 }
 
 int nrf24l01_pwr_up(struct nrf24l01_t* nrf)
@@ -230,14 +254,60 @@ int nrf24l01_pwr_up(struct nrf24l01_t* nrf)
 	return nrf24l01_set_pwr_up(nrf, 1);
 }
 
+int nrf24l01_pwr_down_(struct nrf24l01_t* nrf)
+{
+	return nrf24l01_set_pwr_up_(nrf, 0);
+}
+
 int nrf24l01_pwr_down(struct nrf24l01_t* nrf)
 {
 	return nrf24l01_set_pwr_up(nrf, 0);
 }
 
-int nrf24l01_get_pwr_up(struct nrf24l01_t* nrf, unsigned int* state)
+void nrf24l01_standby(struct nrf24l01_t* nrf)
+{
+	mutex_lock(&nrf->m_state);
+	NRF24L01_CE_LO(nrf);
+	mutex_unlock(&nrf->m_state);
+}
+
+int nrf24l01_shutdown(struct nrf24l01_t* nrf)
+{
+	int err;
+	unsigned int is_rx;
+	mutex_lock(&nrf->m_state);
+	if((err = nrf24l01_get_prim_rx_(nrf, &is_rx)))
+	{
+		goto exit_err_mutex;
+	}
+	if((is_rx || (!is_rx && nrf24l01_get_mode_non_canon_standby(nrf))) && !nrf24l01_get_mode_pwr_down_not_standby(nrf))
+	{
+		NRF24L01_CE_LO_(nrf);
+	}
+	else
+	{
+		if((err = nrf24l01_pwr_down_(nrf)))
+		{
+			goto exit_err_mutex;
+		}
+	}
+exit_err_mutex:
+	mutex_unlock(&nrf->m_state);
+	return err;
+}
+
+int nrf24l01_get_pwr_up_(struct nrf24l01_t* nrf, unsigned int* state)
 {
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_PWR_UP, state, 1);
+}
+
+int nrf24l01_get_pwr_up(struct nrf24l01_t* nrf, unsigned int* state)
+{
+	int err;
+	mutex_lock(&nrf->m_state);
+	err = nrf24l01_get_pwr_up_(nrf, state);
+	mutex_unlock(&nrf->m_state);
+	return err;	
 }
 
 int nrf24l01_set_prim_rx(struct nrf24l01_t* nrf, unsigned int state)
@@ -245,9 +315,18 @@ int nrf24l01_set_prim_rx(struct nrf24l01_t* nrf, unsigned int state)
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_PRIM_RX, &state, 1);
 }
 
-int nrf24l01_get_prim_rx(struct nrf24l01_t* nrf, unsigned int* state)
+int nrf24l01_get_prim_rx_(struct nrf24l01_t* nrf, unsigned int* state)
 {
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_CONFIG_PRIM_RX, state, 1);
+}
+
+int nrf24l01_get_prim_rx(struct nrf24l01_t* nrf, unsigned int* state)
+{
+	int err;
+	mutex_lock(&nrf->m_state);
+	err = nrf24l01_get_prim_rx_(nrf, state);
+	mutex_unlock(&nrf->m_state);
+	return err;
 }
 
 int nrf24l01_set_pipe_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int width)
@@ -367,9 +446,16 @@ int nrf24l01_get_tx_addr(struct nrf24l01_t* nrf, unsigned char* addr, unsigned i
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_TX_ADDR, (unsigned int*)addr, len);
 }
 
-void nrf24l01_set_ce(struct nrf24l01_t* nrf, unsigned int state)
+void nrf24l01_set_ce_(struct nrf24l01_t* nrf, unsigned int state)
 {
 	gpio_set_value(nrf->gpio_ce, state);
+}
+
+void nrf24l01_set_ce(struct nrf24l01_t* nrf, unsigned int state)
+{
+	mutex_lock(&nrf->m_state);
+	nrf24l01_set_ce_(nrf, state);
+	mutex_unlock(&nrf->m_state);
 }
 
 int nrf24l01_get_status_rx_dr(struct nrf24l01_t* nrf, unsigned int* status)
@@ -449,28 +535,40 @@ int nrf24l01_get_tx_full_or_fail(struct nrf24l01_t* nrf)
 	return nrf24l01_get_vreg_or_fail_short(nrf, NRF24L01_VREG_STATUS_TX_FULL, NRF24L01_VREG_TRIES);
 }
 
+int nrf24l01_get_rxtx_(struct nrf24l01_t* nrf, int* state)
+{
+	return nrf24l01_get_prim_rx_(nrf, state);
+}
+
 int nrf24l01_get_rxtx(struct nrf24l01_t* nrf, int* state)
 {
-	return nrf24l01_get_prim_rx(nrf, state);
+	int err;
+	mutex_lock(&nrf->m_state);
+	err = nrf24l01_get_prim_rx_(nrf, state);
+	mutex_unlock(&nrf->m_state);
+	return err;
 }
 
 int nrf24l01_set_rxtx(struct nrf24l01_t* nrf, int state)
 {
 	int err, cstate;
+	mutex_lock(&nrf->m_state);
 	if((err = nrf24l01_get_rxtx(nrf, &cstate)))
-		return err;
+		goto exit_err_mutex;
 	if(state != cstate)
 	{
 		NRF24L01_CE_LO(nrf);
 		if((err = nrf24l01_pwr_down(nrf)))
-			return err;
+			goto exit_err_mutex;
 		if((err = nrf24l01_set_prim_rx(nrf, state)))
-			return err;
+			goto exit_err_mutex;
 	}
 	if((err = nrf24l01_pwr_up(nrf)))
-		return err;
+		goto exit_err_mutex;
 	NRF24L01_CE_HI(nrf);
-	return 0;
+exit_err_mutex:
+	mutex_unlock(&nrf->m_state);
+	return err;
 }
 
 int nrf24l01_set_rx(struct nrf24l01_t* nrf)
@@ -505,11 +603,10 @@ static int nrf24l01_reader_dec(struct nrf24l01_t* nrf)
 		}
 		if(fifo_status)
 		{
-			NRF24L01_CE_LO(nrf);
-/*			if((err = nrf24l01_pwr_down(nrf)))
+			if((err = nrf24l01_shutdown(nrf)))
 			{
 				goto exit_mutex_tx;
-			}*/
+			}
 		}
 exit_mutex_tx:
 		mutex_unlock(&nrf->m_tx_path);			
