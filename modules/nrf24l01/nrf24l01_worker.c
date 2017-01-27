@@ -74,10 +74,11 @@ static int nrf24l01_worker_do_work(void* ctx)
 					}
 					else
 					{
-						if((err = nrf24l01_pwr_down(nrf)))
+						NRF24L01_CE_LO(nrf);
+/*						if((err = nrf24l01_pwr_down(nrf)))
 						{
 							dev_err(&nrf->spi->dev, "Failed to power down nrf: %d\n", err);
-						}
+						}*/
 					}
 					mutex_unlock(&nrf->m_rx_path);
 				}
@@ -122,10 +123,11 @@ tx_fifo_empty_mutex:
 				}
 				else
 				{
-					if((err = nrf24l01_pwr_down(nrf)))
+					NRF24L01_CE_LO(nrf);
+/*					if((err = nrf24l01_pwr_down(nrf)))
 					{
 						dev_err(&nrf->spi->dev, "Failed to power down nrf: %d\n", err);
-					}
+					}*/
 				}
 				mutex_unlock(&nrf->m_rx_path);
 			}

@@ -505,10 +505,11 @@ static int nrf24l01_reader_dec(struct nrf24l01_t* nrf)
 		}
 		if(fifo_status)
 		{
-			if((err = nrf24l01_pwr_down(nrf)))
+			NRF24L01_CE_LO(nrf);
+/*			if((err = nrf24l01_pwr_down(nrf)))
 			{
 				goto exit_mutex_tx;
-			}
+			}*/
 		}
 exit_mutex_tx:
 		mutex_unlock(&nrf->m_tx_path);			
