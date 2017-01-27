@@ -129,6 +129,20 @@ static struct attribute_group group_rf = {
 	.name = "rf"
 };
 
+static DEVICE_ATTR(delay, 0644, nrf24l01_sysfs_show_retr_ard, nrf24l01_sysfs_store_retr_ard);
+static DEVICE_ATTR(count, 0644, nrf24l01_sysfs_show_retr_arc, nrf24l01_sysfs_store_retr_arc);
+
+static struct attribute* attr_retr[] = {
+	&dev_attr_delay.attr,
+	&dev_attr_count.attr,
+	NULL
+};
+
+static struct attribute_group group_retr = {
+	.attrs = attr_retr,
+	.name = "retransmit"
+};
+
 static DEVICE_ATTR(address_width, 0644, nrf24l01_sysfs_show_addr_width, nrf24l01_sysfs_store_addr_width);
 static DEVICE_ATTR(pwr_up, 0644, nrf24l01_sysfs_show_pwr_up, nrf24l01_sysfs_store_pwr_up);
 static DEVICE_ATTR(gpio_ce, 0644, nrf24l01_sysfs_show_ce, nrf24l01_sysfs_store_ce);
@@ -506,6 +520,7 @@ static struct attribute_group group_pipe5 = {
 static struct attribute_group* attribute_groups[] = {
 	&group_general,
 	&group_rf,
+	&group_retr,
 	&group_pipe0,
 	&group_pipe1,
 	&group_pipe2,

@@ -71,6 +71,41 @@ int nrf24l01_get_dr(struct nrf24l01_t* nrf, unsigned int* dr)
 	return 0;
 }
 
+int nrf24l01_set_retr_ard(struct nrf24l01_t* nrf, unsigned int ard)
+{
+	if(ard < 250 || ard > 4000)
+		return -EINVAL;
+	if(ard % 250 != 0)
+		return -EINVAL;
+	ard /= 250;
+	ard--;
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_SETUP_RETR_ARD, &ard, 1);
+}
+
+int nrf24l01_get_retr_ard(struct nrf24l01_t* nrf, unsigned int* ard)
+{
+	int err;
+	if((err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_SETUP_RETR_ARD, ard, 1)))
+	{
+		return err;
+	}
+	*ard += 1;
+	*ard *= 250;
+	return err;
+}
+
+int nrf24l01_set_retr_arc(struct nrf24l01_t* nrf, unsigned int arc)
+{
+	if(arc > 15)
+		return -EINVAL;
+	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_SETUP_RETR_ARC, &arc, 1);
+}
+
+int nrf24l01_get_retr_arc(struct nrf24l01_t* nrf, unsigned int* arc)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_SETUP_RETR_ARC, arc, 1);
+}
+
 int nrf24l01_set_crc(struct nrf24l01_t* nrf, unsigned int crc)
 {
 	int err;

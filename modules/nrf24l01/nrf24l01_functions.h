@@ -72,6 +72,11 @@ void nrf24l01_set_ce_(struct nrf24l01_t* nrf, unsigned int state);
 int nrf24l01_shutdown(struct nrf24l01_t* nrf);
 int nrf24l01_get_ce_(struct nrf24l01_t* nrf);
 int nrf24l01_get_ce(struct nrf24l01_t* nrf);
+int nrf24l01_set_retr_ard(struct nrf24l01_t* nrf, unsigned int ard);
+int nrf24l01_get_retr_ard(struct nrf24l01_t* nrf, unsigned int* ard);
+int nrf24l01_set_retr_arc(struct nrf24l01_t* nrf, unsigned int arc);
+int nrf24l01_get_retr_arc(struct nrf24l01_t* nrf, unsigned int* arc);
+
 
 #define NRF24L01_CE_HI_(nrf) nrf24l01_set_ce_(nrf, 1)
 #define NRF24L01_CE_LO_(nrf) nrf24l01_set_ce_(nrf, 0)
