@@ -39,7 +39,7 @@
                                 interrupts = <18 2>;
                                 interrupt-parent = <&gpio>;
                                 nrf-ce = <17>;
-                                nrf-mode = <1>;
+                                nrf-mode = <2>;
                         };
 
                 };
