@@ -624,6 +624,15 @@ exit_err:
     return err;
 }
 
+ssize_t nrf24l01_sysfs_show_ce(struct device* dev, struct device_attribute* attr, char* buf)
+{
+	ssize_t err;
+	unsigned int state;
+	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	state = nrf24l01_get_ce(nrf);
+	return sprintf(buf, "%u\n", state);
+}
+
 ssize_t nrf24l01_sysfs_store_ce(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
 {
     ssize_t err;

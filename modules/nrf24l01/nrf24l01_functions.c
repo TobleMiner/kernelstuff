@@ -467,6 +467,20 @@ void nrf24l01_set_ce(struct nrf24l01_t* nrf, unsigned int state)
 	mutex_unlock(&nrf->m_state);
 }
 
+int nrf24l01_get_ce_(struct nrf24l01_t* nrf)
+{
+	return gpio_get_value(nrf->gpio_ce);
+}
+
+int nrf24l01_get_ce(struct nrf24l01_t* nrf)
+{
+	int state;
+	mutex_lock(&nrf->m_state);
+	state = nrf24l01_get_ce_(nrf);
+	mutex_unlock(&nrf->m_state);
+	return state;
+}
+
 int nrf24l01_get_status_rx_dr(struct nrf24l01_t* nrf, unsigned int* status)
 {
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_RX_DR, status, 1);

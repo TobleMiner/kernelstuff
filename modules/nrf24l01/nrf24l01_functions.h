@@ -70,6 +70,8 @@ int nrf24l01_get_prim_rx_(struct nrf24l01_t* nrf, unsigned int* state);
 int nrf24l01_get_rxtx_(struct nrf24l01_t* nrf, int* state);
 void nrf24l01_set_ce_(struct nrf24l01_t* nrf, unsigned int state);
 int nrf24l01_shutdown(struct nrf24l01_t* nrf);
+int nrf24l01_get_ce_(struct nrf24l01_t* nrf);
+int nrf24l01_get_ce(struct nrf24l01_t* nrf);
 
 #define NRF24L01_CE_HI_(nrf) nrf24l01_set_ce_(nrf, 1)
 #define NRF24L01_CE_LO_(nrf) nrf24l01_set_ce_(nrf, 0)
