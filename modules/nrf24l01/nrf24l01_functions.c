@@ -310,9 +310,18 @@ int nrf24l01_get_pwr_up(struct nrf24l01_t* nrf, unsigned int* state)
 	return err;	
 }
 
-int nrf24l01_set_prim_rx(struct nrf24l01_t* nrf, unsigned int state)
+int nrf24l01_set_prim_rx_(struct nrf24l01_t* nrf, unsigned int state)
 {
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_CONFIG_PRIM_RX, &state, 1);
+}
+
+int nrf24l01_set_prim_rx(struct nrf24l01_t* nrf, unsigned int state)
+{
+	int err;
+	mutex_lock(&nrf->m_state);
+	err = nrf24l01_set_prim_rx_(nrf, state);
+	mutex_unlock(&nrf->m_state);
+	return err;
 }
 
 int nrf24l01_get_prim_rx_(struct nrf24l01_t* nrf, unsigned int* state)
@@ -553,19 +562,19 @@ int nrf24l01_set_rxtx(struct nrf24l01_t* nrf, int state)
 {
 	int err, cstate;
 	mutex_lock(&nrf->m_state);
-	if((err = nrf24l01_get_rxtx(nrf, &cstate)))
+	if((err = nrf24l01_get_rxtx_(nrf, &cstate)))
 		goto exit_err_mutex;
 	if(state != cstate)
 	{
-		NRF24L01_CE_LO(nrf);
-		if((err = nrf24l01_pwr_down(nrf)))
+		NRF24L01_CE_LO_(nrf);
+		if((err = nrf24l01_pwr_down_(nrf)))
 			goto exit_err_mutex;
-		if((err = nrf24l01_set_prim_rx(nrf, state)))
+		if((err = nrf24l01_set_prim_rx_(nrf, state)))
 			goto exit_err_mutex;
 	}
-	if((err = nrf24l01_pwr_up(nrf)))
+	if((err = nrf24l01_pwr_up_(nrf)))
 		goto exit_err_mutex;
-	NRF24L01_CE_HI(nrf);
+	NRF24L01_CE_HI_(nrf);
 exit_err_mutex:
 	mutex_unlock(&nrf->m_state);
 	return err;
