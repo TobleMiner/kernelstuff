@@ -777,7 +777,7 @@ ssize_t nrf24l01_sysfs_show_retr_arc(struct device* dev, struct device_attribute
 	ssize_t err;
 	unsigned int arc;
 	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
-	if((err = nrf24l01_get_retr_ard(nrf, &arc)))
+	if((err = nrf24l01_get_retr_arc(nrf, &arc)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", arc);
 exit_err:
@@ -797,7 +797,7 @@ ssize_t nrf24l01_sysfs_store_retr_arc(struct device* dev, struct device_attribut
     }
     if((err = kstrtouint(str, 10, &arc)))
         goto exit_stralloc;
-    if((err = nrf24l01_set_retr_ard(nrf, arc)))
+    if((err = nrf24l01_set_retr_arc(nrf, arc)))
         goto exit_stralloc;
     err = count;
 exit_stralloc:
