@@ -59,7 +59,6 @@ int nrf24l01_write_short_reg_masked(void* ctx, unsigned int reg, unsigned int va
 int nrf24l01_read_short_reg(void* ctx, unsigned int reg, unsigned int* val)
 {
 	ssize_t err;
-	printk(KERN_INFO "Reading register %d with cmd %d\n", reg, NRF24L01_CMD_R_REGISTER | (u8)reg);
 	err = spi_w8r8(((struct nrf24l01_t*)ctx)->spi, NRF24L01_CMD_R_REGISTER | (u8)reg);
 	if(err < 0)
 		return err;
@@ -88,7 +87,6 @@ static int nrf24l01_spi_cmd_write(struct nrf24l01_t* nrf, u8 cmd, unsigned char*
 // There is no read only mode
 static int nrf24l01_spi_cmd_read(struct nrf24l01_t* nrf, u8 cmd, unsigned char* dest, unsigned int len)
 {
-	printk(KERN_INFO "Performing cmd read (%u bytes)\n", len);
 	int err;
 	unsigned char* read_buffer;
 	unsigned char* write_buffer = vzalloc(len + 1);
@@ -114,7 +112,6 @@ exit_noalloc:
 
 int nrf24l01_spi_write_reg(struct nrf24l01_t* nrf, unsigned int reg, unsigned char* data, unsigned int len)
 {
-	printk(KERN_INFO "Long register write (reg=%u,len=%u)\n", reg, len);
 	return nrf24l01_spi_cmd_write(nrf, NRF24L01_CMD_W_REGISTER | (u8)reg, data, len);
 }
 

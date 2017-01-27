@@ -30,7 +30,7 @@ static int nrf24l01_worker_do_work(void* ctx)
 				break;
 			continue;
 		}
-		printk(KERN_INFO "Event!\n");
+		dev_dbg(&nrf->spi->dev, "Event!\n");
 		if((err = nrf24l01_get_status_rx_dr(nrf, &data)))
 		{
 			dev_err(&nrf->spi->dev, "Failed to get rx_dr flag: %d\n", err);
