@@ -517,7 +517,7 @@ static struct attribute_group group_pipe5 = {
 	.name = "pipe5"
 };
 
-static struct attribute_group* attribute_groups[] = {
+static const struct attribute_group* attribute_groups[] = {
 	&group_general,
 	&group_rf,
 	&group_retr,
