@@ -16,6 +16,7 @@
 #include "nrf24l01_chrdev.h"
 #include "nrf24l01_functions.h"
 #include "nrf24l01_worker.h"
+#include "nrf24l01_quirks.h"
 #include "partregmap.h"
 
 enum nrf24l01_modules {nRF24L01, nRF24L01p};
@@ -169,6 +170,12 @@ static int nrf24l01_probe(struct spi_device* spi)
 	nrf24l01_set_status_tx_ds(nrf24l01_dev, 1);
 	if(!nrf24l01_get_mode_low_pwr(nrf24l01_dev))
 		nrf24l01_set_rx(nrf24l01_dev);
+
+	err = nrf24l01_test_unflushable_fifo(nrf24l01_dev);
+	if(err < 0)
+		goto exit_gpioalloc;
+	if(err)
+		dev_err(&spi->dev, "Faulty nrf module detected! TX FIFO stuck full\n");
 
 	return 0;
 exit_gpioalloc:
