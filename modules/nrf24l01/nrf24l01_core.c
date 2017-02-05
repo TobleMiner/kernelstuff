@@ -74,7 +74,8 @@ static const struct regmap_config nrf24l01_regmap_short = {
 	.rd_table = &regmap_rd_table_short,
 	.volatile_table = &regmap_volatile_table_short,
 	.precious_table = &regmap_precious_table_short,
-	.use_single_rw = 1
+	.use_single_rw = 1,
+	.cache_type = REGCACHE_RBTREE
 };
 
 static irqreturn_t nrf24l01_irq(int irq, void* data)
