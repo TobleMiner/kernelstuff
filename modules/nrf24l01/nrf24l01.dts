@@ -34,7 +34,7 @@
                         nrf24l01@1 {
                                 status = "okay";
                                 compatible = "nordicsemi,nrf24l01";
-                                spi-max-frequency = <500000>;
+                                spi-max-frequency = <10000000>;
                                 reg = <1>;
                                 interrupts = <18 2>;
                                 interrupt-parent = <&gpio>;

@@ -621,8 +621,13 @@ int nrf24l01_set_rxtx(struct nrf24l01_t* nrf, int state)
 		if((err = nrf24l01_set_prim_rx_(nrf, state)))
 			goto exit_err_mutex;
 	}
-	if((err = nrf24l01_pwr_up_(nrf)))
+	if((err = nrf24l01_get_pwr_up_(nrf, &cstate)))
 		goto exit_err_mutex;
+	if(!cstate)
+	{
+		if((err = nrf24l01_pwr_up_(nrf)))
+			goto exit_err_mutex;
+	}
 	NRF24L01_CE_HI_(nrf);
 exit_err_mutex:
 	mutex_unlock(&nrf->m_state);
