@@ -728,7 +728,7 @@ tryagain:
 		mutex_unlock(&nrf->m_rx_path);
 		goto tryagain;
 	}
-	printk(KERN_INFO "Got payload in pipe %u\n", pipe_no);
+	dev_dbg(&nrf->spi->dev, "Got payload in pipe %u\n", pipe_no);
 	if((err = nrf24l01_get_dynpd(nrf, pipe_no, &dyn_pld)))
 	{
 		dev_err(&nrf->spi->dev, "Failed to determine pipe payload type (dynamic/fixed size): %d\n", err);
