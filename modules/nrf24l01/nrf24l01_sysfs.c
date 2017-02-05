@@ -626,7 +626,6 @@ exit_err:
 
 ssize_t nrf24l01_sysfs_show_ce(struct device* dev, struct device_attribute* attr, char* buf)
 {
-	ssize_t err;
 	unsigned int state;
 	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
 	state = nrf24l01_get_ce(nrf);
