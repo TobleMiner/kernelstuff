@@ -173,7 +173,8 @@ int nrf24l01_get_tx_power(struct nrf24l01_t* nrf, int* tx_pwr)
 		return err;
 	if(pwr > 0b11)
 		return -EINVAL;
-	return -18 + pwr * 6;
+	*tx_pwr = -18 + pwr * 6;
+	return 0;
 }
 
 int nrf24l01_set_address_width(struct nrf24l01_t* nrf, unsigned int width)

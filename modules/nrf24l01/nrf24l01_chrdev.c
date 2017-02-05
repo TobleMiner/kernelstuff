@@ -113,7 +113,7 @@ static struct file_operations fops =
    .release = dev_release	
 };
 
-static DEVICE_ATTR(txpower, 0644, NULL, NULL);
+static DEVICE_ATTR(txpower, 0644, nrf24l01_sysfs_show_tx_pwr, nrf24l01_sysfs_store_tx_pwr);
 static DEVICE_ATTR(channel, 0644, nrf24l01_sysfs_show_channel, nrf24l01_sysfs_store_channel);
 static DEVICE_ATTR(datarate, 0644, nrf24l01_sysfs_show_dr, nrf24l01_sysfs_store_dr);
 
