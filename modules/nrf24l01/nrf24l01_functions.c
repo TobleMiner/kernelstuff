@@ -567,6 +567,16 @@ int nrf24l01_get_fifo_tx_empty(struct nrf24l01_t* nrf, unsigned int* status)
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_FIFO_STATUS_TX_EMPTY, status, 1);
 }
 
+int nrf24l01_get_fifo_rx_full(struct nrf24l01_t* nrf, unsigned int* status)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_FIFO_STATUS_RX_FULL, status, 1);
+}
+
+int nrf24l01_get_fifo_rx_empty(struct nrf24l01_t* nrf, unsigned int* status)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_FIFO_STATUS_RX_EMPTY, status, 1);
+}
+
 
 int nrf24l01_get_vreg_or_fail_short(struct nrf24l01_t* nrf, int vreg, int ntries)
 {
