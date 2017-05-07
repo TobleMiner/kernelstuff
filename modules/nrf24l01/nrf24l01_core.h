@@ -26,6 +26,7 @@ typedef struct nrf24l01_t {
 	wait_queue_head_t		tx_queue;
 	unsigned int			num_readers;
 	unsigned int			mode_flags;
+	unsigned int			ce_state;
 } nrf24l01_t;
 
 // Don't idle in RX mode rxing all the time but do so only if there are readers active
