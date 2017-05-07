@@ -27,7 +27,7 @@ static int dev_open(struct inode* inodep, struct file *filep)
 		err = -EBUSY;
 		goto exit_err;
 	}
-	session = vmalloc(sizeof(struct nrf24l01_chrdev_session));
+	session = vzalloc(sizeof(struct nrf24l01_chrdev_session));
 	if(!session)
 	{
 		err = -ENOMEM;
