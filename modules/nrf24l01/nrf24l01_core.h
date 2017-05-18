@@ -17,7 +17,7 @@ typedef struct nrf24l01_t {
 	struct regmap*			regmap_short;
 	struct nrf24l01_chrdev	chrdev;
 	struct partreg_table*	reg_table;
-	unsigned 				gpio_ce;
+	unsigned				gpio_ce;
 	struct nrf24l01_worker	worker;
 	struct mutex			m_rx_path;
 	struct mutex			m_tx_path;

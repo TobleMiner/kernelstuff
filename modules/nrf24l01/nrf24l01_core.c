@@ -122,7 +122,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	of_nrf_mode = of_get_property(spi->dev.of_node, "nrf-mode", NULL);
 	if(!of_nrf_mode)
 	{
-        dev_warn(&spi->dev, "Mode not specified, defaulting to 0\n");
+		dev_warn(&spi->dev, "Mode not specified, defaulting to 0\n");
 	}
 	else
 	{
@@ -139,9 +139,9 @@ static int nrf24l01_probe(struct spi_device* spi)
 	of_gpio_ce = of_get_property(spi->dev.of_node, "nrf-ce", NULL);
 	if(!of_gpio_ce)
 	{
-        dev_err(&spi->dev, "Chip Enable not specified\n");
+		dev_err(&spi->dev, "Chip Enable not specified\n");
 		err = -EINVAL;
-        goto exit_workeralloc;
+		goto exit_workeralloc;
 	}
 	nrf24l01_dev->gpio_ce = be32_to_cpup(of_gpio_ce);
 	printk(KERN_INFO "CE GPIO: %u\n", nrf24l01_dev->gpio_ce);

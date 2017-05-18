@@ -7,7 +7,7 @@
 
 typedef struct nrf24l01_chrdev_session {
 	struct nrf24l01_chrdev* chrdev;
-	unsigned int 			read_offset;
+	unsigned int			read_offset;
 } nrf24l01_chrdev_session;
 
 typedef struct nrf24l01_chrdev {

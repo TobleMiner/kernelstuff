@@ -277,11 +277,11 @@ static unsigned int mask_rf_ch_rf_ch = 0b01111111;
 
 static struct partreg_template reg_rf_ch_rf_ch = {
 	.name = "rf_ch_rf_ch",
-    .reg = NRF24L01_REG_RF_CH,
-    .offset = 0,
-    .mask = &mask_rf_ch_rf_ch,
-    .len = 1,
-    .value_range = &range_rf_ch_rf_ch
+	.reg = NRF24L01_REG_RF_CH,
+	.offset = 0,
+	.mask = &mask_rf_ch_rf_ch,
+	.len = 1,
+	.value_range = &range_rf_ch_rf_ch
 };
 
 static struct partreg_range range_rf_setup_rf_pwr = partreg_reg_range(0, 0b11);
@@ -289,11 +289,11 @@ static unsigned int mask_rf_setup_rf_pwr = 0b110;
 
 static struct partreg_template reg_rf_setup_rf_pwr = {
 	.name = "rf_setup_rf_pwr",
-    .reg = NRF24L01_REG_RF_SETUP,
-    .offset = 1,
-    .mask = &mask_rf_setup_rf_pwr,
-    .len = 1,
-    .value_range = &range_rf_setup_rf_pwr
+	.reg = NRF24L01_REG_RF_SETUP,
+	.offset = 1,
+	.mask = &mask_rf_setup_rf_pwr,
+	.len = 1,
+	.value_range = &range_rf_setup_rf_pwr
 };
 
 static struct partreg_range range_rf_setup_rf_dr_hi = partreg_reg_range(0, 0b001);
@@ -313,11 +313,11 @@ static unsigned int mask_rf_setup_rf_dr = 0b101000;
 
 static struct partreg_template reg_rf_setup_rf_dr = {
 	.name = "rf_setup_rf_dr",
-    .reg = NRF24L01_REG_RF_SETUP,
-    .offset = 3,
-    .mask = &mask_rf_setup_rf_dr,
-    .len = 1,
-    .value_ranges = &range_table_rf_setup_rf_dr
+	.reg = NRF24L01_REG_RF_SETUP,
+	.offset = 3,
+	.mask = &mask_rf_setup_rf_dr,
+	.len = 1,
+	.value_ranges = &range_table_rf_setup_rf_dr
 };
 
 static struct partreg_range range_rf_setup_pll_lock = partreg_reg_range(0, 1);
@@ -325,11 +325,11 @@ static unsigned int mask_rf_setup_pll_lock = 0b10000;
 
 static struct partreg_template reg_rf_setup_pll_lock = {
 	.name = "rf_setup_pll_lock",
-    .reg = NRF24L01_REG_RF_SETUP,
-    .offset = 4,
-    .mask = &mask_rf_setup_pll_lock,
-    .len = 1,
-    .value_range = &range_rf_setup_pll_lock
+	.reg = NRF24L01_REG_RF_SETUP,
+	.offset = 4,
+	.mask = &mask_rf_setup_pll_lock,
+	.len = 1,
+	.value_range = &range_rf_setup_pll_lock
 };
 
 static struct partreg_range range_rf_setup_cont_wave = partreg_reg_range(0, 1);
@@ -337,11 +337,11 @@ static unsigned int mask_rf_setup_cont_wave = 0b10000000;
 
 static struct partreg_template reg_rf_setup_cont_wave = {
 	.name = "rf_setup_cont_wave",
-    .reg = NRF24L01_REG_RF_SETUP,
-    .offset = 7,
-    .mask = &mask_rf_setup_cont_wave,
-    .len = 1,
-    .value_range = &range_rf_setup_cont_wave
+	.reg = NRF24L01_REG_RF_SETUP,
+	.offset = 7,
+	.mask = &mask_rf_setup_cont_wave,
+	.len = 1,
+	.value_range = &range_rf_setup_cont_wave
 };
 
 static struct partreg_range range_status_tx_full = partreg_reg_range(0, 1);
@@ -349,11 +349,11 @@ static unsigned int mask_status_tx_full = 0b1;
 
 static struct partreg_template reg_status_tx_full = {
 	.name = "status_tx_full",
-    .reg = NRF24L01_REG_STATUS,
-    .offset = 0,
-    .mask = &mask_status_tx_full,
-    .len = 1,
-    .value_range = &range_status_tx_full
+	.reg = NRF24L01_REG_STATUS,
+	.offset = 0,
+	.mask = &mask_status_tx_full,
+	.len = 1,
+	.value_range = &range_status_tx_full
 };
 
 static struct partreg_range range_status_rx_p_no = partreg_reg_range(0, 0b111);
@@ -361,11 +361,11 @@ static unsigned int mask_status_rx_p_no = 0b1110;
 
 static struct partreg_template reg_status_rx_p_no = {
 	.name = "status_rx_p_no",
-    .reg = NRF24L01_REG_STATUS,
-    .offset = 1,
-    .mask = &mask_status_rx_p_no,
-    .len = 1,
-    .value_range = &range_status_rx_p_no
+	.reg = NRF24L01_REG_STATUS,
+	.offset = 1,
+	.mask = &mask_status_rx_p_no,
+	.len = 1,
+	.value_range = &range_status_rx_p_no
 };
 
 static struct partreg_range range_status_max_rt = partreg_reg_range(0, 1);
@@ -373,11 +373,11 @@ static unsigned int mask_status_max_rt = 0b10000;
 
 static struct partreg_template reg_status_max_rt = {
 	.name = "status_max_rt",
-    .reg = NRF24L01_REG_STATUS,
-    .offset = 4,
-    .mask = &mask_status_max_rt,
-    .len = 1,
-    .value_range = &range_status_max_rt
+	.reg = NRF24L01_REG_STATUS,
+	.offset = 4,
+	.mask = &mask_status_max_rt,
+	.len = 1,
+	.value_range = &range_status_max_rt
 };
 
 static struct partreg_range range_status_tx_ds = partreg_reg_range(0, 1);
@@ -385,11 +385,11 @@ static unsigned int mask_status_tx_ds = 0b100000;
 
 static struct partreg_template reg_status_tx_ds = {
 	.name = "status_tx_ds",
-    .reg = NRF24L01_REG_STATUS,
-    .offset = 5,
-    .mask = &mask_status_tx_ds,
-    .len = 1,
-    .value_range = &range_status_tx_ds
+	.reg = NRF24L01_REG_STATUS,
+	.offset = 5,
+	.mask = &mask_status_tx_ds,
+	.len = 1,
+	.value_range = &range_status_tx_ds
 };
 
 static struct partreg_range range_status_rx_dr = partreg_reg_range(0, 1);
@@ -397,11 +397,11 @@ static unsigned int mask_status_rx_dr = 0b1000000;
 
 static struct partreg_template reg_status_rx_dr = {
 	.name = "status_rx_dr",
-    .reg = NRF24L01_REG_STATUS,
-    .offset = 6,
-    .mask = &mask_status_rx_dr,
-    .len = 1,
-    .value_range = &range_status_rx_dr
+	.reg = NRF24L01_REG_STATUS,
+	.offset = 6,
+	.mask = &mask_status_rx_dr,
+	.len = 1,
+	.value_range = &range_status_rx_dr
 };
 
 static struct partreg_range range_observe_tx_arc_cnt = partreg_reg_range(0, 0b1111);
@@ -409,11 +409,11 @@ static unsigned int mask_observe_tx_arc_cnt = 0b00001111;
 
 static struct partreg_template reg_observe_tx_arc_cnt = {
 	.name = "observe_tx_arc_cnt",
-    .reg = NRF24L01_REG_OBSERVE_TX,
-    .offset = 0,
-    .mask = &mask_observe_tx_arc_cnt,
-    .len = 1,
-    .value_range = &range_observe_tx_arc_cnt
+	.reg = NRF24L01_REG_OBSERVE_TX,
+	.offset = 0,
+	.mask = &mask_observe_tx_arc_cnt,
+	.len = 1,
+	.value_range = &range_observe_tx_arc_cnt
 };
 
 static struct partreg_range range_observe_tx_plos_cnt = partreg_reg_range(0, 0b1111);
@@ -421,11 +421,11 @@ static unsigned int mask_observe_tx_plos_cnt = 0b11110000;
 
 static struct partreg_template reg_observe_tx_plos_cnt = {
 	.name = "observe_tx_plos_cnt",
-    .reg = NRF24L01_REG_OBSERVE_TX,
-    .offset = 4,
-    .mask = &mask_observe_tx_plos_cnt,
-    .len = 1,
-    .value_range = &range_observe_tx_plos_cnt
+	.reg = NRF24L01_REG_OBSERVE_TX,
+	.offset = 4,
+	.mask = &mask_observe_tx_plos_cnt,
+	.len = 1,
+	.value_range = &range_observe_tx_plos_cnt
 };
 
 static struct partreg_range range_rpd_rpd = partreg_reg_range(0, 0b1);
@@ -433,64 +433,64 @@ static unsigned int mask_rpd_rpd = 0b11110000;
 
 static struct partreg_template reg_rpd_rpd = {
 	.name = "rpd_rpd",
-    .reg = NRF24L01_REG_RPD,
-    .offset = 0,
-    .mask = &mask_rpd_rpd,
-    .len = 1,
-    .value_range = &range_rpd_rpd
+	.reg = NRF24L01_REG_RPD,
+	.offset = 0,
+	.mask = &mask_rpd_rpd,
+	.len = 1,
+	.value_range = &range_rpd_rpd
 };
 
 static struct partreg_template reg_rx_addr_p0 = {
 	.name = "rx_addr_p0",
-    .reg = NRF24L01_REG_RX_ADDR_P0,
-    .offset = 0,
-    .len_func = nrf24l01_reg_get_addr_len,
+	.reg = NRF24L01_REG_RX_ADDR_P0,
+	.offset = 0,
+	.len_func = nrf24l01_reg_get_addr_len,
 	.reg_write = nrf24l01_reg_addr_write,
 	.reg_read = nrf24l01_reg_addr_read
 };
 
 static struct partreg_template reg_rx_addr_p1 = {
 	.name = "rx_addr_p1",
-    .reg = NRF24L01_REG_RX_ADDR_P1,
-    .offset = 0,
-    .len_func = nrf24l01_reg_get_addr_len,
+	.reg = NRF24L01_REG_RX_ADDR_P1,
+	.offset = 0,
+	.len_func = nrf24l01_reg_get_addr_len,
 	.reg_write = nrf24l01_reg_addr_write,
 	.reg_read = nrf24l01_reg_addr_read
 };
 
 static struct partreg_template reg_rx_addr_p2 = {
 	.name = "rx_addr_p2",
-    .reg = NRF24L01_REG_RX_ADDR_P2,
-    .offset = 0,
-    .len = 1
+	.reg = NRF24L01_REG_RX_ADDR_P2,
+	.offset = 0,
+	.len = 1
 };
 
 static struct partreg_template reg_rx_addr_p3 = {
 	.name = "rx_addr_p3",
-    .reg = NRF24L01_REG_RX_ADDR_P3,
-    .offset = 0,
-    .len = 1
+	.reg = NRF24L01_REG_RX_ADDR_P3,
+	.offset = 0,
+	.len = 1
 };
 
 static struct partreg_template reg_rx_addr_p4 = {
 	.name = "rx_addr_p4",
-    .reg = NRF24L01_REG_RX_ADDR_P4,
-    .offset = 0,
-    .len = 1
+	.reg = NRF24L01_REG_RX_ADDR_P4,
+	.offset = 0,
+	.len = 1
 };
 
 static struct partreg_template reg_rx_addr_p5 = {
 	.name = "rx_addr_p5",
-    .reg = NRF24L01_REG_RX_ADDR_P5,
-    .offset = 0,
-    .len = 1
+	.reg = NRF24L01_REG_RX_ADDR_P5,
+	.offset = 0,
+	.len = 1
 };
 
 static struct partreg_template reg_tx_addr = {
 	.name = "tx_addr",
-    .reg = NRF24L01_REG_TX_ADDR,
-    .offset = 0,
-    .len_func = nrf24l01_reg_get_addr_len,
+	.reg = NRF24L01_REG_TX_ADDR,
+	.offset = 0,
+	.len_func = nrf24l01_reg_get_addr_len,
 	.reg_write = nrf24l01_reg_addr_write,
 	.reg_read = nrf24l01_reg_addr_read
 };
@@ -500,11 +500,11 @@ static unsigned int mask_rx_pw_p0 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p0 = {
 	.name = "rx_pw_p0",
-    .reg = NRF24L01_REG_RX_PW_P0,
-    .offset = 0,
-    .mask = &mask_rx_pw_p0,
-    .len = 1,
-    .value_range = &range_rx_pw_p0
+	.reg = NRF24L01_REG_RX_PW_P0,
+	.offset = 0,
+	.mask = &mask_rx_pw_p0,
+	.len = 1,
+	.value_range = &range_rx_pw_p0
 };
 
 static struct partreg_range range_rx_pw_p1 = partreg_reg_range(0, 32);
@@ -512,11 +512,11 @@ static unsigned int mask_rx_pw_p1 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p1 = {
 	.name = "rx_pw_p1",
-    .reg = NRF24L01_REG_RX_PW_P1,
-    .offset = 0,
-    .mask = &mask_rx_pw_p1,
-    .len = 1,
-    .value_range = &range_rx_pw_p1
+	.reg = NRF24L01_REG_RX_PW_P1,
+	.offset = 0,
+	.mask = &mask_rx_pw_p1,
+	.len = 1,
+	.value_range = &range_rx_pw_p1
 };
 
 static struct partreg_range range_rx_pw_p2 = partreg_reg_range(0, 32);
@@ -524,11 +524,11 @@ static unsigned int mask_rx_pw_p2 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p2 = {
 	.name = "rx_pw_p2",
-    .reg = NRF24L01_REG_RX_PW_P2,
-    .offset = 0,
-    .mask = &mask_rx_pw_p2,
-    .len = 1,
-    .value_range = &range_rx_pw_p2
+	.reg = NRF24L01_REG_RX_PW_P2,
+	.offset = 0,
+	.mask = &mask_rx_pw_p2,
+	.len = 1,
+	.value_range = &range_rx_pw_p2
 };
 
 static struct partreg_range range_rx_pw_p3 = partreg_reg_range(0, 32);
@@ -536,11 +536,11 @@ static unsigned int mask_rx_pw_p3 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p3 = {
 	.name = "rx_pw_p3",
-    .reg = NRF24L01_REG_RX_PW_P3,
-    .offset = 0,
-    .mask = &mask_rx_pw_p3,
-    .len = 1,
-    .value_range = &range_rx_pw_p3
+	.reg = NRF24L01_REG_RX_PW_P3,
+	.offset = 0,
+	.mask = &mask_rx_pw_p3,
+	.len = 1,
+	.value_range = &range_rx_pw_p3
 };
 
 static struct partreg_range range_rx_pw_p4 = partreg_reg_range(0, 32);
@@ -548,11 +548,11 @@ static unsigned int mask_rx_pw_p4 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p4 = {
 	.name = "rx_pw_p4",
-    .reg = NRF24L01_REG_RX_PW_P4,
-    .offset = 0,
-    .mask = &mask_rx_pw_p4,
-    .len = 1,
-    .value_range = &range_rx_pw_p4
+	.reg = NRF24L01_REG_RX_PW_P4,
+	.offset = 0,
+	.mask = &mask_rx_pw_p4,
+	.len = 1,
+	.value_range = &range_rx_pw_p4
 };
 
 static struct partreg_range range_rx_pw_p5 = partreg_reg_range(0, 32);
@@ -560,11 +560,11 @@ static unsigned int mask_rx_pw_p5 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p5 = {
 	.name = "rx_pw_p5",
-    .reg = NRF24L01_REG_RX_PW_P5,
-    .offset = 0,
-    .mask = &mask_rx_pw_p5,
-    .len = 1,
-    .value_range = &range_rx_pw_p5
+	.reg = NRF24L01_REG_RX_PW_P5,
+	.offset = 0,
+	.mask = &mask_rx_pw_p5,
+	.len = 1,
+	.value_range = &range_rx_pw_p5
 };
 
 static struct partreg_range range_fifo_status_rx_empty = partreg_reg_range(0, 1);
@@ -572,11 +572,11 @@ static unsigned int mask_fifo_status_rx_empty = 0b00000001;
 
 static struct partreg_template reg_fifo_status_rx_empty = {
 	.name = "fifo_status_rx_empty",
-    .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 0,
-    .mask = &mask_fifo_status_rx_empty,
-    .len = 1,
-    .value_range = &range_fifo_status_rx_empty
+	.reg = NRF24L01_REG_FIFO_STATUS,
+	.offset = 0,
+	.mask = &mask_fifo_status_rx_empty,
+	.len = 1,
+	.value_range = &range_fifo_status_rx_empty
 };
 
 static struct partreg_range range_fifo_status_rx_full = partreg_reg_range(0, 1);
@@ -584,11 +584,11 @@ static unsigned int mask_fifo_status_rx_full = 0b00000010;
 
 static struct partreg_template reg_fifo_status_rx_full = {
 	.name = "fifo_status_rx_full",
-    .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 1,
-    .mask = &mask_fifo_status_rx_full,
-    .len = 1,
-    .value_range = &range_fifo_status_rx_full
+	.reg = NRF24L01_REG_FIFO_STATUS,
+	.offset = 1,
+	.mask = &mask_fifo_status_rx_full,
+	.len = 1,
+	.value_range = &range_fifo_status_rx_full
 };
 
 static struct partreg_range range_fifo_status_tx_empty = partreg_reg_range(0, 1);
@@ -596,11 +596,11 @@ static unsigned int mask_fifo_status_tx_empty = 0b00010000;
 
 static struct partreg_template reg_fifo_status_tx_empty = {
 	.name = "fifo_status_tx_empty",
-    .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 4,
-    .mask = &mask_fifo_status_tx_empty,
-    .len = 1,
-    .value_range = &range_fifo_status_tx_empty
+	.reg = NRF24L01_REG_FIFO_STATUS,
+	.offset = 4,
+	.mask = &mask_fifo_status_tx_empty,
+	.len = 1,
+	.value_range = &range_fifo_status_tx_empty
 };
 
 static struct partreg_range range_fifo_status_tx_full = partreg_reg_range(0, 1);
@@ -608,11 +608,11 @@ static unsigned int mask_fifo_status_tx_full = 0b00100000;
 
 static struct partreg_template reg_fifo_status_tx_full = {
 	.name = "fifo_status_tx_full",
-    .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 5,
-    .mask = &mask_fifo_status_tx_full,
-    .len = 1,
-    .value_range = &range_fifo_status_tx_full
+	.reg = NRF24L01_REG_FIFO_STATUS,
+	.offset = 5,
+	.mask = &mask_fifo_status_tx_full,
+	.len = 1,
+	.value_range = &range_fifo_status_tx_full
 };
 
 static struct partreg_range range_fifo_status_tx_reuse = partreg_reg_range(0, 1);
@@ -620,11 +620,11 @@ static unsigned int mask_fifo_status_tx_reuse = 0b01000000;
 
 static struct partreg_template reg_fifo_status_tx_reuse = {
 	.name = "fifo_status_tx_reuse",
-    .reg = NRF24L01_REG_FIFO_STATUS,
-    .offset = 6,
-    .mask = &mask_fifo_status_tx_reuse,
-    .len = 1,
-    .value_range = &range_fifo_status_tx_reuse
+	.reg = NRF24L01_REG_FIFO_STATUS,
+	.offset = 6,
+	.mask = &mask_fifo_status_tx_reuse,
+	.len = 1,
+	.value_range = &range_fifo_status_tx_reuse
 };
 
 static struct partreg_range range_dynpd_dpl_p0 = partreg_reg_range(0, 1);
@@ -632,11 +632,11 @@ static unsigned int mask_dynpd_dpl_p0 = 0b00000001;
 
 static struct partreg_template reg_dynpd_dpl_p0 = {
 	.name = "fifo_dynpd_dpl_p0",
-    .reg = NRF24L01_REG_DYNPD,
-    .offset = 0,
-    .mask = &mask_dynpd_dpl_p0,
-    .len = 1,
-    .value_range = &range_dynpd_dpl_p0
+	.reg = NRF24L01_REG_DYNPD,
+	.offset = 0,
+	.mask = &mask_dynpd_dpl_p0,
+	.len = 1,
+	.value_range = &range_dynpd_dpl_p0
 };
 
 static struct partreg_range range_dynpd_dpl_p1 = partreg_reg_range(0, 1);
@@ -644,11 +644,11 @@ static unsigned int mask_dynpd_dpl_p1 = 0b00000010;
 
 static struct partreg_template reg_dynpd_dpl_p1 = {
 	.name = "fifo_dynpd_dpl_p1",
-    .reg = NRF24L01_REG_DYNPD,
-    .offset = 1,
-    .mask = &mask_dynpd_dpl_p1,
-    .len = 1,
-    .value_range = &range_dynpd_dpl_p1
+	.reg = NRF24L01_REG_DYNPD,
+	.offset = 1,
+	.mask = &mask_dynpd_dpl_p1,
+	.len = 1,
+	.value_range = &range_dynpd_dpl_p1
 };
 
 static struct partreg_range range_dynpd_dpl_p2 = partreg_reg_range(0, 1);
@@ -656,11 +656,11 @@ static unsigned int mask_dynpd_dpl_p2 = 0b00000100;
 
 static struct partreg_template reg_dynpd_dpl_p2 = {
 	.name = "fifo_dynpd_dpl_p2",
-    .reg = NRF24L01_REG_DYNPD,
-    .offset = 2,
-    .mask = &mask_dynpd_dpl_p2,
-    .len = 1,
-    .value_range = &range_dynpd_dpl_p2
+	.reg = NRF24L01_REG_DYNPD,
+	.offset = 2,
+	.mask = &mask_dynpd_dpl_p2,
+	.len = 1,
+	.value_range = &range_dynpd_dpl_p2
 };
 
 static struct partreg_range range_dynpd_dpl_p3 = partreg_reg_range(0, 1);
@@ -668,11 +668,11 @@ static unsigned int mask_dynpd_dpl_p3 = 0b00001000;
 
 static struct partreg_template reg_dynpd_dpl_p3 = {
 	.name = "fifo_dynpd_dpl_p3",
-    .reg = NRF24L01_REG_DYNPD,
-    .offset = 3,
-    .mask = &mask_dynpd_dpl_p3,
-    .len = 1,
-    .value_range = &range_dynpd_dpl_p3
+	.reg = NRF24L01_REG_DYNPD,
+	.offset = 3,
+	.mask = &mask_dynpd_dpl_p3,
+	.len = 1,
+	.value_range = &range_dynpd_dpl_p3
 };
 
 static struct partreg_range range_dynpd_dpl_p4 = partreg_reg_range(0, 1);
@@ -680,11 +680,11 @@ static unsigned int mask_dynpd_dpl_p4 = 0b00010000;
 
 static struct partreg_template reg_dynpd_dpl_p4 = {
 	.name = "fifo_dynpd_dpl_p4",
-    .reg = NRF24L01_REG_DYNPD,
-    .offset = 4,
-    .mask = &mask_dynpd_dpl_p4,
-    .len = 1,
-    .value_range = &range_dynpd_dpl_p4
+	.reg = NRF24L01_REG_DYNPD,
+	.offset = 4,
+	.mask = &mask_dynpd_dpl_p4,
+	.len = 1,
+	.value_range = &range_dynpd_dpl_p4
 };
 
 static struct partreg_range range_dynpd_dpl_p5 = partreg_reg_range(0, 1);
@@ -692,11 +692,11 @@ static unsigned int mask_dynpd_dpl_p5 = 0b00100000;
 
 static struct partreg_template reg_dynpd_dpl_p5 = {
 	.name = "fifo_dynpd_dpl_p5",
-    .reg = NRF24L01_REG_DYNPD,
-    .offset = 5,
-    .mask = &mask_dynpd_dpl_p5,
-    .len = 1,
-    .value_range = &range_dynpd_dpl_p5
+	.reg = NRF24L01_REG_DYNPD,
+	.offset = 5,
+	.mask = &mask_dynpd_dpl_p5,
+	.len = 1,
+	.value_range = &range_dynpd_dpl_p5
 };
 
 static struct partreg_range range_feature_en_dyn_ack = partreg_reg_range(0, 1);
@@ -704,11 +704,11 @@ static unsigned int mask_feature_en_dyn_ack = 0b00000001;
 
 static struct partreg_template reg_feature_en_dyn_ack = {
 	.name = "feature_en_dyn_ack",
-    .reg = NRF24L01_REG_FEATURE,
-    .offset = 0,
-    .mask = &mask_feature_en_dyn_ack,
-    .len = 1,
-    .value_range = &range_feature_en_dyn_ack
+	.reg = NRF24L01_REG_FEATURE,
+	.offset = 0,
+	.mask = &mask_feature_en_dyn_ack,
+	.len = 1,
+	.value_range = &range_feature_en_dyn_ack
 };
 
 static struct partreg_range range_feature_en_ack_pay = partreg_reg_range(0, 1);
@@ -716,11 +716,11 @@ static unsigned int mask_feature_en_ack_pay = 0b00000010;
 
 static struct partreg_template reg_feature_en_ack_pay = {
 	.name = "feature_en_ack_pay",
-    .reg = NRF24L01_REG_FEATURE,
-    .offset = 1,
-    .mask = &mask_feature_en_ack_pay,
-    .len = 1,
-    .value_range = &range_feature_en_ack_pay
+	.reg = NRF24L01_REG_FEATURE,
+	.offset = 1,
+	.mask = &mask_feature_en_ack_pay,
+	.len = 1,
+	.value_range = &range_feature_en_ack_pay
 };
 
 static struct partreg_range range_feature_en_dpl = partreg_reg_range(0, 1);
@@ -728,11 +728,11 @@ static unsigned int mask_feature_en_dpl = 0b00000100;
 
 static struct partreg_template reg_feature_en_dpl = {
 	.name = "feature_en_dpl",
-    .reg = NRF24L01_REG_FEATURE,
-    .offset = 2,
-    .mask = &mask_feature_en_dpl,
-    .len = 1,
-    .value_range = &range_feature_en_dpl
+	.reg = NRF24L01_REG_FEATURE,
+	.offset = 2,
+	.mask = &mask_feature_en_dpl,
+	.len = 1,
+	.value_range = &range_feature_en_dpl
 };
 
 static struct partreg_template* nrf24l01_regs[] = {

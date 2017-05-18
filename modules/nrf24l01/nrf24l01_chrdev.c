@@ -540,10 +540,10 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 		goto exit_noalloc;
 	nrfchr->class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
 	if(IS_ERR(nrfchr->class))
-    {
-        err = PTR_ERR(nrfchr->class);
-        goto exit_unregchrdev;
-    }
+	{
+		err = PTR_ERR(nrfchr->class);
+		goto exit_unregchrdev;
+	}
 	cdev_init(&nrfchr->cdev, &fops);
 	dev_t devnum = MKDEV(MAJOR(nrfchr->devt), MINOR(nrfchr->devt));
 	nrfchr->dev = device_create_with_groups(nrfchr->class, NULL, devnum, nrfchr, attribute_groups, NRF24L01_CHRDEV_NAME);

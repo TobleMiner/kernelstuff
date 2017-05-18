@@ -170,6 +170,6 @@ int nrf24l01_spi_write_tx_pld_no_ack(struct nrf24l01_t* nrf, unsigned char* data
 
 int nrf24l01_spi_nop(struct nrf24l01_t* nrf)
 {
-    unsigned char nop = NRF24L01_CMD_NOP;
-    return nrf24l01_spi_write(nrf, &nop, 1);
+	unsigned char nop = NRF24L01_CMD_NOP;
+	return nrf24l01_spi_write(nrf, &nop, 1);
 }
