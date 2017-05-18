@@ -580,7 +580,7 @@ int nrf24l01_get_fifo_rx_empty(struct nrf24l01_t* nrf, unsigned int* status)
 
 int nrf24l01_get_vreg_or_fail_short(struct nrf24l01_t* nrf, int vreg, int ntries)
 {
-	int err, tries = 0;
+	int err = 0, tries = 0;
 	unsigned int data;
 	while(++tries <= ntries)
 	{
@@ -664,7 +664,7 @@ static void nrf24l01_reader_inc(struct nrf24l01_t* nrf)
 
 static int nrf24l01_reader_dec(struct nrf24l01_t* nrf)
 {
-	int err;
+	int err = 0;
 	unsigned int fifo_status;
 	mutex_lock(&nrf->m_rx_path);
 	nrf->num_readers--;

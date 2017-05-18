@@ -87,7 +87,7 @@ static int nrf24l01_spi_cmd_write(struct nrf24l01_t* nrf, u8 cmd, unsigned char*
 // There is no read only mode
 static int nrf24l01_spi_cmd_read(struct nrf24l01_t* nrf, u8 cmd, unsigned char* dest, unsigned int len)
 {
-	int err;
+	int err = -ENOMEM;
 	unsigned char* read_buffer;
 	unsigned char* write_buffer = vzalloc(len + 1);
 	if(!write_buffer)
