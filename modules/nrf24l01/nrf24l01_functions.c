@@ -689,8 +689,7 @@ exit_mutex_tx:
 	return err;
 }
 
-// TODO: Implement non blocking version
-ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
+ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* data, unsigned int len)
 {
 	size_t err, cleanup_err;
 	unsigned int pipe_no, payload_width, dyn_pld, fifo_status;
@@ -714,9 +713,24 @@ ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, unsigned char* data, unsign
 		mutex_unlock(&nrf->m_tx_path);
 	}
 tryagain:
-	if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_rx_p_no_or_fail(nrf) != NRF24L01_RX_P_NO_EMPTY)))
+	if(noblock)
 	{
-		goto exit_err;
+		if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
+		{
+			goto exit_err;
+		}
+		if(pipe_no == NRF24L01_RX_P_NO_EMPTY)
+		{
+			err = -EAGAIN;
+			goto exit_err;
+		}
+	}
+	else
+	{
+		if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_rx_p_no_or_fail(nrf) != NRF24L01_RX_P_NO_EMPTY)))
+		{
+			goto exit_err;
+		}
 	}
 	mutex_lock(&nrf->m_rx_path);
 	if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
@@ -725,6 +739,11 @@ tryagain:
 	}
 	if(pipe_no == NRF24L01_RX_P_NO_EMPTY)
 	{
+		if(noblock)
+		{
+			err = -EAGAIN;
+			goto exit_err_mutex;
+		}
 		mutex_unlock(&nrf->m_rx_path);
 		goto tryagain;
 	}
@@ -784,8 +803,7 @@ exit_err:
 	return err;
 }
 
-// TODO: Basically same as read_packet
-int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len)
+int nrf24l01_send_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* data, unsigned int len)
 {
 	int err;
 	unsigned int tx_full;
@@ -795,9 +813,24 @@ int nrf24l01_send_packet(struct nrf24l01_t* nrf, unsigned char* data, unsigned i
 		goto exit_err;
 	}	
 tryagain:
-	if((err = wait_event_interruptible(nrf->tx_queue, nrf24l01_get_tx_full_or_fail(nrf) != 1)))
+	if(noblock)
 	{
-		goto exit_err;
+		if((err = nrf24l01_get_status_tx_full(nrf, &tx_full)))
+		{
+			goto exit_err;
+		}
+		if(tx_full)
+		{
+			err = -EAGAIN;
+			goto exit_err;
+		}
+	}
+	else
+	{
+		if((err = wait_event_interruptible(nrf->tx_queue, nrf24l01_get_tx_full_or_fail(nrf) != 1)))
+		{
+			goto exit_err;
+		}
 	}
 	mutex_lock(&nrf->m_tx_path);
 	if((err = nrf24l01_get_status_tx_full(nrf, &tx_full)))
@@ -806,6 +839,11 @@ tryagain:
 	}
 	if(tx_full == 1)
 	{
+		if(noblock)
+		{
+			err = -EAGAIN;
+			goto exit_err_mutex;
+		}
 		mutex_unlock(&nrf->m_tx_path);
 		goto tryagain;
 	}

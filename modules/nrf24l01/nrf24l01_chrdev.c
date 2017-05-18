@@ -57,7 +57,7 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 		err = -ENOMEM;
 		goto exit_err;
 	}
-	if((readlen = nrf24l01_read_packet(nrf, data, (unsigned int) len)) < 0)
+	if((readlen = nrf24l01_read_packet(nrf, !!(filep->f_flags & O_NONBLOCK), data, (unsigned int) len)) < 0)
 	{
 		err = readlen;
 		goto exit_dataalloc;
@@ -87,7 +87,7 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 	}
 	if((lenoffset = copy_from_user(data, buffer, len)))
 		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to kernelspace\n", lenoffset, len);
-	if((err = nrf24l01_send_packet(nrf, data, (unsigned int) len)))
+	if((err = nrf24l01_send_packet(nrf, !!(filep->f_flags & O_NONBLOCK), data, (unsigned int) len)))
 		goto exit_dataalloc;
 	err = len;
 exit_dataalloc:
