@@ -686,6 +686,7 @@ ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char
 {
 	size_t err, cleanup_err;
 	unsigned int pipe_no, payload_width, dyn_pld, fifo_status;
+	// Keep track of active readers for power saving
 	if(nrf24l01_get_mode_low_pwr(nrf))
 	{
 		nrf24l01_reader_inc(nrf);
@@ -705,13 +706,18 @@ ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char
 		}
 		mutex_unlock(&nrf->m_tx_path);
 	}
+
+	// This block does the actual receiving
 tryagain:
+	// We can't enter the event queue if we are not allowed to block
 	if(noblock)
 	{
+		// Check if there is any data ...
 		if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
 		{
 			goto exit_err;
 		}
+		// ... and exit if there is none
 		if(pipe_no == NRF24L01_RX_P_NO_EMPTY)
 		{
 			err = -EAGAIN;
@@ -720,27 +726,33 @@ tryagain:
 	}
 	else
 	{
+		// Wait for the nrf worker to wake us up
 		if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_rx_p_no_or_fail(nrf) != NRF24L01_RX_P_NO_EMPTY)))
 		{
 			goto exit_err;
 		}
 	}
+	// Make sure we are the only one retreiving packets
 	mutex_lock(&nrf->m_rx_path);
+	// Check if another worker already fetched our packet
 	if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
 	{
 		goto exit_err_mutex;
 	}
 	if(pipe_no == NRF24L01_RX_P_NO_EMPTY)
 	{
+		// Fail if there was no packet
 		if(noblock)
 		{
 			err = -EAGAIN;
 			goto exit_err_mutex;
 		}
+		// Try again if we are supposed to block
 		mutex_unlock(&nrf->m_rx_path);
 		goto tryagain;
 	}
 	dev_dbg(&nrf->spi->dev, "Got payload in pipe %u\n", pipe_no);
+	// Check wether our payload has dynamic length
 	if((err = nrf24l01_get_dynpd(nrf, pipe_no, &dyn_pld)))
 	{
 		dev_err(&nrf->spi->dev, "Failed to determine pipe payload type (dynamic/fixed size): %d\n", err);
@@ -748,11 +760,13 @@ tryagain:
 	}
 	if(dyn_pld)
 	{
+		// Get payload width
 		if((err = nrf24l01_get_dyn_pld_width(nrf, &payload_width)))
 		{
 			dev_err(&nrf->spi->dev, "Payload size read failed: %d\n", err);
 			goto exit_err_mutex;
 		}
+		// Flush rx fifo if payload size is invalid
 		if(payload_width > 32)
 		{
 			dev_err(&nrf->spi->dev, "Payload size is > 32, flushing rx fifo\n");
@@ -767,17 +781,20 @@ tryagain:
 	}
 	else
 	{
+		// Get static payload width from pipe
 		if((err = nrf24l01_get_pipe_pld_width(nrf, pipe_no, &payload_width)))
 		{
 			goto exit_err_mutex;
 		}
 	}
+	// Fail if supplied buffer is too short
 	if(len < payload_width)
 	{
 		dev_err(&nrf->spi->dev, "Packet read buffer too short. Should be >= %u, is %u\n", payload_width, len);
 		err = -EINVAL;
 		goto exit_err_mutex;
 	}
+	// And (finally!) read packet to buffer
 	if((err = nrf24l01_spi_read_rx_pld(nrf, data, payload_width)))
 	{
 		goto exit_err_mutex;
@@ -786,6 +803,7 @@ tryagain:
 exit_err_mutex:
 	mutex_unlock(&nrf->m_rx_path);
 exit_err:
+	// Decrement reader count if in low power mode
 	if(nrf24l01_get_mode_low_pwr(nrf))
 	{
 		if((cleanup_err = nrf24l01_reader_dec(nrf)))
@@ -800,18 +818,24 @@ int nrf24l01_send_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* da
 {
 	int err;
 	unsigned int tx_full;
+	// Check wether packet is too long for nrf
 	if(len > 32)
 	{
 		err = -EINVAL;
 		goto exit_err;
-	}	
+	}
+
+	// This block handles the actual data transmission
 tryagain:
+	// We can't enter the tx queue if we are not allowed to block
 	if(noblock)
 	{
+		// Check if tx buffer is full ...
 		if((err = nrf24l01_get_status_tx_full(nrf, &tx_full)))
 		{
 			goto exit_err;
 		}
+		// ... and fail if it is
 		if(tx_full)
 		{
 			err = -EAGAIN;
@@ -820,30 +844,38 @@ tryagain:
 	}
 	else
 	{
+		// Wait for nrf worker to wake us up
 		if((err = wait_event_interruptible(nrf->tx_queue, nrf24l01_get_tx_full_or_fail(nrf) != 1)))
 		{
 			goto exit_err;
 		}
 	}
+	// Make sure we are the only one doing stuff modifying the tx state
 	mutex_lock(&nrf->m_tx_path);
+	// Check if there is still space in the tx fifo
 	if((err = nrf24l01_get_status_tx_full(nrf, &tx_full)))
 	{
 		goto exit_err_mutex;
 	}
+	// Abort current write attempt if tx fifo became full
 	if(tx_full == 1)
 	{
+		// Fail if we can't block
 		if(noblock)
 		{
 			err = -EAGAIN;
 			goto exit_err_mutex;
 		}
+		// Back to square one if we are allowd to block
 		mutex_unlock(&nrf->m_tx_path);
 		goto tryagain;
 	}
+	// Set nrf to tx mode
 	if((err = nrf24l01_set_tx(nrf)))
 	{
 		goto exit_err_mutex;
 	}
+	// Write and send the payload
 	if((err = nrf24l01_spi_write_tx_pld(nrf, data, len)))
 	{
 		goto exit_err_mutex;
