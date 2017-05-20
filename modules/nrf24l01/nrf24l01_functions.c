@@ -30,7 +30,6 @@ int nrf24l01_get_mode_pwr_down_not_standby(struct nrf24l01_t* nrf)
 
 int nrf24l01_set_channel(struct nrf24l01_t* nrf, unsigned int ch)
 {
-	printk(KERN_INFO "Calling table write\n");
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_RF_CH_RF_CH, &ch, 1);
 }
 

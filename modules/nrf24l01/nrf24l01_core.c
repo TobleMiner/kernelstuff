@@ -91,7 +91,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	unsigned int irq_trigger;
 	const void *of_gpio_ce, *of_nrf_mode;
 	struct nrf24l01_t* nrf;
-	printk(KERN_WARNING "nrf24l01_probe\n");
+	dev_info(&spi->dev, "Initializing nrf driver\n");
 	nrf = vzalloc(sizeof(nrf24l01_t));
 	if(!nrf)
 	{
@@ -103,7 +103,6 @@ static int nrf24l01_probe(struct spi_device* spi)
 	mutex_init(&nrf->m_rx_path);
 	mutex_init(&nrf->m_tx_path);
 	mutex_init(&nrf->m_state);
-	printk(KERN_INFO "Adding regmap...\n");
 	nrf->regmap_short = regmap_init(&spi->dev, NULL, nrf, &nrf24l01_regmap_short);
 	if(IS_ERR(nrf->regmap_short))
 	{
@@ -143,7 +142,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 		goto exit_workeralloc;
 	}
 	nrf->gpio_ce = be32_to_cpup(of_gpio_ce);
-	printk(KERN_INFO "CE GPIO: %u\n", nrf->gpio_ce);
+	dev_dbg(&nrf->spi->dev, "CE GPIO: %u\n", nrf->gpio_ce);
 	if((err = gpio_request(nrf->gpio_ce, "ce")))
 	{
 		dev_err(&spi->dev, "Allocation of GPIO%u failed\n", nrf->gpio_ce);
@@ -197,8 +196,8 @@ exit_noalloc:
 static int nrf24l01_remove(struct spi_device* spi)
 {
 	struct nrf24l01_t* nrf;
-	printk(KERN_WARNING "nrf24l01_remove\n");
 	nrf = dev_get_drvdata(&spi->dev);
+	dev_info(&nrf->spi->dev, "Removing nrf\n");
 	nrf24l01_destroy_worker(nrf);
 	gpio_free(nrf->gpio_ce);
 	chrdev_free(nrf);

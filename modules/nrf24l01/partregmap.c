@@ -55,7 +55,7 @@ static int partreg_custom_read(struct partreg* reg, unsigned int* value, unsigne
 static int partreg_custom_write(struct partreg* reg, unsigned int* value, unsigned int maxlen)
 {
 	// Don't perform shifting/masking as we don't need it
-	printk(KERN_INFO "Using custom reg write func (reg=%u)\n", reg->reg);
+	printk(KERN_DEBUG "Using custom reg write func (reg=%u)\n", reg->reg);
 	int err;
 	unsigned int len = reg->len;
 	if(reg->len_func != NULL)

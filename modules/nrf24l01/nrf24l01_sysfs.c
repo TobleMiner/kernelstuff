@@ -22,7 +22,6 @@ ssize_t nrf24l01_sysfs_show_channel(struct device* dev, struct device_attribute*
 	int err;
 	if((err = nrf24l01_get_channel(((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf, &channel)))
 		return err;
-	printk(KERN_INFO "Got channel %d\n", channel);
 	return sprintf(buf, "%d\n", channel);
 }
 
