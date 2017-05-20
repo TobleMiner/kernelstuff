@@ -89,33 +89,32 @@ static int nrf24l01_probe(struct spi_device* spi)
 {
 	int err = 0;
 	unsigned int irq_trigger;
-	const void* of_gpio_ce;
-	const void* of_nrf_mode;
-	struct nrf24l01_t* nrf24l01_dev;
+	const void *of_gpio_ce, *of_nrf_mode;
+	struct nrf24l01_t* nrf;
 	printk(KERN_WARNING "nrf24l01_probe\n");
-	nrf24l01_dev = vzalloc(sizeof(nrf24l01_t));
-	if(!nrf24l01_dev)
+	nrf = vzalloc(sizeof(nrf24l01_t));
+	if(!nrf)
 	{
 		err = -ENOMEM;
 		goto exit_noalloc;
 	}
-	dev_set_drvdata(&spi->dev, nrf24l01_dev);
-	nrf24l01_dev->spi = spi;
-	mutex_init(&nrf24l01_dev->m_rx_path);
-	mutex_init(&nrf24l01_dev->m_tx_path);
-	mutex_init(&nrf24l01_dev->m_state);
+	dev_set_drvdata(&spi->dev, nrf);
+	nrf->spi = spi;
+	mutex_init(&nrf->m_rx_path);
+	mutex_init(&nrf->m_tx_path);
+	mutex_init(&nrf->m_state);
 	printk(KERN_INFO "Adding regmap...\n");
-	nrf24l01_dev->regmap_short = regmap_init(&spi->dev, NULL, nrf24l01_dev, &nrf24l01_regmap_short);
-	if(IS_ERR(nrf24l01_dev->regmap_short))
+	nrf->regmap_short = regmap_init(&spi->dev, NULL, nrf, &nrf24l01_regmap_short);
+	if(IS_ERR(nrf->regmap_short))
 	{
-		err = PTR_ERR(nrf24l01_dev->regmap_short);
+		err = PTR_ERR(nrf->regmap_short);
 		goto exit_nrfalloc;
 	}
-	if((err = nrf24l01_create_partregs(nrf24l01_dev)) < 0)
+	if((err = nrf24l01_create_partregs(nrf)) < 0)
 	{
 		goto exit_regmapalloc;
 	}
-	if((err = chrdev_alloc(nrf24l01_dev)) < 0)
+	if((err = chrdev_alloc(nrf)) < 0)
 	{
 		goto exit_partregalloc;
 	}
@@ -126,12 +125,12 @@ static int nrf24l01_probe(struct spi_device* spi)
 	}
 	else
 	{
-		nrf24l01_dev->mode_flags = be32_to_cpup(of_nrf_mode);
+		nrf->mode_flags = be32_to_cpup(of_nrf_mode);
 	}
-	dev_info(&spi->dev, "nrf mode: %u\n", nrf24l01_dev->mode_flags);
-	init_waitqueue_head(&nrf24l01_dev->rx_queue);
-	init_waitqueue_head(&nrf24l01_dev->tx_queue);
-	if((err = nrf24l01_create_worker(nrf24l01_dev)))
+	dev_info(&spi->dev, "nrf mode: %u\n", nrf->mode_flags);
+	init_waitqueue_head(&nrf->rx_queue);
+	init_waitqueue_head(&nrf->tx_queue);
+	if((err = nrf24l01_create_worker(nrf)))
 	{
 		dev_err(&spi->dev, "Failed to create worker thread\n");
 		goto exit_chrdevalloc;
@@ -143,14 +142,14 @@ static int nrf24l01_probe(struct spi_device* spi)
 		err = -EINVAL;
 		goto exit_workeralloc;
 	}
-	nrf24l01_dev->gpio_ce = be32_to_cpup(of_gpio_ce);
-	printk(KERN_INFO "CE GPIO: %u\n", nrf24l01_dev->gpio_ce);
-	if((err = gpio_request(nrf24l01_dev->gpio_ce, "ce")))
+	nrf->gpio_ce = be32_to_cpup(of_gpio_ce);
+	printk(KERN_INFO "CE GPIO: %u\n", nrf->gpio_ce);
+	if((err = gpio_request(nrf->gpio_ce, "ce")))
 	{
-		dev_err(&spi->dev, "Allocation of GPIO%u failed\n", nrf24l01_dev->gpio_ce);
+		dev_err(&spi->dev, "Allocation of GPIO%u failed\n", nrf->gpio_ce);
 		goto exit_workeralloc;
 	}
-	gpio_direction_output(nrf24l01_dev->gpio_ce, 0);
+	gpio_direction_output(nrf->gpio_ce, 0);
 	irq_trigger = irq_get_trigger_type(spi->irq);
 	if(!irq_trigger)
 	{
@@ -158,21 +157,21 @@ static int nrf24l01_probe(struct spi_device* spi)
 		err = -EINVAL;
 		goto exit_gpioalloc;
 	}
-	if((err = devm_request_irq(&spi->dev, spi->irq, nrf24l01_irq, irq_trigger, dev_name(&spi->dev), nrf24l01_dev)))
+	if((err = devm_request_irq(&spi->dev, spi->irq, nrf24l01_irq, irq_trigger, dev_name(&spi->dev), nrf)))
 	{
 		dev_err(&spi->dev, "Failed to allocate interrupt\n");
 		goto exit_gpioalloc;
 	}
-	NRF24L01_CE_LO(nrf24l01_dev);
-	nrf24l01_pwr_down(nrf24l01_dev);
-	nrf24l01_flush(nrf24l01_dev);
-	nrf24l01_set_status_max_rt(nrf24l01_dev, 1);	
-	nrf24l01_set_status_rx_dr(nrf24l01_dev, 1);
-	nrf24l01_set_status_tx_ds(nrf24l01_dev, 1);
-	if(!nrf24l01_get_mode_low_pwr(nrf24l01_dev))
-		nrf24l01_set_rx(nrf24l01_dev);
+	NRF24L01_CE_LO(nrf);
+	nrf24l01_pwr_down(nrf);
+	nrf24l01_flush(nrf);
+	nrf24l01_set_status_max_rt(nrf, 1);	
+	nrf24l01_set_status_rx_dr(nrf, 1);
+	nrf24l01_set_status_tx_ds(nrf, 1);
+	if(!nrf24l01_get_mode_low_pwr(nrf))
+		nrf24l01_set_rx(nrf);
 
-	err = nrf24l01_test_unflushable_fifo(nrf24l01_dev);
+	err = nrf24l01_test_unflushable_fifo(nrf);
 	if(err < 0)
 		goto exit_gpioalloc;
 	if(err)
@@ -180,32 +179,32 @@ static int nrf24l01_probe(struct spi_device* spi)
 
 	return 0;
 exit_gpioalloc:
-	gpio_free(nrf24l01_dev->gpio_ce);
+	gpio_free(nrf->gpio_ce);
 exit_workeralloc:
-	nrf24l01_destroy_worker(nrf24l01_dev);
+	nrf24l01_destroy_worker(nrf);
 exit_chrdevalloc:
-	chrdev_free(nrf24l01_dev);
+	chrdev_free(nrf);
 exit_partregalloc:
-	nrf24l01_free_partregs(nrf24l01_dev);
+	nrf24l01_free_partregs(nrf);
 exit_regmapalloc:
-	regmap_exit(nrf24l01_dev->regmap_short);
+	regmap_exit(nrf->regmap_short);
 exit_nrfalloc:
-	vfree(nrf24l01_dev);
+	vfree(nrf);
 exit_noalloc:
 	return err;
 }
 
 static int nrf24l01_remove(struct spi_device* spi)
 {
-	struct nrf24l01_t* nrf24l01_dev;
+	struct nrf24l01_t* nrf;
 	printk(KERN_WARNING "nrf24l01_remove\n");
-	nrf24l01_dev = dev_get_drvdata(&spi->dev);
-	nrf24l01_destroy_worker(nrf24l01_dev);
-	gpio_free(nrf24l01_dev->gpio_ce);
-	chrdev_free(nrf24l01_dev);
-	nrf24l01_free_partregs(nrf24l01_dev);
-	regmap_exit(nrf24l01_dev->regmap_short);
-	vfree(nrf24l01_dev);
+	nrf = dev_get_drvdata(&spi->dev);
+	nrf24l01_destroy_worker(nrf);
+	gpio_free(nrf->gpio_ce);
+	chrdev_free(nrf);
+	nrf24l01_free_partregs(nrf);
+	regmap_exit(nrf->regmap_short);
+	vfree(nrf);
 	return 0;
 }
 
