@@ -300,13 +300,6 @@ int nrf24l01_pwr_down(struct nrf24l01_t* nrf)
 	return nrf24l01_set_pwr_up(nrf, 0);
 }
 
-void nrf24l01_standby(struct nrf24l01_t* nrf)
-{
-	mutex_lock(&nrf->m_state);
-	NRF24L01_CE_LO(nrf);
-	mutex_unlock(&nrf->m_state);
-}
-
 int nrf24l01_shutdown(struct nrf24l01_t* nrf)
 {
 	int err;
