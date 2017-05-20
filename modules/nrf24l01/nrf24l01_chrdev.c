@@ -19,27 +19,16 @@
 
 static int dev_open(struct inode* inodep, struct file *filep)
 {
-	int err;
 	struct nrf24l01_chrdev_session* session;
 	struct nrf24l01_t* nrf = ((struct nrf24l01_chrdev*)container_of(inodep->i_cdev, struct nrf24l01_chrdev, cdev))->nrf;
-	if(!mutex_trylock(&nrf->chrdev.lock))
-	{
-		err = -EBUSY;
-		goto exit_err;
-	}
 	session = vzalloc(sizeof(struct nrf24l01_chrdev_session));
 	if(!session)
 	{
-		err = -ENOMEM;
-		goto exit_mutex;
+		return -ENOMEM;
 	}
 	session->chrdev = &nrf->chrdev;
 	filep->private_data = session;
 	return 0;
-exit_mutex:
-	mutex_unlock(&nrf->chrdev.lock);
-exit_err:
-	return err;
 }
 
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
@@ -99,8 +88,6 @@ exit_err:
 static int dev_release(struct inode *inodep, struct file *filep)
 {
 	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
-	struct nrf24l01_t* nrf = session->chrdev->nrf;
-	mutex_unlock(&nrf->chrdev.lock);
 	vfree(session);
 	return 0;
 }
@@ -535,7 +522,6 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 	int err;
 	struct nrf24l01_chrdev* nrfchr = &nrf->chrdev;
 	nrfchr->nrf = nrf;
-	mutex_init(&nrfchr->lock);
 	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, NRF24L01_CHRDEV_NAME)))
 		goto exit_noalloc;
 	nrfchr->class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
@@ -555,6 +541,7 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 	if((err = cdev_add(&nrfchr->cdev, devnum, 1)))
 		goto exit_destroydev;
 	return 0;
+
 exit_destroydev:
 	device_destroy(nrfchr->class, devnum);
 exit_unregclass:	

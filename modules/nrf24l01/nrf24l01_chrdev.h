@@ -16,7 +16,6 @@ typedef struct nrf24l01_chrdev {
 	struct cdev			cdev;
 	struct class*		class;
 	dev_t				devt;	
-	struct mutex		lock;
 } nrf24l01_chrdev;
 
 int chrdev_alloc(struct nrf24l01_t* nrf);
