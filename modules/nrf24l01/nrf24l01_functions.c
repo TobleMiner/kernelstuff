@@ -835,7 +835,7 @@ tryagain:
 		{
 			goto exit_err;
 		}
-		// ... and fail if it is
+		// ... and fail when it is
 		if(tx_full)
 		{
 			err = -EAGAIN;
@@ -858,7 +858,7 @@ tryagain:
 		goto exit_err_mutex;
 	}
 	// Abort current write attempt if tx fifo became full
-	if(tx_full == 1)
+	if(tx_full)
 	{
 		// Fail if we can't block
 		if(noblock)
