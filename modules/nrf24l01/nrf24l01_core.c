@@ -85,21 +85,21 @@ static irqreturn_t nrf24l01_irq(int irq, void* data)
 	return IRQ_HANDLED;
 }
 
-static struct nrf24l01_t* nrf24l01_dev;
-
 static int nrf24l01_probe(struct spi_device* spi)
 {
 	int err = 0;
 	unsigned int irq_trigger;
 	const void* of_gpio_ce;
 	const void* of_nrf_mode;
+	struct nrf24l01_t* nrf24l01_dev;
 	printk(KERN_WARNING "nrf24l01_probe\n");
 	nrf24l01_dev = vzalloc(sizeof(nrf24l01_t));
-	if(IS_ERR(nrf24l01_dev))
+	if(!nrf24l01_dev)
 	{
-		err = PTR_ERR(nrf24l01_dev);
+		err = -ENOMEM;
 		goto exit_noalloc;
 	}
+	dev_set_drvdata(&spi->dev, nrf24l01_dev);
 	nrf24l01_dev->spi = spi;
 	mutex_init(&nrf24l01_dev->m_rx_path);
 	mutex_init(&nrf24l01_dev->m_tx_path);
@@ -197,7 +197,9 @@ exit_noalloc:
 
 static int nrf24l01_remove(struct spi_device* spi)
 {
+	struct nrf24l01_t* nrf24l01_dev;
 	printk(KERN_WARNING "nrf24l01_remove\n");
+	nrf24l01_dev = dev_get_drvdata(&spi->dev);
 	nrf24l01_destroy_worker(nrf24l01_dev);
 	gpio_free(nrf24l01_dev->gpio_ce);
 	chrdev_free(nrf24l01_dev);
