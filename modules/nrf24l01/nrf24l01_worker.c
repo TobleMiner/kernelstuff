@@ -17,6 +17,8 @@ static int nrf24l01_worker_do_work(void* ctx)
 	int err;
 	unsigned int data;
 	struct nrf24l01_t* nrf = (nrf24l01_t*) ctx;
+
+	// Check for exit condition once per IRQ/second
 	while(!kthread_should_stop())
 	{
 		// Wait for IRQ
@@ -27,9 +29,7 @@ static int nrf24l01_worker_do_work(void* ctx)
 				dev_err(&nrf->spi->dev, "Worker thread failed! err=%d\n", err);
 //				do_exit(err);
 			}
-			// Check for exit condition once per IRQ/second
-			if(kthread_should_stop())
-				break;
+			// Force termintaion check
 			continue;
 		}
 		dev_dbg(&nrf->spi->dev, "Event!\n");
