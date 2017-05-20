@@ -142,7 +142,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 		goto exit_workeralloc;
 	}
 	nrf->gpio_ce = be32_to_cpup(of_gpio_ce);
-	dev_dbg(&nrf->spi->dev, "CE GPIO: %u\n", nrf->gpio_ce);
+	dev_info(&nrf->spi->dev, "CE GPIO: %u\n", nrf->gpio_ce);
 	if((err = gpio_request(nrf->gpio_ce, "ce")))
 	{
 		dev_err(&spi->dev, "Allocation of GPIO%u failed\n", nrf->gpio_ce);
