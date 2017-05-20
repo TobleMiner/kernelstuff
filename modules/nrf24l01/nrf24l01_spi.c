@@ -88,8 +88,8 @@ static int nrf24l01_spi_cmd_write(struct nrf24l01_t* nrf, u8 cmd, unsigned char*
 static int nrf24l01_spi_cmd_read(struct nrf24l01_t* nrf, u8 cmd, unsigned char* dest, unsigned int len)
 {
 	int err = -ENOMEM;
-	unsigned char* read_buffer;
-	unsigned char* write_buffer = vzalloc(len + 1);
+	unsigned char *read_buffer, *write_buffer;
+	write_buffer = vzalloc(len + 1);
 	if(!write_buffer)
 		goto exit_noalloc;
 	*write_buffer = cmd;

@@ -520,6 +520,7 @@ static const struct attribute_group* attribute_groups[] = {
 int chrdev_alloc(struct nrf24l01_t* nrf)
 {
 	int err;
+	dev_t devnum;
 	struct nrf24l01_chrdev* nrfchr = &nrf->chrdev;
 	nrfchr->nrf = nrf;
 	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, NRF24L01_CHRDEV_NAME)))
@@ -531,7 +532,7 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 		goto exit_unregchrdev;
 	}
 	cdev_init(&nrfchr->cdev, &fops);
-	dev_t devnum = MKDEV(MAJOR(nrfchr->devt), MINOR(nrfchr->devt));
+	devnum = MKDEV(MAJOR(nrfchr->devt), MINOR(nrfchr->devt));
 	nrfchr->dev = device_create_with_groups(nrfchr->class, NULL, devnum, nrfchr, attribute_groups, NRF24L01_CHRDEV_NAME);
 	if(IS_ERR(nrfchr->dev))
 	{

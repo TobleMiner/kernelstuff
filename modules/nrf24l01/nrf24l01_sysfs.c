@@ -48,6 +48,7 @@ static ssize_t nrf24l01_sysfs_show_address(struct device* dev, char* buf, unsign
 	int err;
 	unsigned int addr_width;
 	u64 addr = 0;
+	char fmt[10];
 	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
 	if((err = nrf24l01_get_address_u64(nrf, &addr, pipe)))
 		return err;
@@ -55,7 +56,6 @@ static ssize_t nrf24l01_sysfs_show_address(struct device* dev, char* buf, unsign
 	{
 		if((err = nrf24l01_get_address_width(nrf, &addr_width)))
 			return err;
-		char fmt[10];
 		sprintf(fmt, "%%0%ullX\n", addr_width * 2);
 		return sprintf(buf, fmt, addr);
 	}
@@ -704,12 +704,12 @@ ssize_t nrf24l01_sysfs_show_tx_address(struct device* dev, struct device_attribu
 	int err;
 	unsigned int addr_width;
 	u64 addr = 0;
+	char fmt[10];
 	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
 	if((err = nrf24l01_get_tx_address_u64(nrf, &addr)))
 		return err;
 	if((err = nrf24l01_get_address_width(nrf, &addr_width)))
 		return err;
-	char fmt[10];
 	sprintf(fmt, "%%0%ullX\n", addr_width * 2);
 	return sprintf(buf, fmt, addr);
 }
