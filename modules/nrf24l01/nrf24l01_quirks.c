@@ -7,10 +7,10 @@ int nrf24l01_test_unflushable_fifo(struct nrf24l01_t* nrf)
 {
 	int err;
 	unsigned int val;
-	unsigned char data[32];
+	unsigned char data[NRF24L01_PACKET_MAX_LENGTH];
 	for(val = 0; val < 3; val++)
 	{
-		if((err = nrf24l01_spi_write_tx_pld(nrf, data, 32)))
+		if((err = nrf24l01_spi_write_tx_pld(nrf, data, NRF24L01_PACKET_MAX_LENGTH)))
 			return err;
 	}
 	if((err = nrf24l01_flush_tx(nrf)))

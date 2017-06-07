@@ -370,7 +370,7 @@ int nrf24l01_set_pipe_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsig
 {
 	if(pipe > 5)
 		return -EINVAL;
-	if(width > 32)
+	if(width > NRF24L01_PACKET_MAX_LENGTH)
 		return -EINVAL;
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_RX_PW_P0 + pipe, &width, 1);
 }
@@ -766,9 +766,9 @@ tryagain:
 			goto exit_err_mutex;
 		}
 		// Flush rx fifo if payload size is invalid
-		if(payload_width > 32)
+		if(payload_width > NRF24L01_PACKET_MAX_LENGTH)
 		{
-			dev_err(&nrf->spi->dev, "Payload size is > 32, flushing rx fifo\n");
+			dev_err(&nrf->spi->dev, "Payload size is > %d, flushing rx fifo\n", NRF24L01_PACKET_MAX_LENGTH);
 			if((err = nrf24l01_flush_rx_(nrf)))
 			{
 				dev_err(&nrf->spi->dev, "Failed to flush rx fifo: %d\n", err);
@@ -818,7 +818,7 @@ int nrf24l01_send_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* da
 	int err;
 	unsigned int tx_full;
 	// Check wether packet is too long for nrf
-	if(len > 32)
+	if(len > NRF24L01_PACKET_MAX_LENGTH)
 	{
 		err = -EINVAL;
 		goto exit_err;

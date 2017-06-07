@@ -12,6 +12,8 @@
 #include "nrf24l01_chrdev.h"
 #include "nrf24l01_worker.h"
 
+#define NRF24L01_PACKET_MAX_LENGTH 32
+
 typedef struct nrf24l01_t {
 	struct spi_device*		spi;
 	struct regmap*			regmap_short;

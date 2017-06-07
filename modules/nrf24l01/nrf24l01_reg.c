@@ -495,7 +495,7 @@ static struct partreg_template reg_tx_addr = {
 	.reg_read = nrf24l01_reg_addr_read
 };
 
-static struct partreg_range range_rx_pw_p0 = partreg_reg_range(0, 32);
+static struct partreg_range range_rx_pw_p0 = partreg_reg_range(0, NRF24L01_PACKET_MAX_LENGTH);
 static unsigned int mask_rx_pw_p0 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p0 = {
@@ -507,7 +507,7 @@ static struct partreg_template reg_rx_pw_p0 = {
 	.value_range = &range_rx_pw_p0
 };
 
-static struct partreg_range range_rx_pw_p1 = partreg_reg_range(0, 32);
+static struct partreg_range range_rx_pw_p1 = partreg_reg_range(0, NRF24L01_PACKET_MAX_LENGTH);
 static unsigned int mask_rx_pw_p1 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p1 = {
@@ -519,7 +519,7 @@ static struct partreg_template reg_rx_pw_p1 = {
 	.value_range = &range_rx_pw_p1
 };
 
-static struct partreg_range range_rx_pw_p2 = partreg_reg_range(0, 32);
+static struct partreg_range range_rx_pw_p2 = partreg_reg_range(0, NRF24L01_PACKET_MAX_LENGTH);
 static unsigned int mask_rx_pw_p2 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p2 = {
@@ -531,7 +531,7 @@ static struct partreg_template reg_rx_pw_p2 = {
 	.value_range = &range_rx_pw_p2
 };
 
-static struct partreg_range range_rx_pw_p3 = partreg_reg_range(0, 32);
+static struct partreg_range range_rx_pw_p3 = partreg_reg_range(0, NRF24L01_PACKET_MAX_LENGTH);
 static unsigned int mask_rx_pw_p3 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p3 = {
@@ -543,7 +543,7 @@ static struct partreg_template reg_rx_pw_p3 = {
 	.value_range = &range_rx_pw_p3
 };
 
-static struct partreg_range range_rx_pw_p4 = partreg_reg_range(0, 32);
+static struct partreg_range range_rx_pw_p4 = partreg_reg_range(0, NRF24L01_PACKET_MAX_LENGTH);
 static unsigned int mask_rx_pw_p4 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p4 = {
@@ -555,7 +555,7 @@ static struct partreg_template reg_rx_pw_p4 = {
 	.value_range = &range_rx_pw_p4
 };
 
-static struct partreg_range range_rx_pw_p5 = partreg_reg_range(0, 32);
+static struct partreg_range range_rx_pw_p5 = partreg_reg_range(0, NRF24L01_PACKET_MAX_LENGTH);
 static unsigned int mask_rx_pw_p5 = 0b00111111;
 
 static struct partreg_template reg_rx_pw_p5 = {
