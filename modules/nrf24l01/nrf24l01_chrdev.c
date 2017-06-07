@@ -38,8 +38,6 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 	char* data;
 	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
 	struct nrf24l01_t* nrf = session->chrdev->nrf;
-	if(session->read_offset > 0)
-		return 0;
 	data = vmalloc(len);
 	if(!data)
 	{
