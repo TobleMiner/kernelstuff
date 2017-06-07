@@ -63,7 +63,9 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 {
 	unsigned long lenoffset;
 	ssize_t err;
+	size_t len_packet;
 	char* data;
+	loff_t readoffset = 0;
 	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
 	struct nrf24l01_t* nrf = session->chrdev->nrf;
 	data = vmalloc(len);
@@ -74,8 +76,13 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 	}
 	if((lenoffset = copy_from_user(data, buffer, len)))
 		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to kernelspace\n", lenoffset, len);
-	if((err = nrf24l01_send_packet(nrf, !!(filep->f_flags & O_NONBLOCK), data, (unsigned int) len)))
-		goto exit_dataalloc;
+	while(len - readoffset > 0)
+	{
+		len_packet = min((size_t)NRF24L01_PACKET_MAX_LENGTH, (size_t)(len - readoffset));
+		if((err = nrf24l01_send_packet(nrf, !!(filep->f_flags & O_NONBLOCK), data + readoffset, len_packet)))
+			goto exit_dataalloc;
+		readoffset += len_packet;
+	}
 	err = len;
 exit_dataalloc:
 	vfree(data);
