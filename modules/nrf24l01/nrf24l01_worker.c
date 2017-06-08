@@ -43,13 +43,13 @@ static int nrf24l01_worker_do_work(void* ctx)
 		}
 		if(data)
 		{
-			// Wake up rx queue if data has been received
-			wake_up_interruptible(&nrf->rx_queue);
 			// Clear rx data ready flag
 			if((err = nrf24l01_set_status_rx_dr(nrf, 1)))
 			{
 				dev_err(&nrf->spi->dev, "Failed to clear rx_dr flag: %d\n", err);
 			}
+			// Wake up rx queue if data has been received
+			wake_up_interruptible(&nrf->rx_queue);
 		}
 
 		// Check tx data sent flag
@@ -59,13 +59,13 @@ static int nrf24l01_worker_do_work(void* ctx)
 		}
 		if(data)
 		{
-			// Wake up tx queue if space in tx fifo became available
-			wake_up_interruptible(&nrf->tx_queue);
 			// Clear tx data sent flag
 			if((err = nrf24l01_set_status_tx_ds(nrf, 1)))
 			{
 				dev_err(&nrf->spi->dev, "Failed to clear tx_ds flag: %d\n", err);
 			}
+			// Wake up tx queue if space in tx fifo became available
+			wake_up_interruptible(&nrf->tx_queue);
 			// Make sure no tx opertaion is in progress
 			mutex_lock(&nrf->m_tx_path);
 			// Check for empty tx queue
