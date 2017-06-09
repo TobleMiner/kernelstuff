@@ -30,7 +30,14 @@ int nrf24l01_get_mode_pwr_down_not_standby(struct nrf24l01_t* nrf)
 
 int nrf24l01_set_channel(struct nrf24l01_t* nrf, unsigned int ch)
 {
-	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_RF_CH_RF_CH, &ch, 1);
+	int err, ce_state;
+	mutex_lock(&nrf->m_state);
+	ce_state = nrf24l01_get_ce_(nrf);
+	NRF24L01_CE_LO_(nrf);
+	err = partreg_table_write(nrf->reg_table, NRF24L01_VREG_RF_CH_RF_CH, &ch, 1);
+	nrf24l01_set_ce_(nrf, ce_state);
+	mutex_unlock(&nrf->m_state);
+	return err;
 }
 
 int nrf24l01_get_channel(struct nrf24l01_t* nrf, unsigned int* ch)
