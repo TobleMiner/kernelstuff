@@ -89,6 +89,9 @@ static int nrf24l01_spi_cmd_read(struct nrf24l01_t* nrf, u8 cmd, unsigned char* 
 {
 	int err = -ENOMEM;
 	unsigned char *read_buffer, *write_buffer;
+	struct spi_transfer trans = {
+		.len = len + 1
+	};
 	write_buffer = vzalloc(len + 1);
 	if(!write_buffer)
 		goto exit_noalloc;
@@ -96,11 +99,8 @@ static int nrf24l01_spi_cmd_read(struct nrf24l01_t* nrf, u8 cmd, unsigned char* 
 	read_buffer = vmalloc(len + 1);
 	if(!read_buffer)
 		goto exit_writealloc;
-	struct spi_transfer trans = {
-		.tx_buf = write_buffer,
-		.rx_buf = read_buffer,
-		.len = len + 1
-	};
+	trans.tx_buf = write_buffer;
+	trans.rx_buf = read_buffer;
 	err = spi_sync_transfer(nrf->spi, &trans, 1);
 	memcpy(dest, read_buffer + 1, len);
 	vfree(read_buffer);
