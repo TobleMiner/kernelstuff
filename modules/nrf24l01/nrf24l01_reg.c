@@ -370,6 +370,20 @@ static struct partreg_template reg_status_rx_p_no = {
 	.reg_read = nrf24l01_reg_get_status
 };
 
+static struct partreg_range range_status_irqf = partreg_reg_range(0, 7);
+static unsigned int mask_status_irqf = 0b01110000;
+
+static struct partreg_template reg_status_irqf = {
+	.name = "status_irqf",
+	.reg = NRF24L01_REG_STATUS,
+	.offset = 4,
+	.mask = &mask_status_irqf,
+	.len = 1,
+	.value_range = &range_status_irqf,
+	.reg_read = nrf24l01_reg_get_status,
+	.reg_write = nrf24l01_reg_set_status
+};
+
 static struct partreg_range range_status_max_rt = partreg_reg_range(0, 1);
 static unsigned int mask_status_max_rt = 0b10000;
 
@@ -805,7 +819,8 @@ static struct partreg_template* nrf24l01_regs[] = {
 	&reg_dynpd_dpl_p5,
 	&reg_feature_en_dyn_ack,
 	&reg_feature_en_ack_pay,
-	&reg_feature_en_dpl
+	&reg_feature_en_dpl,
+	&reg_status_irqf
 };
 
 static struct partreg_layout nrf24l01_reg_layout = {

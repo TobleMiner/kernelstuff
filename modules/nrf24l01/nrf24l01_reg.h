@@ -152,10 +152,15 @@
 #define NRF24L01_VREG_FEATURE_EN_DYN_ACK	59
 #define NRF24L01_VREG_FEATURE_EN_ACK_PAY	60
 #define NRF24L01_VREG_FEATURE_EN_DPL		61
+#define NRF24L01_VREG_STATUS_IRQF			62
 
 #define NRF24L01_RX_P_NO_EMPTY				0b111
 
 #define NRF24L01_N_PIPES					6
+
+#define NRF24L01_IRQF_MASK_RX_DR			0b100
+#define NRF24L01_IRQF_MASK_TX_DS			0b010
+#define NRF24L01_IRQF_MASK_MAX_RT			0b001
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf);
 void nrf24l01_free_partregs(struct nrf24l01_t* nrf);

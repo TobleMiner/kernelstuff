@@ -80,6 +80,10 @@ int nrf24l01_get_fifo_rx_full(struct nrf24l01_t* nrf, unsigned int* status);
 int nrf24l01_get_fifo_rx_empty(struct nrf24l01_t* nrf, unsigned int* status);
 void nrf24l01_store_ce_(struct nrf24l01_t* nrf, unsigned int *state);
 void nrf24l01_load_ce_(struct nrf24l01_t* nrf, unsigned int state);
+unsigned int nrf24l01_irqf_get_rx_dr(unsigned int irqf);
+unsigned int nrf24l01_irqf_get_tx_ds(unsigned int irqf);
+unsigned int nrf24l01_irqf_get_max_rt(unsigned int irqf);
+int nrf24l01_get_status_irqf(struct nrf24l01_t* nrf, unsigned int* irqf);
 
 
 #define NRF24L01_CE_HI_(nrf) nrf24l01_set_ce_(nrf, 1)

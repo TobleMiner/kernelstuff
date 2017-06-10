@@ -16,6 +16,8 @@ static int nrf24l01_worker_do_work(void* ctx)
 {
 	int err;
 	unsigned int data;
+	unsigned int status;
+	bool update_status;
 	struct nrf24l01_t* nrf = (nrf24l01_t*) ctx;
 
 	// Check for exit condition once per IRQ/second
@@ -35,13 +37,13 @@ static int nrf24l01_worker_do_work(void* ctx)
 			// Continue to IRQ flag check in case we somehow missed an interrupt
 		}
 		dev_dbg(&nrf->spi->dev, "Event!\n");
+		if((err = nrf24l01_get_status_irqf(nrf, &status)))
+		{
+			dev_err(&nrf->spi->dev, "Failed to get irq flags: %d\n", err);			
+		}
 
 		// Check rx data ready flag
-		if((err = nrf24l01_get_status_rx_dr(nrf, &data)))
-		{
-			dev_err(&nrf->spi->dev, "Failed to get rx_dr flag: %d\n", err);
-		}
-		if(data)
+		if(nrf24l01_irqf_get_rx_dr(status))
 		{
 			// Clear rx data ready flag
 			if((err = nrf24l01_set_status_rx_dr(nrf, 1)))
@@ -50,14 +52,15 @@ static int nrf24l01_worker_do_work(void* ctx)
 			}
 			// Wake up rx queue if data has been received
 			wake_up_interruptible(&nrf->rx_queue);
+	
+			if((err = nrf24l01_get_status_irqf(nrf, &status)))
+			{
+				dev_err(&nrf->spi->dev, "Failed to get irq flags: %d\n", err);			
+			}
 		}
 
 		// Check tx data sent flag
-		if((err = nrf24l01_get_status_tx_ds(nrf, &data)))
-		{
-			dev_err(&nrf->spi->dev, "Failed to get tx_ds flag\n");
-		}
-		if(data)
+		if(nrf24l01_irqf_get_tx_ds(status))
 		{
 			// Clear tx data sent flag
 			if((err = nrf24l01_set_status_tx_ds(nrf, 1)))
@@ -111,16 +114,16 @@ static int nrf24l01_worker_do_work(void* ctx)
 			}
 tx_fifo_empty_mutex:
 			mutex_unlock(&nrf->m_tx_path);
+			if((err = nrf24l01_get_status_irqf(nrf, &status)))
+			{
+				dev_err(&nrf->spi->dev, "Failed to get irq flags: %d\n", err);			
+			}
 		}
 
 		// Check for maximum retransmissions reached flag
-		if((err = nrf24l01_get_status_max_rt(nrf, &data)))
+		if(nrf24l01_irqf_get_max_rt(status))
 		{
-			dev_err(&nrf->spi->dev, "Failed to get max_rt flag\n");
-		}
-		// Clear fifo if there were too many retransmissions
-		if(data)
-		{
+			// Clear fifo if there were too many retransmissions
 			dev_warn(&nrf->spi->dev, "Maximum number of retransmissions reached. Dropping tx fifo\n");
 
 			// Clear maxiumum retransmissions reached flag

@@ -516,6 +516,26 @@ int nrf24l01_get_ce(struct nrf24l01_t* nrf)
 	return state;
 }
 
+unsigned int nrf24l01_irqf_get_rx_dr(unsigned int irqf)
+{
+	return !!(irqf & NRF24L01_IRQF_MASK_RX_DR);
+}
+
+unsigned int nrf24l01_irqf_get_tx_ds(unsigned int irqf)
+{
+	return !!(irqf & NRF24L01_IRQF_MASK_TX_DS);
+}
+
+unsigned int nrf24l01_irqf_get_max_rt(unsigned int irqf)
+{
+	return !!(irqf & NRF24L01_IRQF_MASK_MAX_RT);
+}
+
+int nrf24l01_get_status_irqf(struct nrf24l01_t* nrf, unsigned int* irqf)
+{
+	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_IRQF, irqf, 1);
+}
+
 int nrf24l01_get_status_rx_dr(struct nrf24l01_t* nrf, unsigned int* status)
 {
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_STATUS_RX_DR, status, 1);
