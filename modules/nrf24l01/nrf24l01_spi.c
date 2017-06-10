@@ -173,3 +173,14 @@ int nrf24l01_spi_nop(struct nrf24l01_t* nrf)
 	unsigned char nop = NRF24L01_CMD_NOP;
 	return nrf24l01_spi_write(nrf, &nop, 1);
 }
+
+int nrf24l01_spi_read_status(struct nrf24l01_t* nrf, unsigned char* status)
+{
+	unsigned char write_buffer = NRF24L01_CMD_NOP;
+	struct spi_transfer xfer = {
+		.tx_buf	= &write_buffer,
+		.rx_buf	= status,
+		.len	= 1
+	};
+	return spi_sync_transfer(nrf->spi, &xfer, 1);
+}

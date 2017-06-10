@@ -17,5 +17,6 @@ int nrf24l01_spi_read_rx_pl_width(struct nrf24l01_t* nrf, unsigned int* width);
 int nrf24l01_spi_write_ack_pld(struct nrf24l01_t* nrf, unsigned int pipe, unsigned char* data, unsigned int len);
 int nrf24l01_spi_write_tx_pld_no_ack(struct nrf24l01_t* nrf, unsigned char* data, unsigned int len);
 int nrf24l01_spi_nop(struct nrf24l01_t* nrf);
+int nrf24l01_spi_read_status(struct nrf24l01_t* nrf, unsigned char* status);
 
 #endif

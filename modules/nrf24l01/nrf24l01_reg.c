@@ -353,7 +353,8 @@ static struct partreg_template reg_status_tx_full = {
 	.offset = 0,
 	.mask = &mask_status_tx_full,
 	.len = 1,
-	.value_range = &range_status_tx_full
+	.value_range = &range_status_tx_full,
+	.reg_read = nrf24l01_reg_get_status
 };
 
 static struct partreg_range range_status_rx_p_no = partreg_reg_range(0, 0b111);
@@ -365,7 +366,8 @@ static struct partreg_template reg_status_rx_p_no = {
 	.offset = 1,
 	.mask = &mask_status_rx_p_no,
 	.len = 1,
-	.value_range = &range_status_rx_p_no
+	.value_range = &range_status_rx_p_no,
+	.reg_read = nrf24l01_reg_get_status
 };
 
 static struct partreg_range range_status_max_rt = partreg_reg_range(0, 1);
@@ -377,7 +379,8 @@ static struct partreg_template reg_status_max_rt = {
 	.offset = 4,
 	.mask = &mask_status_max_rt,
 	.len = 1,
-	.value_range = &range_status_max_rt
+	.value_range = &range_status_max_rt,
+	.reg_read = nrf24l01_reg_get_status
 };
 
 static struct partreg_range range_status_tx_ds = partreg_reg_range(0, 1);
@@ -389,7 +392,8 @@ static struct partreg_template reg_status_tx_ds = {
 	.offset = 5,
 	.mask = &mask_status_tx_ds,
 	.len = 1,
-	.value_range = &range_status_tx_ds
+	.value_range = &range_status_tx_ds,
+	.reg_read = nrf24l01_reg_get_status
 };
 
 static struct partreg_range range_status_rx_dr = partreg_reg_range(0, 1);
@@ -401,7 +405,8 @@ static struct partreg_template reg_status_rx_dr = {
 	.offset = 6,
 	.mask = &mask_status_rx_dr,
 	.len = 1,
-	.value_range = &range_status_rx_dr
+	.value_range = &range_status_rx_dr,
+	.reg_read = nrf24l01_reg_get_status
 };
 
 static struct partreg_range range_observe_tx_arc_cnt = partreg_reg_range(0, 0b1111);
@@ -831,4 +836,22 @@ int nrf24l01_reg_addr_write(void* ctx, struct partreg* reg, unsigned int* data, 
 int nrf24l01_reg_get_addr_len(void* ctx, struct partreg* reg, unsigned int* len)
 {
 	return nrf24l01_get_address_width((nrf24l01_t*) ctx, len);
+}
+
+int nrf24l01_reg_get_status(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len)
+{
+	int err;
+	unsigned int status = 0;
+	if(len < 1)
+	{
+		return -EINVAL;
+	}
+	if((err = nrf24l01_spi_read_status((nrf24l01_t*)ctx, (unsigned char*)&status)))
+	{
+		return err;
+	}
+	status &= *reg->mask;
+	status >>= reg->offset;
+	*data = status;
+	return err;
 }

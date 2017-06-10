@@ -162,5 +162,6 @@ void nrf24l01_free_partregs(struct nrf24l01_t* nrf);
 int nrf24l01_reg_addr_write(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len);
 int nrf24l01_reg_addr_read(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len);
 int nrf24l01_reg_get_addr_len(void* ctx, struct partreg* reg, unsigned int* len);
+int nrf24l01_reg_get_status(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len);
 
 #endif
