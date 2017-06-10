@@ -380,7 +380,8 @@ static struct partreg_template reg_status_max_rt = {
 	.mask = &mask_status_max_rt,
 	.len = 1,
 	.value_range = &range_status_max_rt,
-	.reg_read = nrf24l01_reg_get_status
+	.reg_read = nrf24l01_reg_get_status,
+	.reg_write = nrf24l01_reg_set_status
 };
 
 static struct partreg_range range_status_tx_ds = partreg_reg_range(0, 1);
@@ -393,7 +394,8 @@ static struct partreg_template reg_status_tx_ds = {
 	.mask = &mask_status_tx_ds,
 	.len = 1,
 	.value_range = &range_status_tx_ds,
-	.reg_read = nrf24l01_reg_get_status
+	.reg_read = nrf24l01_reg_get_status,
+	.reg_write = nrf24l01_reg_set_status
 };
 
 static struct partreg_range range_status_rx_dr = partreg_reg_range(0, 1);
@@ -406,7 +408,8 @@ static struct partreg_template reg_status_rx_dr = {
 	.mask = &mask_status_rx_dr,
 	.len = 1,
 	.value_range = &range_status_rx_dr,
-	.reg_read = nrf24l01_reg_get_status
+	.reg_read = nrf24l01_reg_get_status,
+	.reg_write = nrf24l01_reg_set_status
 };
 
 static struct partreg_range range_observe_tx_arc_cnt = partreg_reg_range(0, 0b1111);
@@ -836,6 +839,18 @@ int nrf24l01_reg_addr_write(void* ctx, struct partreg* reg, unsigned int* data, 
 int nrf24l01_reg_get_addr_len(void* ctx, struct partreg* reg, unsigned int* len)
 {
 	return nrf24l01_get_address_width((nrf24l01_t*) ctx, len);
+}
+
+int nrf24l01_reg_set_status(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len)
+{
+	unsigned int value = *data;
+	if(len < 1)
+	{
+		return -EINVAL;
+	}
+	value <<= reg->offset;
+	value &= *reg->mask;
+	return nrf24l01_write_short_reg_masked((nrf24l01_t*)ctx, reg->reg, value);
 }
 
 int nrf24l01_reg_get_status(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len)
