@@ -21,9 +21,9 @@ typedef struct partreg {
 	unsigned int* mask;
 	unsigned int len;
 	void* ctx;
-	int (* len_func)(void* ctx, unsigned int reg, unsigned int* len);
-	int (* reg_write)(void* ctx, unsigned int reg, unsigned int* data, unsigned int len); 
-	int (* reg_read)(void* ctx, unsigned int reg, unsigned int* data, unsigned int len); 
+	int (* len_func)(void* ctx, struct partreg* reg, unsigned int* len);
+	int (* reg_write)(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len);
+	int (* reg_read)(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len);
 	struct partreg_range* value_range;
 	struct partreg_range_table* value_ranges;
 } partreg;
@@ -39,9 +39,9 @@ typedef struct partreg_template {
 	unsigned int offset;
 	unsigned int* mask;
 	unsigned int len;
-	int (* len_func)(void* ctx, unsigned int reg, unsigned int* len);
-	int (* reg_write)(void* ctx, unsigned int reg, unsigned int* data, unsigned int len); 
-	int (* reg_read)(void* ctx, unsigned int reg, unsigned int* data, unsigned int len); 
+	int (* len_func)(void* ctx, struct partreg* reg, unsigned int* len);
+	int (* reg_write)(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len);
+	int (* reg_read)(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len);
 	struct partreg_range* value_range;
 	struct partreg_range_table* value_ranges;	
 } partreg_template;

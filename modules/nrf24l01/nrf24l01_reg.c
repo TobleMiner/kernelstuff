@@ -802,7 +802,7 @@ static struct partreg_template* nrf24l01_regs[] = {
 
 static struct partreg_layout nrf24l01_reg_layout = {
 	.regs = nrf24l01_regs,
-	.n_regs = 62,
+	.n_regs = sizeof(nrf24l01_regs) / sizeof(struct partreg_template*),
 };
 
 int nrf24l01_create_partregs(struct nrf24l01_t* nrf)
@@ -818,17 +818,17 @@ void nrf24l01_free_partregs(nrf24l01_t* nrf)
 	partreg_free_table(nrf->reg_table);
 }
 
-int nrf24l01_reg_addr_read(void* ctx, unsigned int reg, unsigned int* data, unsigned int len)
+int nrf24l01_reg_addr_read(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len)
 {
-	return nrf24l01_spi_read_reg((nrf24l01_t*)ctx, reg, (unsigned char*)data, len);
+	return nrf24l01_spi_read_reg((nrf24l01_t*)ctx, reg->reg, (unsigned char*)data, len);
 }
 
-int nrf24l01_reg_addr_write(void* ctx, unsigned int reg, unsigned int* data, unsigned int len)
+int nrf24l01_reg_addr_write(void* ctx, struct partreg* reg, unsigned int* data, unsigned int len)
 {
-	return nrf24l01_spi_write_reg((nrf24l01_t*)ctx, reg, (unsigned char*)data, len);
+	return nrf24l01_spi_write_reg((nrf24l01_t*)ctx, reg->reg, (unsigned char*)data, len);
 }
 
-int nrf24l01_reg_get_addr_len(void* ctx, unsigned int reg, unsigned int* len)
+int nrf24l01_reg_get_addr_len(void* ctx, struct partreg* reg, unsigned int* len)
 {
 	return nrf24l01_get_address_width((nrf24l01_t*) ctx, len);
 }
