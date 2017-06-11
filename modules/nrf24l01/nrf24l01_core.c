@@ -198,9 +198,9 @@ static int nrf24l01_remove(struct spi_device* spi)
 	struct nrf24l01_t* nrf;
 	nrf = dev_get_drvdata(&spi->dev);
 	dev_info(&nrf->spi->dev, "Removing nrf\n");
+	chrdev_free(nrf);
 	nrf24l01_destroy_worker(nrf);
 	gpio_free(nrf->gpio_ce);
-	chrdev_free(nrf);
 	nrf24l01_free_partregs(nrf);
 	regmap_exit(nrf->regmap_short);
 	vfree(nrf);

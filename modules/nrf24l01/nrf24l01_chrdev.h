@@ -16,6 +16,10 @@ typedef struct nrf24l01_chrdev {
 	struct cdev			cdev;
 	struct class*		class;
 	dev_t				devt;	
+	wait_queue_head_t	exit_queue;
+	unsigned int		num_sessions;
+	struct mutex		m_session;
+	bool				shutdown;
 } nrf24l01_chrdev;
 
 int chrdev_alloc(struct nrf24l01_t* nrf);

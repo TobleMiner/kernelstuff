@@ -19,16 +19,27 @@
 
 static int dev_open(struct inode* inodep, struct file *filep)
 {
+	int err = 0;
 	struct nrf24l01_chrdev_session* session;
-	struct nrf24l01_t* nrf = ((struct nrf24l01_chrdev*)container_of(inodep->i_cdev, struct nrf24l01_chrdev, cdev))->nrf;
+	struct nrf24l01_chrdev* nrfchr = (struct nrf24l01_chrdev*)container_of(inodep->i_cdev, struct nrf24l01_chrdev, cdev);
+	mutex_lock(&nrfchr->m_session);
+	if(nrfchr->shutdown)
+	{
+		err = -ESHUTDOWN;
+		goto exit_err;
+	}
+	nrfchr->num_sessions++;
 	session = vzalloc(sizeof(struct nrf24l01_chrdev_session));
 	if(!session)
 	{
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto exit_err;
 	}
-	session->chrdev = &nrf->chrdev;
+	session->chrdev = nrfchr;
 	filep->private_data = session;
-	return 0;
+exit_err:
+	mutex_unlock(&nrfchr->m_session);
+	return err;
 }
 
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
@@ -93,7 +104,12 @@ exit_err:
 static int dev_release(struct inode *inodep, struct file *filep)
 {
 	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
+	struct nrf24l01_chrdev* nrfchr = session->chrdev;
 	vfree(session);
+	mutex_lock(&nrfchr->m_session);
+	nrfchr->num_sessions--;
+	mutex_unlock(&nrfchr->m_session);
+	wake_up(&nrfchr->exit_queue);
 	return 0;
 }
 
@@ -528,6 +544,9 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 	dev_t devnum;
 	struct nrf24l01_chrdev* nrfchr = &nrf->chrdev;
 	nrfchr->nrf = nrf;
+	init_waitqueue_head(&nrfchr->exit_queue);
+	mutex_init(&nrfchr->m_session);
+	mutex_lock(&nrfchr->m_session);
 	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, NRF24L01_CHRDEV_NAME)))
 		goto exit_noalloc;
 	nrfchr->class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
@@ -546,7 +565,7 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 	}
 	if((err = cdev_add(&nrfchr->cdev, devnum, 1)))
 		goto exit_destroydev;
-	return 0;
+	goto exit_noalloc;
 
 exit_destroydev:
 	device_destroy(nrfchr->class, devnum);
@@ -556,14 +575,24 @@ exit_unregclass:
 exit_unregchrdev:
 	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
 exit_noalloc:
+	mutex_unlock(&nrfchr->m_session);
 	return err;
 }
 
 void chrdev_free(struct nrf24l01_t* nrf)
 {
-	cdev_del(&nrf->chrdev.cdev);
-	device_destroy(nrf->chrdev.class, nrf->chrdev.devt);
-	class_unregister(nrf->chrdev.class);
-	class_destroy(nrf->chrdev.class);
-	unregister_chrdev_region(MAJOR(nrf->chrdev.devt), 1);
+	struct nrf24l01_chrdev* nrfchr = &nrf->chrdev;
+	mutex_lock(&nrfchr->m_session);
+	nrfchr->shutdown = true;
+	mutex_unlock(&nrfchr->m_session);
+	if(nrfchr->num_sessions > 0)
+	{
+		dev_warn(nrfchr->dev, "Waiting for %u active readers/writers to finish\n", nrfchr->num_sessions);
+		wait_event(nrfchr->exit_queue, nrfchr->num_sessions == 0);
+	}
+	cdev_del(&nrfchr->cdev);
+	device_destroy(nrfchr->class, nrfchr->devt);
+	class_unregister(nrfchr->class);
+	class_destroy(nrfchr->class);
+	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
 }
