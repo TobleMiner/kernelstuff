@@ -89,7 +89,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 {
 	int err = 0;
 	unsigned int irq_trigger;
-	const void *of_gpio_ce, *of_nrf_mode;
+	const void *of_gpio_ce, *of_nrf_mode, *of_nrf_addr_be;
 	struct nrf24l01_t* nrf;
 	dev_info(&spi->dev, "Initializing nrf driver\n");
 	nrf = vzalloc(sizeof(nrf24l01_t));
@@ -127,6 +127,17 @@ static int nrf24l01_probe(struct spi_device* spi)
 		nrf->mode_flags = be32_to_cpup(of_nrf_mode);
 	}
 	dev_info(&spi->dev, "nrf mode: %u\n", nrf->mode_flags);
+	of_nrf_addr_be = of_get_property(spi->dev.of_node, "nrf-addr-be", NULL);
+	if(!of_nrf_addr_be)
+	{
+		dev_warn(&spi->dev, "Address endianess not specified, defaulting to LE\n");
+	}
+	else
+	{
+		nrf->addr_be = !!be32_to_cpup(of_nrf_addr_be);
+	}
+	nrf->addr_be = true;
+	dev_info(&spi->dev, "Address endianess: %s\n", nrf->addr_be ? "BE" : "LE");
 	init_waitqueue_head(&nrf->rx_queue);
 	init_waitqueue_head(&nrf->tx_queue);
 	if((err = nrf24l01_create_worker(nrf)))

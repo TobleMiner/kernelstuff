@@ -40,6 +40,7 @@
                                 interrupt-parent = <&gpio>;
                                 nrf-ce = <17>;
                                 nrf-mode = <2>;
+                                nrf-addr-be = <0>;
                         };
 
                 };
