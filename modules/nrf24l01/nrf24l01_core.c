@@ -19,7 +19,7 @@
 #include "nrf24l01_quirks.h"
 #include "partregmap.h"
 
-static struct nrf24l01_t* nrf_list;
+static LIST_HEAD(nrf_list);
 
 enum nrf24l01_modules {nRF24L01, nRF24L01p};
 
@@ -87,7 +87,12 @@ static irqreturn_t nrf24l01_irq(int irq, void* data)
 	return IRQ_HANDLED;
 }
 
-static int nrf24l01_get_free_id(struct nrf24l01_t* nrf_list, unsigned int* id)
+bool nrf24l01_nrf_registered()
+{
+	return !list_empty(&nrf_list);
+}
+
+static int nrf24l01_get_free_id(struct list_head* nrf_list, unsigned int* id)
 {
 	struct list_head* cursor;
 	unsigned int id_test;
@@ -96,7 +101,7 @@ static int nrf24l01_get_free_id(struct nrf24l01_t* nrf_list, unsigned int* id)
 	for(id_test = 0; id_test <= UINT_MAX; id_test++)
 	{
 		id_free = true;
-		list_for_each(cursor, &nrf_list->list)
+		list_for_each(cursor, nrf_list)
 		{
 			nrf = list_entry(cursor, nrf24l01_t, list);
 			if(nrf->id == id_test)
@@ -129,20 +134,12 @@ static int nrf24l01_probe(struct spi_device* spi)
 	}
 	dev_set_drvdata(&spi->dev, nrf);
 	nrf->spi = spi;
-	nrf->list = (struct list_head) LIST_HEAD_INIT(nrf->list);
-	if(nrf_list)
+	if((err = nrf24l01_get_free_id(&nrf_list, &nrf->id)))
 	{
-		if((err = nrf24l01_get_free_id(nrf_list, &nrf->id)))
-		{
-			dev_err(&spi->dev, "No free nrf id found\n");
-			goto exit_nrfalloc;
-		}
-		list_add(&nrf->list, &nrf_list->list);
+		dev_err(&spi->dev, "No free nrf id found\n");
+		goto exit_nrfalloc;
 	}
-	else
-	{
-		nrf_list = nrf;
-	}
+	list_add(&nrf->list, &nrf_list);
 	dev_info(&spi->dev, "Got id %u\n", nrf->id);
 	mutex_init(&nrf->m_rx_path);
 	mutex_init(&nrf->m_tx_path);
@@ -251,15 +248,8 @@ static int nrf24l01_remove(struct spi_device* spi)
 {
 	struct nrf24l01_t* nrf;
 	nrf = dev_get_drvdata(&spi->dev);
-	dev_info(&nrf->spi->dev, "Removing nrf\n");
-	if(nrf == nrf_list)
-	{
-		nrf_list = list_next_entry(nrf, list);
-		if(nrf == nrf_list)
-		{
-			nrf_list = NULL;
-		}
-	}
+	dev_info(&nrf->spi->dev, "Removing nrf %u\n", nrf->id);
+	list_del(&nrf->list);
 	chrdev_free(nrf);
 	nrf24l01_destroy_worker(nrf);
 	gpio_free(nrf->gpio_ce);

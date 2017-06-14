@@ -14,7 +14,7 @@
 #include "nrf24l01_sysfs.h"
 #include "nrf24l01_reg.h"
 
-#define NRF24L01_CHRDEV_NAME "nrf24l01"
+#define NRF24L01_CHRDEV_FORMAT "nrf24l0%lu"
 #define NRF24L01_CHRDEV_CLASS "nrf24"
 
 static struct class* chrdev_class = NULL;
@@ -544,22 +544,27 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 {
 	int err;
 	dev_t devnum;
+	char dev_name[25];
 	struct nrf24l01_chrdev* nrfchr = &nrf->chrdev;
 	nrfchr->nrf = nrf;
 	init_waitqueue_head(&nrfchr->exit_queue);
 	mutex_init(&nrfchr->m_session);
 	mutex_lock(&nrfchr->m_session);
-	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, NRF24L01_CHRDEV_NAME)))
+	snprintf(dev_name, sizeof(dev_name), NRF24L01_CHRDEV_FORMAT, ((unsigned long) nrf->id) + 1);
+	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, dev_name)))
 		goto exit_noalloc;
-	chrdev_class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
-	if(IS_ERR(chrdev_class))
+	if(!chrdev_class)
 	{
-		err = PTR_ERR(chrdev_class);
-		goto exit_unregchrdev;
+		chrdev_class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
+		if(IS_ERR(chrdev_class))
+		{
+			err = PTR_ERR(chrdev_class);
+			goto exit_unregchrdev;
+		}
 	}
 	cdev_init(&nrfchr->cdev, &fops);
 	devnum = MKDEV(MAJOR(nrfchr->devt), MINOR(nrfchr->devt));
-	nrfchr->dev = device_create_with_groups(nrfchr->class, NULL, devnum, nrfchr, attribute_groups, NRF24L01_CHRDEV_NAME);
+	nrfchr->dev = device_create_with_groups(chrdev_class, NULL, devnum, nrfchr, attribute_groups, dev_name);
 	if(IS_ERR(nrfchr->dev))
 	{
 		err = PTR_ERR(nrfchr->dev);
@@ -570,10 +575,10 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 	goto exit_noalloc;
 
 exit_destroydev:
-	device_destroy(nrfchr->class, devnum);
+	device_destroy(chrdev_class, devnum);
 exit_unregclass:	
-	class_unregister(nrfchr->class);
-	class_destroy(nrfchr->class);
+	class_unregister(chrdev_class);
+	class_destroy(chrdev_class);
 exit_unregchrdev:
 	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
 exit_noalloc:
@@ -593,8 +598,11 @@ void chrdev_free(struct nrf24l01_t* nrf)
 		wait_event(nrfchr->exit_queue, nrfchr->num_sessions == 0);
 	}
 	cdev_del(&nrfchr->cdev);
-	device_destroy(nrfchr->class, nrfchr->devt);
-	class_unregister(nrfchr->class);
-	class_destroy(nrfchr->class);
+	device_destroy(chrdev_class, nrfchr->devt);
+	if(!nrf24l01_nrf_registered())
+	{
+		class_unregister(chrdev_class);
+		class_destroy(chrdev_class);
+	}
 	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
 }

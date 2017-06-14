@@ -40,4 +40,6 @@ typedef struct nrf24l01_t {
 // Forces the module into lower power power down mode instead of standby
 #define NRF24L01_MODE_PWR_DOWN_NOT_STANDBY	0b00000100
 
+bool nrf24l01_nrf_registered(void);
+
 #endif
