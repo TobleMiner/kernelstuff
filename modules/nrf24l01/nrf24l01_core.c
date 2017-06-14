@@ -106,14 +106,15 @@ static int nrf24l01_get_free_id(struct list_head* nrf_list, unsigned int* id)
 			nrf = list_entry(cursor, nrf24l01_t, list);
 			if(nrf->id == id_test)
 			{
+				dev_info(&nrf->spi->dev, "Id %u is in use\n", id_test);
 				id_free = false;
 				break;
 			}
-			if(id_free)
-			{
-				*id = id_test;
-				return 0;
-			}
+		}
+		if(id_free)
+		{
+			*id = id_test;
+			return 0;
 		}
 	}
 	return -ENOMEM;
