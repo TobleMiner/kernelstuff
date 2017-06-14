@@ -172,8 +172,10 @@ tx_fifo_empty_mutex:
 
 int nrf24l01_create_worker(struct nrf24l01_t* nrf)
 {
+	char thread_name[25];
 	sema_init(&nrf->worker.sema, 0);
-	nrf->worker.thread = kthread_run(nrf24l01_worker_do_work, nrf, "nrf_worker");
+	snprintf(thread_name, sizeof(thread_name), "nrf_worker (%u)", nrf->id);
+	nrf->worker.thread = kthread_run(nrf24l01_worker_do_work, nrf, thread_name);
 	if(IS_ERR(nrf->worker.thread))
 		return PTR_ERR(nrf->worker.thread);
 	return 0;
