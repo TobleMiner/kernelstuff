@@ -577,8 +577,11 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 exit_destroydev:
 	device_destroy(chrdev_class, devnum);
 exit_unregclass:	
-	class_unregister(chrdev_class);
-	class_destroy(chrdev_class);
+	if(!nrf24l01_nrf_registered())
+	{
+		class_unregister(chrdev_class);
+		class_destroy(chrdev_class);
+	}
 exit_unregchrdev:
 	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
 exit_noalloc:
@@ -603,6 +606,7 @@ void chrdev_free(struct nrf24l01_t* nrf)
 	{
 		class_unregister(chrdev_class);
 		class_destroy(chrdev_class);
+		chrdev_class = NULL;
 	}
 	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
 }
