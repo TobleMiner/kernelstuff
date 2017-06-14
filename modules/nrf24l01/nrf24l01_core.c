@@ -20,6 +20,7 @@
 #include "partregmap.h"
 
 static LIST_HEAD(nrf_list);
+static DEFINE_MUTEX(m_nrf_list);
 
 enum nrf24l01_modules {nRF24L01, nRF24L01p};
 
@@ -126,12 +127,13 @@ static int nrf24l01_probe(struct spi_device* spi)
 	unsigned int irq_trigger;
 	const void *of_gpio_ce, *of_nrf_mode, *of_nrf_addr_be;
 	struct nrf24l01_t* nrf;
+	mutex_lock(&m_nrf_list);
 	dev_info(&spi->dev, "Initializing nrf driver\n");
 	nrf = vzalloc(sizeof(nrf24l01_t));
 	if(!nrf)
 	{
 		err = -ENOMEM;
-		goto exit_noalloc;
+		goto exit_err;
 	}
 	dev_set_drvdata(&spi->dev, nrf);
 	nrf->spi = spi;
@@ -228,7 +230,8 @@ static int nrf24l01_probe(struct spi_device* spi)
 	if(err)
 		dev_err(&spi->dev, "Faulty nrf module detected! TX FIFO stuck full\n");
 
-	return 0;
+	goto exit_err;
+
 exit_gpioalloc:
 	gpio_free(nrf->gpio_ce);
 exit_workeralloc:
@@ -243,13 +246,15 @@ exit_nrf_list_insert:
 	list_del(&nrf->list);
 exit_nrfalloc:
 	vfree(nrf);
-exit_noalloc:
+exit_err:
+	mutex_unlock(&m_nrf_list);
 	return err;
 }
 
 static int nrf24l01_remove(struct spi_device* spi)
 {
 	struct nrf24l01_t* nrf;
+	mutex_lock(&m_nrf_list);
 	nrf = dev_get_drvdata(&spi->dev);
 	dev_info(&nrf->spi->dev, "Removing nrf %u\n", nrf->id);
 	list_del(&nrf->list);
@@ -259,6 +264,7 @@ static int nrf24l01_remove(struct spi_device* spi)
 	nrf24l01_free_partregs(nrf);
 	regmap_exit(nrf->regmap_short);
 	vfree(nrf);
+	mutex_unlock(&m_nrf_list);
 	return 0;
 }
 
