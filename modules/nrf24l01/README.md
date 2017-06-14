@@ -27,7 +27,7 @@ Install kernel headers and simply run make in this directory
 
 # Usage
 
-To use the modules they have to be set up first. I will demonstrate this with two Pis, each with one nRF connected and the driver installed.
+To use the modules they have to be set up first. I will demonstrate this with two Pis, each with one nrf connected and the driver installed.
 
 On the first Pi run as root:
 
