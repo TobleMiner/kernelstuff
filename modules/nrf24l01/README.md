@@ -94,3 +94,7 @@ This happens when SPI communication with the module doesn't work. There is most 
 ### One of the GPIOs can't be allocated
 
 Either the CE GPIO or the IRQ GPIO is in use by something else. Just choose a different one.
+
+### Driver can't allocate the SPI chip enable line
+
+Make sure you don't load any other device tree overlays that use the SPI in ```/boot/config.txt``` (or wherever your board specifies boot time device tree overlays).
