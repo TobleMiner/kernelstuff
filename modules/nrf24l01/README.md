@@ -10,20 +10,20 @@ Install kernel headers and simply run make in this directory
 
 # Installation
 
-- Copy ther resulting ```nrf24l01.ko``` to ```/lib/modules/extramodules-<your_kernel_version>``` or in case you don't have that directory directly to ```/lib/modules/<your_kernel_version>```.
+- Copy the resulting ```nrf24l01.ko``` to ```/lib/modules/extramodules-<your_kernel_version>``` or in case you don't have that directory directly to ```/lib/modules/<your_kernel_version>```.
 
-- As root run ```depmod```
+- Run ```depmod``` as root
 
 - Take a look at ```nrf24l01.dts```. This file specifies how the NRF module interfaces with your existing hardware. Currently it is specifically taylored for usage with a raspberry pi. The most important parameters here are reg, interrupts, nrf-ce, nrf-mode and nrf-addr-be:
 	* reg: reg ist the chip select line to use. 1 means, that ```CE1``` of your SPI needs to connect to ```CSN``` on the nrf.
 	* interrupts: interrupts selects the GPIO pin used for the ```IRQ``` line of the nrf. Set it to whatever gpio you are using. The second number after the GPIO pin is the interrupt mode. 2 means falling edge. This parameter has to remain unchanged.
 	* nrf-ce: nrf-ce controls which GPIO will be used to enable the NRF module. This must be the GPIO number of the pin connected to the nrfs ```CE``` line.
 	* nrf-mode: This driver supports various modes of operation for the nrf module. This is essentially a bitmask controlling general driver behavior. For now I'd recommend leaving this value set to 2.
-	* nrf-addr-be: If set to 1 this flag reverses the byte order of all addresses used by the nrf. This is usefull when interacting with other nrfs controlled by libraries that have reversed address byte order.
+	* nrf-addr-be: If set to 1 this flag reverses the byte order of all addresses used by the nrf. This is useful when interacting with other nrfs controlled by libraries that have reversed address byte order.
 
 - Compile the device tree file using ```dtc -@ nrf24l01.dts nrf24l01.dtbo```
 
-- Load the device tree file using ```dtoverlay nrf24l01.dtbo``` this will automatically load the driver. If you wish to load the driver automatically at bootup you can do so by loading the device tree file at boot. On a raspberry PI this is accomplished by copying ```nrf24l01.dtbo``` to ```/boot/overlays``` and adding the line ```dtoverlay=nrf24l01``` to ```/boot/config.txt```
+- Load the device tree file using ```dtoverlay nrf24l01.dtbo```. This will automatically load the driver. If you wish to load the driver automatically at bootup you can do so by loading the device tree file at boot. On a raspberry pi this is accomplished by copying ```nrf24l01.dtbo``` to ```/boot/overlays``` and adding the line ```dtoverlay=nrf24l01``` to ```/boot/config.txt```
 
 # Usage
 
