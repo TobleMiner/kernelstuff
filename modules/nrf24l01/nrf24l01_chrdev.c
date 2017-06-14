@@ -17,6 +17,8 @@
 #define NRF24L01_CHRDEV_NAME "nrf24l01"
 #define NRF24L01_CHRDEV_CLASS "nrf24"
 
+static struct class* chrdev_class = NULL;
+
 static int dev_open(struct inode* inodep, struct file *filep)
 {
 	int err = 0;
@@ -549,10 +551,10 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 	mutex_lock(&nrfchr->m_session);
 	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, NRF24L01_CHRDEV_NAME)))
 		goto exit_noalloc;
-	nrfchr->class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
-	if(IS_ERR(nrfchr->class))
+	chrdev_class = class_create(THIS_MODULE, NRF24L01_CHRDEV_CLASS);
+	if(IS_ERR(chrdev_class))
 	{
-		err = PTR_ERR(nrfchr->class);
+		err = PTR_ERR(chrdev_class);
 		goto exit_unregchrdev;
 	}
 	cdev_init(&nrfchr->cdev, &fops);

@@ -29,6 +29,8 @@ typedef struct nrf24l01_t {
 	unsigned int			num_readers;
 	unsigned int			mode_flags;
 	bool					addr_be;
+	struct list_head		list;
+	unsigned int 			id;
 } nrf24l01_t;
 
 // Don't idle in RX mode rxing all the time but do so only if there are readers active
