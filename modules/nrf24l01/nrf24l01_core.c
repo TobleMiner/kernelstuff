@@ -149,7 +149,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	if(IS_ERR(nrf->regmap_short))
 	{
 		err = PTR_ERR(nrf->regmap_short);
-		goto exit_nrfalloc;
+		goto exit_nrf_list_insert;
 	}
 	if((err = nrf24l01_create_partregs(nrf)) < 0)
 	{
@@ -239,6 +239,8 @@ exit_partregalloc:
 	nrf24l01_free_partregs(nrf);
 exit_regmapalloc:
 	regmap_exit(nrf->regmap_short);
+exit_nrf_list_insert:
+	list_del(&nrf->list);
 exit_nrfalloc:
 	vfree(nrf);
 exit_noalloc:
