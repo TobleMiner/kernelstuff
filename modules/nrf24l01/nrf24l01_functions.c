@@ -802,7 +802,7 @@ tryagain:
 	// Check wether our payload has dynamic length
 	if((err = nrf24l01_get_dynpd(nrf, pipe_no, &dyn_pld)))
 	{
-		dev_err(&nrf->spi->dev, "Failed to determine pipe payload type (dynamic/fixed size): %d\n", err);
+		dev_err(&nrf->spi->dev, "Failed to determine pipe payload type (dynamic/fixed size): %zd\n", err);
 		goto exit_err_mutex;
 	}
 	if(dyn_pld)
@@ -810,7 +810,7 @@ tryagain:
 		// Get payload width
 		if((err = nrf24l01_get_dyn_pld_width(nrf, &payload_width)))
 		{
-			dev_err(&nrf->spi->dev, "Payload size read failed: %d\n", err);
+			dev_err(&nrf->spi->dev, "Payload size read failed: %zd\n", err);
 			goto exit_err_mutex;
 		}
 		// Flush rx fifo if payload size is invalid
@@ -819,7 +819,7 @@ tryagain:
 			dev_err(&nrf->spi->dev, "Payload size is > %d, flushing rx fifo\n", NRF24L01_PACKET_MAX_LENGTH);
 			if((err = nrf24l01_flush_rx_(nrf)))
 			{
-				dev_err(&nrf->spi->dev, "Failed to flush rx fifo: %d\n", err);
+				dev_err(&nrf->spi->dev, "Failed to flush rx fifo: %zu\n", err);
 				goto exit_err_mutex;
 			}
 			err = -EIO;
