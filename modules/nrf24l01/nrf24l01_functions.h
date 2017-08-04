@@ -43,7 +43,7 @@ int nrf24l01_set_rxtx(struct nrf24l01_t* nrf, int state);
 int nrf24l01_set_rx(struct nrf24l01_t* nrf);
 int nrf24l01_set_tx(struct nrf24l01_t* nrf);
 int nrf24l01_send_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* data, unsigned int len);
-int nrf24l01_read_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* data, unsigned int len);
+ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* data, unsigned int len);
 int nrf24l01_set_address_u64(struct nrf24l01_t* nrf, u64 addr, unsigned int pipe);
 int nrf24l01_get_address_u64(struct nrf24l01_t* nrf, u64* addr, unsigned int pipe);
 int nrf24l01_set_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int state);
