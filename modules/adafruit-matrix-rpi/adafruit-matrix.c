@@ -176,8 +176,11 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 	{
 		for(j = 0; j < pwm_steps; j++)
 		{
-			adamtx_clock_out_row(frame + i * pwm_steps * columns + j * columns, columns);
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
+			adamtx_clock_out_row(frame + i * pwm_steps * columns + j * columns, columns);
+			if(!j) {
+				adamtx_set_address(i);
+			}
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_STR);
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
