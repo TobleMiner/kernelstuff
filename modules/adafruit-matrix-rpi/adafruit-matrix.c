@@ -68,6 +68,18 @@ static struct matrix_ledpanel adamtx_matrix_low = {
 	.flip_y = 0
 };
 
+static struct matrix_ledpanel adamtx_matrix_32x16 = {
+	.name = "small",
+	.xres = 32,
+	.yres = 16,
+	.virtual_x = 0,
+	.virtual_y = 0,
+	.realx = 0,
+	.realy = 0,
+	.flip_x = 1,
+	.flip_y = 0
+};
+
 static struct hrtimer adamtx_frametimer;
 static ktime_t adamtx_frameperiod;
 static int adamtx_frametimer_enabled = 0;
@@ -373,6 +385,7 @@ static int adamtx_probe(struct platform_device *device)
 	}
 	adamtx_panels[0] = &adamtx_matrix_up;
 	adamtx_panels[1] = &adamtx_matrix_low;
+//	adamtx_panels[0] = &adamtx_matrix_32x16;
 
 	framesize = ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN;
 	if(dummyfb_get_fbsize() != framesize)
