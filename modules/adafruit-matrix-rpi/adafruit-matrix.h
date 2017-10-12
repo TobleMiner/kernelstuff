@@ -43,7 +43,8 @@
 #define ADAMTX_RATE			120UL
 #define ADAMTX_DEPTH		ADAMTX_PWM_BITS * 3
 #define ADAMTX_FBRATE		30UL
-#define ADAMTX_BCD_TIME_NS	1000UL		
+//#define ADAMTX_BCD_TIME_NS	1000UL
+#define ADAMTX_BCD_TIME_NS	2000UL
 
 // Macros
 #define ADAMTX_BITS_TO_BYTES(bits) (bits >> 3)

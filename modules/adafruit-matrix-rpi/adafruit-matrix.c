@@ -52,8 +52,8 @@ static struct matrix_ledpanel adamtx_matrix_up = {
 	.virtual_y = 0,
 	.realx = 0,
 	.realy = 0,
-	.flip_x = 1,
-	.flip_y = 0
+	.flip_x = 0,
+	.flip_y = 1
 };
 
 static struct matrix_ledpanel adamtx_matrix_low = {
