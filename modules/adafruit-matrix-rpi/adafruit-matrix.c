@@ -42,6 +42,8 @@ static int adamtx_do_perf = 0;
 
 static uint32_t* adamtx_intermediate_frame;
 
+static unsigned long current_bcd_time = ADAMTX_BCD_TIME_NS;
+
 #define ADAMTX_NUM_PANELS 2
 
 static struct matrix_ledpanel adamtx_matrix_up = {
@@ -102,6 +104,8 @@ void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 	{
 		adamtx_gpio_write_bits(((uint32_t*)data)[length]);
 		ADAMTX_GPIO_HI(ADAMTX_GPIO_CLK);
+		ADAMTX_GPIO_HI(ADAMTX_GPIO_CLK);
+//		ADAMTX_GPIO_HI(ADAMTX_GPIO_CLK);
 	}
 }
 
@@ -172,19 +176,36 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 	ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
 	int i, j, k;
 	int pwm_steps = bits;
+	struct timespec last, now;
+	unsigned long rem_delay, clock_out_delay, bcd_time = current_bcd_time;
 	for(i = rows / 2 - 1; i >= 0; i--)
 	{
 		for(j = 0; j < pwm_steps; j++)
 		{
+			getnstimeofday(&last);
+
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
 			adamtx_clock_out_row(frame + i * pwm_steps * columns + j * columns, columns);
 			if(!j) {
 				adamtx_set_address(i);
 			}
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
+			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
+			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
+
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_STR);
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
-			ndelay((1 << j) * ADAMTX_BCD_TIME_NS);
+
+			getnstimeofday(&now);
+			rem_delay = (1 << j) * bcd_time;
+			clock_out_delay = (now.tv_sec - last.tv_sec) * 1000000000UL + (now.tv_nsec - last.tv_nsec);
+			if(clock_out_delay < rem_delay) {
+				if((clock_out_delay < rem_delay) && !j)
+					current_bcd_time = bcd_time - 50;
+				ndelay(rem_delay - clock_out_delay);
+			} else if(clock_out_delay > rem_delay) {
+					current_bcd_time = bcd_time + 50;
+			}
 		}
 	}
 	ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
