@@ -40,9 +40,18 @@ struct task_struct* adamtx_draw_thread;
 struct task_struct* adamtx_perf_thread;
 static int adamtx_do_perf = 0;
 
-static uint32_t* adamtx_intermediate_frame;
+static struct matrix_pixel* adamtx_intermediate_frame;
 
 static unsigned long current_bcd_time = ADAMTX_BCD_TIME_NS;
+
+static struct matrix_size adamtx_virtual_size;
+static struct matrix_size adamtx_real_size;
+
+static struct {
+	uint8_t chain0: 1;
+	uint8_t chain1: 1;
+	uint8_t chain2: 1;
+} enabled_chains;
 
 static uint8_t gamma_table[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -73,7 +82,8 @@ static struct matrix_ledpanel adamtx_matrix_up = {
 	.realx = 0,
 	.realy = 0,
 	.flip_x = 0,
-	.flip_y = 1
+	.flip_y = 1,
+	.chain = ADAMTX_CHAIN_0
 };
 
 static struct matrix_ledpanel adamtx_matrix_low = {
@@ -85,7 +95,8 @@ static struct matrix_ledpanel adamtx_matrix_low = {
 	.realx = 0,
 	.realy = 32,
 	.flip_x = 1,
-	.flip_y = 0
+	.flip_y = 0,
+	.chain = ADAMTX_CHAIN_0
 };
 
 static struct matrix_ledpanel adamtx_matrix_32x16 = {
@@ -97,7 +108,8 @@ static struct matrix_ledpanel adamtx_matrix_32x16 = {
 	.realx = 0,
 	.realy = 0,
 	.flip_x = 1,
-	.flip_y = 0
+	.flip_y = 0,
+	.chain = ADAMTX_CHAIN_0
 };
 
 static struct hrtimer adamtx_frametimer;
@@ -135,12 +147,13 @@ void adamtx_set_address(int i)
 	adamtx_gpio_write_bits(*((uint32_t*)&io));
 }
 
-void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, int height_from, uint32_t* to, int width_to, int height_to)
+void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, int height_from, struct matrix_pixel* to, int width_to, int height_to)
 {
 	int i, j;
 	off_t offset;
 	struct matrix_ledpanel* panel;
 	struct matrix_pos pos;
+	struct matrix_pixel* pixel;
 	for(i = 0; i < height_from; i++)
 	{
 		for(j = 0; j < width_from; j++)
@@ -148,7 +161,8 @@ void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, in
 			panel = matrix_get_panel_at_real(panels, ADAMTX_NUM_PANELS, j, i);
 			matrix_panel_get_position(&pos, panel, j, i);
 			offset = i * width_from * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN;
-			to[pos.y * width_to + pos.x] = gamma_table[(unsigned char)from[offset]] | gamma_table[(unsigned char)from[offset + 1]] << 8 | gamma_table[(unsigned char)from[offset + 2]] << 16;
+			pixel = &to[pos.y * width_to + pos.x];
+			pixel->chains[panel->chain] = gamma_table[(unsigned char)from[offset]] | gamma_table[(unsigned char)from[offset + 1]] << 8 | gamma_table[(unsigned char)from[offset + 2]] << 16;
 		}
 	}
 }
@@ -156,7 +170,7 @@ void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, in
 void prerender_frame_part(struct adamtx_frame* framepart)
 {
 	int i, j, k, addr;
-	uint32_t* frame = framepart->frame;
+	struct matrix_pixel* frame = framepart->frame;
 	int rows = framepart->height;
 	int columns = framepart->width;
 	int pwm_steps = framepart->pwm_bits;
@@ -171,12 +185,14 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 			memset(row, 0, columns * sizeof(struct adamtx_panel_io));
 			for(k = 0; k < columns; k++)
 			{
-				row[k].B1 = (frame[row1_base + k] & (1 << j)) > 0;
-				row[k].G1 = ((frame[row1_base + k] >> 8) & (1 << j)) > 0;
-				row[k].R1 = ((frame[row1_base + k] >> 16) & (1 << j)) > 0;
-				row[k].B2 = (frame[row2_base + k] & (1 << j)) > 0;
-				row[k].G2 = ((frame[row2_base + k] >> 8) & (1 << j)) > 0;
-				row[k].R2 = ((frame[row2_base + k] >> 16) & (1 << j)) > 0;
+				if(enabled_chains.chain0) {
+					row[k].B1 = (frame[row1_base + k].chains[0] & (1 << j)) > 0;
+					row[k].G1 = ((frame[row1_base + k].chains[0] >> 8) & (1 << j)) > 0;
+					row[k].R1 = ((frame[row1_base + k].chains[0] >> 16) & (1 << j)) > 0;
+					row[k].B2 = (frame[row2_base + k].chains[0] & (1 << j)) > 0;
+					row[k].G2 = ((frame[row2_base + k].chains[0] >> 8) & (1 << j)) > 0;
+					row[k].R2 = ((frame[row2_base + k].chains[0] >> 16) & (1 << j)) > 0;
+				}
 				if(j == 0)
 					addr = (i + 1) % (framepart->rows / 2);
 				else
@@ -238,17 +254,7 @@ int process_frame(struct adamtx_processable_frame* frame)
 {
 	int i;
 
-/*	int datalen = frame->rows * frame->columns * sizeof(uint32_t);
-
-//	printk(KERN_INFO ADAMTX_NAME ": allocation size: %d bytes\n", datalen);
-
-	uint32_t* data = vmalloc(datalen);
-	if(data == NULL)
-		return -ENOMEM;
-*/
 	remap_frame(frame->panels, frame->frame, frame->width, frame->height, adamtx_intermediate_frame, frame->columns, frame->rows);
-
-//	memset(frame->iodata, 0, frame->pwm_bits * frame->columns * frame->rows / 2 * sizeof(struct adamtx_panel_io));
 
 	struct adamtx_frame threadframe = {
 		.width = frame->columns,
@@ -264,7 +270,6 @@ int process_frame(struct adamtx_processable_frame* frame)
 
 	render_part(&threadframe);
 
-//	vfree(data);
 	return 0;
 }
 
@@ -288,7 +293,7 @@ static int draw_frame(void* arg)
 		adamtx_do_draw = 0;
 		spin_lock_irqsave(&adamtx_lock_draw, irqflags);
 		getnstimeofday(&before);
-		show_frame(paneldata, ADAMTX_PWM_BITS, ADAMTX_ROWS, ADAMTX_COLUMNS);
+		show_frame(paneldata, ADAMTX_PWM_BITS, adamtx_virtual_size.height, adamtx_virtual_size.width);
 		getnstimeofday(&after);
 		adamtx_draw_time += (after.tv_sec - before.tv_sec) * 1000000000UL + (after.tv_nsec - before.tv_nsec);
 		adamtx_draws++;
@@ -321,10 +326,10 @@ static int update_frame(void* arg)
 		dummyfb_copy(framedata);
 
 		struct adamtx_processable_frame frame = {
-			.width = ADAMTX_REAL_WIDTH,
-			.height = ADAMTX_REAL_HEIGHT,
-			.columns = ADAMTX_COLUMNS,
-			.rows = ADAMTX_ROWS,
+			.width = adamtx_real_size.width,
+			.height = adamtx_real_size.height,
+			.columns = adamtx_virtual_size.width,
+			.rows = adamtx_virtual_size.height,
 			.pwm_bits = ADAMTX_PWM_BITS,
 			.iodata = paneldata,
 			.frame = framedata,
@@ -413,6 +418,11 @@ static int adamtx_probe(struct platform_device *device)
 {
 	int i, j, ret, framesize;
 	
+	// eanble chain 0
+	enabled_chains.chain0 = 1;
+	enabled_chains.chain1 = 0;
+	enabled_chains.chain2 = 0;
+
 	if((ret = adamtx_gpio_alloc()))
 	{
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate gpios (%d)\n", ret);
@@ -431,7 +441,14 @@ static int adamtx_probe(struct platform_device *device)
 	adamtx_panels[1] = &adamtx_matrix_low;
 //	adamtx_panels[0] = &adamtx_matrix_32x16;
 
-	framesize = ADAMTX_REAL_HEIGHT * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN;
+	// Calculate real and virtual display size (smallest rectangle around all displays)
+	matrix_panel_get_size_virtual(&adamtx_virtual_size, adamtx_panels, ADAMTX_NUM_PANELS);
+	matrix_panel_get_size_real(&adamtx_real_size, adamtx_panels, ADAMTX_NUM_PANELS);
+
+	printk(KERN_INFO "Calculated real (user) size: (%d, %d)\n", adamtx_real_size.width, adamtx_real_size.height);
+	printk(KERN_INFO "Calculated virtual (technical) size: (%d, %d)\n", adamtx_virtual_size.width, adamtx_virtual_size.height);
+
+	framesize = adamtx_real_size.height * adamtx_real_size.width * ADAMTX_PIX_LEN;
 	if(dummyfb_get_fbsize() != framesize)
 	{
         ret = -EINVAL;
@@ -445,14 +462,14 @@ static int adamtx_probe(struct platform_device *device)
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate frame memory (%d)\n", ret);
 		goto panels_alloced;
 	}
-	paneldata = vmalloc(ADAMTX_PWM_BITS * ADAMTX_ROWS / 2 * ADAMTX_COLUMNS * sizeof(struct adamtx_panel_io));
+	paneldata = vmalloc(ADAMTX_PWM_BITS * adamtx_virtual_size.height / 2 * adamtx_virtual_size.width * sizeof(struct adamtx_panel_io));
 	if(paneldata == NULL)
 	{
 		ret = -ENOMEM;
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panel memory (%d)\n", ret);
 		goto framedata_alloced;
 	}
-	adamtx_intermediate_frame = vmalloc(ADAMTX_ROWS * ADAMTX_COLUMNS * sizeof(uint32_t));
+	adamtx_intermediate_frame = vmalloc(adamtx_virtual_size.height * adamtx_virtual_size.width * sizeof(struct matrix_pixel));
 	if(adamtx_intermediate_frame == NULL)
 	{
         ret = -ENOMEM;
@@ -460,24 +477,25 @@ static int adamtx_probe(struct platform_device *device)
         goto paneldata_alloced;
 	}
 
-	for(i = 0; i < ADAMTX_REAL_HEIGHT; i++)
+/*
+	for(i = 0; i < adamtx_real_size.height; i++)
 	{
-		for(j = 0; j < ADAMTX_REAL_WIDTH; j++)
+		for(j = 0; j < adamtx_real_size.width; j++)
 		{
-			if(i == j || i == ADAMTX_REAL_WIDTH - j - 1)
+			if(i == j || i == adamtx_real_size.width - j - 1)
 			{
-				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 0] = 4;
-				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 1] = 8;
-				framedata[i * ADAMTX_REAL_WIDTH * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 2] = 2;
+				framedata[i * adamtx_real_size.width * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 0] = 4;
+				framedata[i * adamtx_real_size.width * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 1] = 8;
+				framedata[i * adamtx_real_size.width * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN + 2] = 2;
 			}
 		}
 	}
 
 	struct adamtx_processable_frame frame = {
-		.width = ADAMTX_REAL_WIDTH,
-		.height = ADAMTX_REAL_HEIGHT,
-		.columns = ADAMTX_COLUMNS,
-		.rows = ADAMTX_ROWS,
+		.width = adamtx_real_size.width,
+		.height = adamtx_real_size.height,
+		.columns = adamtx_virtual_size.width,
+		.rows = adamtx_virtual_size.height,
 		.pwm_bits = ADAMTX_PWM_BITS,
 		.iodata = paneldata,
 		.frame = framedata,
@@ -486,6 +504,7 @@ static int adamtx_probe(struct platform_device *device)
 	
 
 	process_frame(&frame);
+*/
 
 	adamtx_update_param.rate = ADAMTX_FBRATE;
 	adamtx_update_thread = kthread_create(update_frame, &adamtx_update_param, "adamtx_update");

@@ -1,6 +1,8 @@
 #ifndef _ADAMTX_H
 #define _ADAMTX_H
 
+#include "matrix.h"
+
 #define ADAMTX_NAME "adafruit-matrix"
 
 // GPIO setup
@@ -31,15 +33,7 @@
 
 
 // Matrix parameters
-#define ADAMTX_ROWS			32
-#define ADAMTX_COLUMNS		128
-//#define ADAMTX_ROWS			16
-//#define ADAMTX_COLUMNS		32
 #define ADAMTX_PWM_BITS		8
-#define ADAMTX_REAL_WIDTH	64
-#define ADAMTX_REAL_HEIGHT	64
-//#define ADAMTX_REAL_WIDTH	32
-//#define ADAMTX_REAL_HEIGHT	16
 #define ADAMTX_RATE			120UL
 #define ADAMTX_DEPTH		ADAMTX_PWM_BITS * 3
 #define ADAMTX_FBRATE		30UL
@@ -90,7 +84,7 @@ struct adamtx_frame {
 	int pwm_bits;
 	struct adamtx_panel_io* paneldata;
 	off_t paneloffset;
-	uint32_t* frame;
+	struct matrix_pixel* frame;
 	off_t frameoffset;
 };
 
