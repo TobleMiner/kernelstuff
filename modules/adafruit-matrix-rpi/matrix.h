@@ -1,8 +1,7 @@
 #ifndef _ADAMTX_MATRIX_H
 #define _ADAMTX_MATRIX_H
 
-typedef struct matrix_ledpanel
-{
+struct matrix_ledpanel {
 	char* name;
 	int	xres;
 	int	yres;
@@ -12,10 +11,10 @@ typedef struct matrix_ledpanel
 	int	realy;
 	int	flip_x : 1;
 	int	flip_y : 1;
+	int chain;
 };
 
-typedef struct matrix_pos
-{
+struct matrix_pos {
 	int x;
 	int y;
 };

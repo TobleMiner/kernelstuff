@@ -51,7 +51,7 @@
 #define ADAMTX_PIX_LEN ADAMTX_BITS_TO_BYTES(ADAMTX_DEPTH)
 
 // Typdedefs
-typedef struct adamtx_panel_io {
+struct adamtx_panel_io {
 	uint32_t GPIO0	: 1;
 	uint32_t GPIO1	: 1;
 	uint32_t GPIO2	: 1;
@@ -82,8 +82,7 @@ typedef struct adamtx_panel_io {
 	uint32_t G1		: 1;
 };
 
-typedef struct adamtx_frame
-{
+struct adamtx_frame {
 	int width;
 	int height;
 	int vertical_offset;
@@ -95,8 +94,7 @@ typedef struct adamtx_frame
 	off_t frameoffset;
 };
 
-typedef struct adamtx_processable_frame
-{
+struct adamtx_processable_frame {
 	int width;
 	int height;
 	int columns;
@@ -107,13 +105,11 @@ typedef struct adamtx_processable_frame
 	struct matrix_ledpanel** panels;
 };
 
-typedef struct adamtx_update_param
-{
+struct adamtx_update_param {
 	long rate;
 };
 
-typedef struct adamtx_draw_param
-{
+struct adamtx_draw_param {
 	long rate;
 };
 
