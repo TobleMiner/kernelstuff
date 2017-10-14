@@ -293,6 +293,7 @@ static int draw_frame(void* arg)
 		adamtx_draw_time += (after.tv_sec - before.tv_sec) * 1000000000UL + (after.tv_nsec - before.tv_nsec);
 		adamtx_draws++;
 		spin_unlock_irqrestore(&adamtx_lock_draw, irqflags);
+		yield();
 	}
 	do_exit(0);	
 }
@@ -339,6 +340,7 @@ static int update_frame(void* arg)
 		spin_unlock_irqrestore(&adamtx_lock_draw, irqflags);
 		if(err)
 			do_exit(err);
+		yield();
 	}
 	do_exit(0);
 }
@@ -374,6 +376,7 @@ static int show_perf(void* arg)
 		spin_unlock_irqrestore(&adamtx_lock_draw, irqflags);
 		printk(KERN_INFO ADAMTX_NAME ": %ld updates/s\t%ld irqs/s\t%lu ns/update", perf_adamtx_updates, perf_adamtx_update_irqs, perf_adamtx_updates != 0 ? perf_adamtx_update_time / perf_adamtx_updates : 0);
 		printk(KERN_INFO ADAMTX_NAME ": %ld draws/s\t%ld irqs/s\t%lu ns/draw", perf_adamtx_draws, perf_adamtx_draw_irqs, perf_adamtx_draws != 0 ? perf_adamtx_draw_time / perf_adamtx_draws : 0);	
+		yield();
 	}
 }
 
