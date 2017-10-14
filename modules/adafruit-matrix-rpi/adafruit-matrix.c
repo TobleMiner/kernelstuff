@@ -73,13 +73,13 @@ static struct matrix_ledpanel adamtx_matrix_up = {
 	.name = "Upper",
 	.xres = 64,
 	.yres = 32,
-	.virtual_x = 64,
+	.virtual_x = 0,
 	.virtual_y = 0,
 	.realx = 0,
 	.realy = 0,
-	.flip_x = 0,
-	.flip_y = 1,
-	.chain = ADAMTX_CHAIN_0
+	.flip_x = 1,
+	.flip_y = 0,
+	.chain = ADAMTX_CHAIN_1
 };
 
 static struct matrix_ledpanel adamtx_matrix_low = {
@@ -443,7 +443,7 @@ static int adamtx_probe(struct platform_device *device)
 	
 	// eanble chain 0
 	enabled_chains.chain0 = 1;
-	enabled_chains.chain1 = 0;
+	enabled_chains.chain1 = 1;
 	enabled_chains.chain2 = 0;
 
 	if((ret = adamtx_gpio_alloc()))
