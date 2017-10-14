@@ -47,11 +47,7 @@ static unsigned long current_bcd_time = ADAMTX_BCD_TIME_NS;
 static struct matrix_size adamtx_virtual_size;
 static struct matrix_size adamtx_real_size;
 
-static struct {
-	uint8_t chain0: 1;
-	uint8_t chain1: 1;
-	uint8_t chain2: 1;
-} enabled_chains;
+static struct enabled_chains enabled_chains;
 
 static uint8_t gamma_table[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -208,7 +204,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns)
 {
 	ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
-	int i, j, k;
+	int i, j;
 	int pwm_steps = bits;
 	struct timespec last, now;
 	unsigned long rem_delay, clock_out_delay, bcd_time = current_bcd_time;
@@ -347,12 +343,14 @@ static int update_frame(void* arg)
 			do_exit(err);
 		yield();
 	}
+
 	do_exit(0);
 }
 
 static int show_perf(void* arg)
 {
-	long irqflags, perf_adamtx_updates, perf_adamtx_update_irqs, perf_adamtx_update_time;
+	unsigned long irqflags;
+	long perf_adamtx_updates, perf_adamtx_update_irqs, perf_adamtx_update_time;
 	long perf_adamtx_draws, perf_adamtx_draw_irqs, perf_adamtx_draw_time;
 	while(!kthread_should_stop())
     {
@@ -383,6 +381,8 @@ static int show_perf(void* arg)
 		printk(KERN_INFO ADAMTX_NAME ": %ld draws/s\t%ld irqs/s\t%lu ns/draw", perf_adamtx_draws, perf_adamtx_draw_irqs, perf_adamtx_draws != 0 ? perf_adamtx_draw_time / perf_adamtx_draws : 0);	
 		yield();
 	}
+
+	do_exit(0);
 }
 
 static enum hrtimer_restart update_callback(struct hrtimer* timer)
