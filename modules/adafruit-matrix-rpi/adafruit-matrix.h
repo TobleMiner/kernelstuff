@@ -8,17 +8,38 @@
 // GPIO setup
 #define ADAMTX_NUM_GPIOS 14
 
-#define ADAMTX_GPIO_R1	11
-#define ADAMTX_GPIO_R2	8
-#define ADAMTX_GPIO_G1	27
-#define ADAMTX_GPIO_G2	9
-#define ADAMTX_GPIO_B1	7
-#define ADAMTX_GPIO_B2	10
+// chain 0
+#define ADAMTX_GPIO_C0_R1	11
+#define ADAMTX_GPIO_C0_R2	8
+#define ADAMTX_GPIO_C0_G1	27
+#define ADAMTX_GPIO_C0_G2	9
+#define ADAMTX_GPIO_C0_B1	7
+#define ADAMTX_GPIO_C0_B2	10
+
+// chain 1
+#define ADAMTX_GPIO_C1_R1	12
+#define ADAMTX_GPIO_C1_R2	19
+#define ADAMTX_GPIO_C1_G1	5
+#define ADAMTX_GPIO_C1_G2	13
+#define ADAMTX_GPIO_C1_B1	6
+#define ADAMTX_GPIO_C1_B2	20
+
+// chain 2
+#define ADAMTX_GPIO_C2_R1	14
+#define ADAMTX_GPIO_C2_R2	26
+#define ADAMTX_GPIO_C2_G1	2
+#define ADAMTX_GPIO_C2_G2	16
+#define ADAMTX_GPIO_C2_B1	3
+#define ADAMTX_GPIO_C2_B2	21
+
+// address lines
 #define ADAMTX_GPIO_A	22
 #define ADAMTX_GPIO_B	23
 #define ADAMTX_GPIO_C	24
 #define ADAMTX_GPIO_D	25
 #define ADAMTX_GPIO_E	15
+
+// misc
 #define ADAMTX_GPIO_OE	18
 #define ADAMTX_GPIO_STR	4
 #define ADAMTX_GPIO_CLK	17
@@ -48,32 +69,32 @@
 struct adamtx_panel_io {
 	uint32_t GPIO0	: 1;
 	uint32_t GPIO1	: 1;
-	uint32_t GPIO2	: 1;
-	uint32_t GPIO3	: 1;
+	uint32_t C2_G1	: 1;
+	uint32_t C2_B1	: 1;
 	uint32_t STR	: 1;
-	uint32_t GPIO5	: 1;
-	uint32_t GPIO6	: 1;
-	uint32_t B1		: 1;
-	uint32_t R2		: 1;
-	uint32_t G2		: 1;
-	uint32_t B2		: 1;
-	uint32_t R1		: 1;
-	uint32_t GPIO12 : 1;
-	uint32_t GPIO13 : 1;
-	uint32_t GPIO14 : 1;
+	uint32_t C1_G1	: 1;
+	uint32_t C1_B1	: 1;
+	uint32_t C0_B1	: 1;
+	uint32_t C0_R2	: 1;
+	uint32_t C0_G2	: 1;
+	uint32_t C0_B2	: 1;
+	uint32_t C0_R1	: 1;
+	uint32_t C1_R1	: 1;
+	uint32_t C1_G2	: 1;
+	uint32_t C2_R1	: 1;
 	uint32_t E		: 1;
-	uint32_t GPIO16 : 1;
+	uint32_t C2_G2	: 1;
 	uint32_t CLK	: 1;
 	uint32_t OE		: 1;
-	uint32_t GPIO19 : 1;
-	uint32_t GPIO20 : 1;
-	uint32_t GPIO21 : 1;
+	uint32_t C1_R2	: 1;
+	uint32_t C1_B2	: 1;
+	uint32_t C2_B2	: 1;
 	uint32_t A		: 1;
 	uint32_t B		: 1;
 	uint32_t C		: 1;
 	uint32_t D		: 1;
-	uint32_t GPIO26 : 1;
-	uint32_t G1		: 1;
+	uint32_t C2_R2	: 1;
+	uint32_t C0_G1	: 1;
 };
 
 struct adamtx_frame {
