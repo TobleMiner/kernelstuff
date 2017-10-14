@@ -53,42 +53,6 @@ void matrix_panel_get_position(struct matrix_pos* pos, struct matrix_ledpanel* p
 	pos->y += panel->virtual_y;
 }
 
-void matrix_panel_get_chain_size_virtual(struct matrix_size* size, struct matrix_ledpanel** panels, int num_panels, int chain) {
-	struct matrix_ledpanel* panel;
-
-	size->width = 0;
-	size->height = 0;
-	while(num_panels-- > 0) {
-		panel = panels[num_panels];
-		if(panel->chain != chain)
-			continue;
-
-		size->width += panel->xres;
-		size->height = panel->yres;
-	}
-}
-
-void matrix_panel_get_chain_size_real(struct matrix_size* size, struct matrix_ledpanel** panels, int num_panels, int chain) {
-	struct matrix_ledpanel* panel;
-	int current_width, current_height;
-
-	size->width = 0;
-	size->height = 0;
-	while(num_panels-- > 0) {
-		panel = panels[num_panels];
-		if(panel->chain != chain)
-			continue;
-
-		current_width = panel->xres + panel->realx;
-		if(current_width > size->width)
-			size->width = current_width;
-
-		current_height = panel->yres + panel->realy;
-		if(current_height > size->height)
-			size->height = current_height;
-	}
-}
-
 void matrix_panel_get_size_virtual(struct matrix_size* size, struct matrix_ledpanel** panels, int num_panels) {
 	struct matrix_ledpanel* panel;
 
