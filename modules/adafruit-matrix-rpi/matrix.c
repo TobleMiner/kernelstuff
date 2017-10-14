@@ -79,7 +79,8 @@ void matrix_panel_get_size_virtual(struct matrix_size* size, struct matrix_ledpa
 		if(chain_size.width > size->width)
 			size->width = chain_size.width;
 
-		size->height += chain_size.height;
+		if(chain_size.height > size->height)
+			size->height = chain_size.height;
 	}
 }
 
