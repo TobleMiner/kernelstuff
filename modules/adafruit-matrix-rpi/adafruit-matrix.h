@@ -117,7 +117,7 @@ struct adamtx_processable_frame {
 	int pwm_bits;
 	char* frame;
 	struct adamtx_panel_io* iodata;
-	struct matrix_ledpanel** panels;
+	struct list_head* panels;
 };
 
 struct adamtx_enabled_chains {

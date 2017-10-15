@@ -1,5 +1,7 @@
 #include <stddef.h>
 
+#include <linux/list.h>
+
 #include "matrix.h"
 
 int matrix_panel_contains_real(struct matrix_ledpanel* panel, int x, int y)
@@ -12,22 +14,22 @@ int matrix_panel_contains(struct matrix_ledpanel* panel, int x, int y)
 	return x >= panel->virtual_x && x <= panel->virtual_x + panel->xres && y >= panel->virtual_y && y <= panel->virtual_y + panel->yres;
 }
 
-struct matrix_ledpanel* matrix_get_panel_at(struct matrix_ledpanel** panels, int numpanels, int x, int y)
+struct matrix_ledpanel* matrix_get_panel_at(struct list_head* panels, int x, int y)
 {
-	while(--numpanels >= 0)
-	{
-		if(matrix_panel_contains(panels[numpanels], x, y))
-			return panels[numpanels];
+	struct matrix_ledpanel* panel;
+	list_for_each_entry(panel, panels, list) {
+		if(matrix_panel_contains(panel, x, y))
+			return panel;
 	}
 	return NULL;
 }
 
-struct matrix_ledpanel* matrix_get_panel_at_real(struct matrix_ledpanel** panels, int numpanels, int x, int y)
+struct matrix_ledpanel* matrix_get_panel_at_real(struct list_head* panels, int x, int y)
 {
-	while(--numpanels >= 0)
-	{
-		if(matrix_panel_contains_real(panels[numpanels], x, y))
-			return panels[numpanels];
+	struct matrix_ledpanel* panel;
+	list_for_each_entry(panel, panels, list) {
+		if(matrix_panel_contains_real(panel, x, y))
+			return panel;
 	}
 	return NULL;
 }
@@ -53,13 +55,13 @@ void matrix_panel_get_position(struct matrix_pos* pos, struct matrix_ledpanel* p
 	pos->y += panel->virtual_y;
 }
 
-void matrix_panel_get_chain_size_virtual(struct matrix_size* size, struct matrix_ledpanel** panels, int num_panels, int chain) {
+void matrix_panel_get_chain_size_virtual(struct matrix_size* size, struct list_head* panels, int chain) {
 	struct matrix_ledpanel* panel;
 
 	size->width = 0;
 	size->height = 0;
-	while(num_panels-- > 0) {
-		panel = panels[num_panels];
+
+	list_for_each_entry(panel, panels, list) {
 		if(panel->chain != chain)
 			continue;
 
@@ -68,14 +70,14 @@ void matrix_panel_get_chain_size_virtual(struct matrix_size* size, struct matrix
 	}
 }
 
-void matrix_panel_get_size_virtual(struct matrix_size* size, struct matrix_ledpanel** panels, int num_panels) {
+void matrix_panel_get_size_virtual(struct matrix_size* size, struct list_head* panels) {
 	struct matrix_size chain_size;
 	int i;
 
 	size->width = 0;
 	size->height = 0;
 	for(i = 0; i < MAX_NUM_CHAINS; i++) {
-		matrix_panel_get_chain_size_virtual(&chain_size, panels, num_panels, i);
+		matrix_panel_get_chain_size_virtual(&chain_size, panels, i);
 		if(chain_size.width > size->width)
 			size->width = chain_size.width;
 
@@ -84,14 +86,13 @@ void matrix_panel_get_size_virtual(struct matrix_size* size, struct matrix_ledpa
 	}
 }
 
-void matrix_panel_get_size_real(struct matrix_size* size, struct matrix_ledpanel** panels, int num_panels) {
+void matrix_panel_get_size_real(struct matrix_size* size, struct list_head* panels) {
 	struct matrix_ledpanel* panel;
 	int current_width, current_height;
 
 	size->width = 0;
 	size->height = 0;
-	while(num_panels-- > 0) {
-		panel = panels[num_panels];
+	list_for_each_entry(panel, panels, list) {
 
 		current_width = panel->xres + panel->realx;
 		if(current_width > size->width)

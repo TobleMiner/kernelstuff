@@ -12,6 +12,8 @@
 #include <linux/err.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
+#include <linux/list.h>
+#include <linux/of.h>
 
 #include "matrix.h"
 #include "adafruit-matrix.h"
@@ -26,7 +28,9 @@ MODULE_AUTHOR("Tobas Schramm");
 MODULE_DESCRIPTION("Adafruit LED matrix driver");
 MODULE_VERSION("0.1");
 
-static struct matrix_ledpanel** adamtx_panels;
+static LIST_HEAD(adamtx_panels);
+
+//static struct matrix_ledpanel** adamtx_panels;
 
 static char* framedata;
 static struct adamtx_panel_io* paneldata;
@@ -49,6 +53,11 @@ static struct matrix_size adamtx_real_size;
 
 static struct adamtx_enabled_chains adamtx_enabled_chains;
 
+static int adamtx_rate;
+static int adamtx_fb_rate;
+
+static int adamtx_num_panels = 0;
+
 static uint8_t gamma_table[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
@@ -67,7 +76,7 @@ static uint8_t gamma_table[] = {
   177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
   215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
 
-#define ADAMTX_NUM_PANELS 2
+/*#define ADAMTX_NUM_PANELS 2
 
 static struct matrix_ledpanel adamtx_matrix_up = {
 	.name = "Upper",
@@ -108,6 +117,8 @@ static struct matrix_ledpanel adamtx_matrix_32x16 = {
 	.chain = ADAMTX_CHAIN_0
 };
 
+*/
+
 static struct hrtimer adamtx_frametimer;
 static ktime_t adamtx_frameperiod;
 static int adamtx_frametimer_enabled = 0;
@@ -143,7 +154,7 @@ void adamtx_set_address(int i)
 	adamtx_gpio_write_bits(*((uint32_t*)&io));
 }
 
-void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, int height_from, struct matrix_pixel* to, int width_to, int height_to)
+void remap_frame(struct list_head* panels, char* from, int width_from, int height_from, struct matrix_pixel* to, int width_to, int height_to)
 {
 	int i, j;
 	off_t offset;
@@ -154,7 +165,7 @@ void remap_frame(struct matrix_ledpanel** panels, char* from, int width_from, in
 	{
 		for(j = 0; j < width_from; j++)
 		{
-			panel = matrix_get_panel_at_real(panels, ADAMTX_NUM_PANELS, j, i);
+			panel = matrix_get_panel_at_real(panels, j, i);
 			matrix_panel_get_position(&pos, panel, j, i);
 			offset = i * width_from * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN;
 			pixel = &to[pos.y * width_to + pos.x];
@@ -345,7 +356,7 @@ static int update_frame(void* arg)
 			.pwm_bits = ADAMTX_PWM_BITS,
 			.iodata = paneldata,
 			.frame = framedata,
-			.panels = adamtx_panels
+			.panels = &adamtx_panels
 		};
 
 		spin_lock_irqsave(&adamtx_lock_draw, irqflags);
@@ -425,7 +436,127 @@ static enum hrtimer_restart perf_callback(struct hrtimer* timer)
 	return HRTIMER_RESTART;
 }
 
-static void __init adamtx_init_gpio(void)
+static int adamtx_of_get_int(struct device_node* of_node, const char* name, int def) {
+	const void* of_prop;
+	if((of_prop = of_get_property(of_node, name, NULL)))
+		return be32_to_cpup(of_prop);
+	return def;
+}
+
+static int adamtx_of_get_int_range(int* dest, struct device_node* of_node, const char* name, int def, int min, int max) {
+	int value = adamtx_of_get_int(of_node, name, def);
+	if(value > max || value < min)
+		return -EINVAL;
+	*dest = value;
+	return 0;
+}
+
+static void free_panels(void) {
+	struct matrix_ledpanel *panel, *panel_next;
+
+	list_for_each_entry_safe(panel, panel_next, &adamtx_panels, list) {
+		list_del(&panel->list);
+		vfree(panel);
+	}
+}
+
+static int adamtx_parse_device_tree(struct device* dev) {
+	int err = 0;
+	struct device_node *panel_node, *dev_of_node = dev->of_node;
+	struct matrix_ledpanel *panel;
+
+	if(!dev_of_node)
+		goto exit_err;
+
+	if((err = adamtx_of_get_int_range(&adamtx_rate, dev_of_node, "adamtx-rate", 60, 0, INT_MAX))) {
+		dev_err(dev, "Invalid refresh rate. Must be in range from 0 to INT_MAX\n");
+		goto exit_err;
+	}
+
+	if((err = adamtx_of_get_int_range(&adamtx_fb_rate, dev_of_node, "adamtx-fb-rate", 60, 0, INT_MAX))) {
+		dev_err(dev, "Invalid framebuffer poll rate. Must be in range from 0 to INT_MAX\n");
+		goto exit_err;
+	}
+
+	for(panel_node = of_get_next_child(dev_of_node, NULL); panel_node; panel_node = of_get_next_child(dev_of_node, panel_node)) {
+		panel = vzalloc(sizeof(struct matrix_ledpanel));
+		if(!panel) {
+			dev_err(dev, "Failed to allocate panel struct\n");
+			err = -ENOMEM;
+			goto exit_panel_alloc;
+		}
+
+		list_add(&panel->list, &adamtx_panels);
+
+		if((err = adamtx_of_get_int_range(&panel->xres, panel_node, "adamtx-xres", 64, 1, INT_MAX))) {
+			dev_err(dev, "Invalid horizontal panel resolution. Must be in range from 1 to INT_MAX\n");
+			goto exit_panel_alloc;
+		}
+
+		if((err = adamtx_of_get_int_range(&panel->yres, panel_node, "adamtx-yres", 32, 1, INT_MAX))) {
+			dev_err(dev, "Invalid vertical panel resolution. Must be in range from 1 to INT_MAX\n");
+			goto exit_panel_alloc;
+		}
+
+		if((err = adamtx_of_get_int_range(&panel->virtual_x, panel_node, "adamtx-virtual-x", 0, 0, INT_MAX))) {
+			dev_err(dev, "Invalid virtual horizontal panel offset. Must be in range from 0 to INT_MAX\n");
+			goto exit_panel_alloc;
+		}
+
+		if((err = adamtx_of_get_int_range(&panel->virtual_y, panel_node, "adamtx-virtual-y", 0, 0, INT_MAX))) {
+			dev_err(dev, "Invalid virtual vertical panel offset. Must be in range from 0 to INT_MAX\n");
+			goto exit_panel_alloc;
+		}
+
+		if((err = adamtx_of_get_int_range(&panel->realx, panel_node, "adamtx-real-x", 0, 0, INT_MAX))) {
+			dev_err(dev, "Invalid horizontal panel offset. Must be in range from 0 to INT_MAX\n");
+			goto exit_panel_alloc;
+		}
+
+		if((err = adamtx_of_get_int_range(&panel->realy, panel_node, "adamtx-real-y", 0, 0, INT_MAX))) {
+			dev_err(dev, "Invalid vertical panel offset. Must be in range from 0 to INT_MAX\n");
+			goto exit_panel_alloc;
+		}
+
+		if((err = adamtx_of_get_int_range(&panel->flip_x, panel_node, "adamtx-flip-x", 0, 0, 1))) {
+			dev_err(dev, "Invalid horizontal mirror flag. Must be either 0 or 1\n");
+			goto exit_panel_alloc;
+		}
+
+		if((err = adamtx_of_get_int_range(&panel->flip_y, panel_node, "adamtx-flip-y", 0, 0, 1))) {
+			dev_err(dev, "Invalid vertical mirror flag. Must be either 0 or 1\n");
+			goto exit_panel_alloc;
+		}
+
+		if((err = adamtx_of_get_int_range(&panel->chain, panel_node, "chain", 0, 0, 2))) {
+			dev_err(dev, "Invalid chain. Must be in range from 0 to 2\n");
+			goto exit_panel_alloc;
+		}
+
+		switch(panel->chain) {
+			case(0):
+				adamtx_enabled_chains.chain0 = 1;
+				break;
+			case(1):
+				adamtx_enabled_chains.chain1 = 1;
+				break;
+			case(2):
+				adamtx_enabled_chains.chain2 = 1;
+		}
+
+		adamtx_num_panels++;
+	}
+
+	return 0;
+
+exit_panel_alloc:
+	free_panels();
+
+exit_err:
+	return err;
+}
+
+static void adamtx_init_gpio(void)
 {
 	uint32_t gpios = (1 << ADAMTX_GPIO_A) | (1 << ADAMTX_GPIO_B) | (1 << ADAMTX_GPIO_C) | (1 << ADAMTX_GPIO_D) | (1 << ADAMTX_GPIO_E) | (1 << ADAMTX_GPIO_OE) | (1 << ADAMTX_GPIO_STR) | (1 << ADAMTX_GPIO_CLK);
 	if(adamtx_enabled_chains.chain0)
@@ -442,31 +573,28 @@ static int adamtx_probe(struct platform_device *device)
 	int i, j, ret, framesize;
 	
 	// eanble chain 0
-	adamtx_enabled_chains.chain0 = 1;
-	adamtx_enabled_chains.chain1 = 1;
-	adamtx_enabled_chains.chain2 = 0;
+//	adamtx_enabled_chains.chain0 = 1;
+//	adamtx_enabled_chains.chain1 = 1;
+//	adamtx_enabled_chains.chain2 = 0;
 
 	if((ret = adamtx_gpio_alloc()))
 	{
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate gpios (%d)\n", ret);
 		goto none_alloced;
 	}
+
+	if((ret = adamtx_parse_device_tree(&device->dev)))
+		goto none_alloced;
+
 	adamtx_init_gpio();
 
-	adamtx_panels = vmalloc(ADAMTX_NUM_PANELS * sizeof(struct matrix_ledpanel*));
-	if(adamtx_panels == NULL)
-	{
-		ret = -ENOMEM;
-		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate panels (%d)\n", ret);
-		goto gpio_alloced;
-	}
-	adamtx_panels[0] = &adamtx_matrix_up;
-	adamtx_panels[1] = &adamtx_matrix_low;
+//	adamtx_panels[0] = &adamtx_matrix_up;
+//	adamtx_panels[1] = &adamtx_matrix_low;
 //	adamtx_panels[0] = &adamtx_matrix_32x16;
 
 	// Calculate real and virtual display size (smallest rectangle around all displays)
-	matrix_panel_get_size_virtual(&adamtx_virtual_size, adamtx_panels, ADAMTX_NUM_PANELS);
-	matrix_panel_get_size_real(&adamtx_real_size, adamtx_panels, ADAMTX_NUM_PANELS);
+	matrix_panel_get_size_virtual(&adamtx_virtual_size, &adamtx_panels);
+	matrix_panel_get_size_real(&adamtx_real_size, &adamtx_panels);
 
 	printk(KERN_INFO "Calculated real (user) size: (%d, %d)\n", adamtx_real_size.width, adamtx_real_size.height);
 	printk(KERN_INFO "Calculated virtual (technical) size: (%d, %d)\n", adamtx_virtual_size.width, adamtx_virtual_size.height);
@@ -476,7 +604,7 @@ static int adamtx_probe(struct platform_device *device)
 	{
         ret = -EINVAL;
         printk(KERN_WARNING ADAMTX_NAME ": size of framebuffer != framesize\n");
-        goto framedata_alloced;
+        goto gpio_alloced;
 	}
 	framedata = vzalloc(framesize);
 	if(framedata == NULL)
@@ -589,7 +717,7 @@ paneldata_alloced:
 framedata_alloced:
 	vfree(framedata);
 panels_alloced:
-	vfree(adamtx_panels);
+	free_panels();
 gpio_alloced:
 	adamtx_gpio_free();
 none_alloced:
@@ -610,20 +738,33 @@ static int adamtx_remove(struct platform_device *device)
 	vfree(adamtx_intermediate_frame);
 	vfree(paneldata);
 	vfree(framedata);
-	vfree(adamtx_panels);
+	free_panels();
 	adamtx_gpio_free();
 	printk(KERN_INFO ADAMTX_NAME ": shutting down\n");
 	return 0;
 }
 
+static const struct of_device_id adamtx_of_match[] = {
+	{ .compatible = "adafruit,matrix" },
+	{ .compatible = "adafruit,adamtx" },
+	{}
+};
+
+
 static struct platform_driver adamtx_driver = {
 	.probe = adamtx_probe,
 	.remove = adamtx_remove,
 	.driver = {
-		.name = ADAMTX_NAME
+		.name = ADAMTX_NAME,
+		.of_match_table = adamtx_of_match
 	}
 };
 
+MODULE_DEVICE_TABLE(of, adamtx_of_match);
+
+module_platform_driver(adamtx_driver);
+
+/*
 static struct platform_device* adamtx_dev;
 
 static int __init adamtx_init(void)
@@ -659,3 +800,5 @@ static void __exit adamtx_exit(void)
 
 module_init(adamtx_init);
 module_exit(adamtx_exit);
+
+*/
