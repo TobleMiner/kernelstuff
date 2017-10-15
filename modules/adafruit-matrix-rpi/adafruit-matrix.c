@@ -396,6 +396,11 @@ static enum hrtimer_restart perf_callback(struct hrtimer* timer)
 	return HRTIMER_RESTART;
 }
 
+static void dummyfb_remove(struct dummyfb* dummyfb) {
+	struct platform_device* dev = dummyfb->param.priv;
+	platform_device_unregister(dev);
+}
+
 static int adamtx_of_get_int(struct device_node* of_node, const char* name, int def) {
 	const void* of_prop;
 	if((of_prop = of_get_property(of_node, name, NULL)))
@@ -564,7 +569,10 @@ static int adamtx_probe(struct platform_device *device)
 		.width = adamtx_real_size.width,
 		.height = adamtx_real_size.height,
 		.rate = adamtx_fb_rate,
-		.depth = ADAMTX_DEPTH
+		.depth = ADAMTX_DEPTH,
+
+		.priv = device,
+		.remove = dummyfb_remove
 	};
 
 	if((ret = dummyfb_create(&dummyfb, dummyfb_param))) {
