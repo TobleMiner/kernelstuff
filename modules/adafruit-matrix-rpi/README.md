@@ -29,13 +29,6 @@ can be loaded at runtime by executing ```/opt/vc/bin/dtoverlay adamtx.dtbo```. T
 come with with the dtoverlay tool you can still load the overlay at boot. To do so move the compiled overlay to ```/boot/overlays/``` and add the line ```dtoverlay=adamtx``` to
 ```/boot/config.txt```. After the next reboot the driver should be loaded and configured.
 
-If you decide to change the resolution or colordepth of your setup you have to change the module paramters of dummyfb accordingly. The parameters are:
-```
-parm:           width:Framebuffer horizontal resolution (int)
-parm:           height:Framebuffer vertical resolution (int)
-parm:           depth:Framebuffer depth/bpp (int)
-```
-
 # Using it
 
-This driver uses dummfb to prove a framebuffer device. Thus a lot of applications like mplayer and even Xorg can use this driver to output to LED panels.
+This driver uses dummyfb to prove a framebuffer device. Thus a lot of applications like mplayer and even Xorg can use this driver to output to the LED panel.
