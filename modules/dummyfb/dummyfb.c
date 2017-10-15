@@ -16,6 +16,10 @@ MODULE_VERSION("0.1");
 
 static LIST_HEAD(dummyfbs);
 
+static int dummyfb_check_var(struct fb_var_screeninfo* var, struct fb_info* info);
+static int dummyfb_set_par(struct fb_info* info);
+static int dummyfb_mmap(struct fb_info *info, struct vm_area_struct *vma);
+
 static struct fb_ops dummyfb_fbops =
 {
 	.owner =	THIS_MODULE,
@@ -132,7 +136,7 @@ static int dummyfb_validate_param(struct dummyfb_param param) {
 	return 0;
 }
 
-static int dummyfb_create(struct dummyfb* dummyfb, struct dummyfb_param param) {
+int dummyfb_create(struct dummyfb* dummyfb, struct dummyfb_param param) {
 	int err;
 
 	if((err = dummyfb_validate_param(param)))
@@ -189,7 +193,7 @@ fail:
 
 EXPORT_SYMBOL(dummyfb_create);
 
-static void dummyfb_destroy(struct dummyfb* dummyfb) {
+void dummyfb_destroy(struct dummyfb* dummyfb) {
 		if(dummyfb->param.remove)
 			dummyfb->param.remove(dummyfb);
 

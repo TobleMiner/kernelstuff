@@ -19,6 +19,8 @@
 #include "adafruit-matrix.h"
 #include "io.h"
 
+#include "../dummyfb/dummyfb.h"
+
 #define ADAMTX_GPIO_HI(gpio) adamtx_gpio_set_bits((1 << gpio))
 #define ADAMTX_GPIO_LO(gpio) adamtx_gpio_clr_bits((1 << gpio))
 #define ADAMTX_GPIO_SET(gpio, state) (state ? ADAMTX_GPIO_HI(gpio) : ADAMTX_GPIO_LO(gpio))
@@ -29,6 +31,8 @@ MODULE_DESCRIPTION("Adafruit LED matrix driver");
 MODULE_VERSION("0.1");
 
 static LIST_HEAD(adamtx_panels);
+
+static struct dummyfb* dummyfb;
 
 static char* framedata;
 static struct adamtx_panel_io* paneldata;
@@ -302,7 +306,7 @@ static int update_frame(void* arg)
 			break;
 		adamtx_do_update = 0;
 
-		dummyfb_copy(framedata);
+		dummyfb_copy(framedata, dummyfb);
 
 		frame = (struct adamtx_processable_frame){
 			.width = adamtx_real_size.width,
@@ -534,7 +538,8 @@ static void adamtx_init_gpio(void)
 static int adamtx_probe(struct platform_device *device)
 {
 	int ret, framesize;
-	
+	struct dummyfb_param dummyfb_param;	
+
 	if((ret = adamtx_gpio_alloc()))
 	{
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate gpios (%d)\n", ret);
@@ -542,7 +547,7 @@ static int adamtx_probe(struct platform_device *device)
 	}
 
 	if((ret = adamtx_parse_device_tree(&device->dev)))
-		goto none_alloced;
+		goto gpio_alloced;
 
 	adamtx_init_gpio();
 
@@ -554,18 +559,25 @@ static int adamtx_probe(struct platform_device *device)
 	printk(KERN_INFO "Calculated virtual (technical) size: (%d, %d)\n", adamtx_virtual_size.width, adamtx_virtual_size.height);
 
 	framesize = adamtx_real_size.height * adamtx_real_size.width * ADAMTX_PIX_LEN;
-	if(dummyfb_get_fbsize() != framesize)
-	{
-        ret = -EINVAL;
-        printk(KERN_WARNING ADAMTX_NAME ": size of framebuffer != framesize\n");
-        goto gpio_alloced;
+
+	dummyfb_param = (struct dummyfb_param) {
+		.width = adamtx_real_size.width,
+		.height = adamtx_real_size.height,
+		.rate = adamtx_fb_rate,
+		.depth = ADAMTX_DEPTH
+	};
+
+	if((ret = dummyfb_create(dummyfb, dummyfb_param))) {
+		dev_err(&device->dev, "Failed to create framebuffer device\n");
+		goto panels_alloced;
 	}
+
 	framedata = vzalloc(framesize);
 	if(framedata == NULL)
 	{
 		ret = -ENOMEM;
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate frame memory (%d)\n", ret);
-		goto panels_alloced;
+		goto dummyfb_alloced;
 	}
 	paneldata = vmalloc(ADAMTX_PWM_BITS * adamtx_virtual_size.height / 2 * adamtx_virtual_size.width * sizeof(struct adamtx_panel_io));
 	if(paneldata == NULL)
@@ -641,6 +653,8 @@ paneldata_alloced:
 	vfree(paneldata);
 framedata_alloced:
 	vfree(framedata);
+dummyfb_alloced:
+	dummyfb_destroy(dummyfb);
 panels_alloced:
 	free_panels();
 gpio_alloced:
@@ -663,6 +677,7 @@ static int adamtx_remove(struct platform_device *device)
 	vfree(adamtx_intermediate_frame);
 	vfree(paneldata);
 	vfree(framedata);
+	dummyfb_destroy(dummyfb);
 	free_panels();
 	adamtx_gpio_free();
 	printk(KERN_INFO ADAMTX_NAME ": shutting down\n");

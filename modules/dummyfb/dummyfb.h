@@ -2,6 +2,7 @@
 #define _DUMMYFB_H
 
 #include <linux/types.h>
+#include <linux/fb.h>
 
 #define DUMMYFB_DEFAULT_WIDTH 64
 #define DUMMYFB_DEFAULT_HEIGHT 64
@@ -44,9 +45,8 @@ struct dummyfb {
 	struct list_head list;
 };
 
-static int dummyfb_check_var(struct fb_var_screeninfo* var, struct fb_info* info);
-static int dummyfb_set_par(struct fb_info* info);
-static int dummyfb_mmap(struct fb_info *info, struct vm_area_struct *vma);
+int dummyfb_create(struct dummyfb* dummyfb, struct dummyfb_param param);
+void dummyfb_destroy(struct dummyfb* dummyfb);
 
 size_t dummyfb_get_fbsize(struct dummyfb* dummyfb);
 char* dummyfb_get_fbmem(struct dummyfb* dummyfb);

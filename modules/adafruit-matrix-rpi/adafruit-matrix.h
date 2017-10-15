@@ -2,6 +2,7 @@
 #define _ADAMTX_H
 
 #include "matrix.h"
+#include "../dummyfb/dummyfb.h"
 
 #define ADAMTX_NAME "adafruit-matrix"
 
@@ -131,7 +132,6 @@ struct adamtx_draw_param {
 	long rate;
 };
 
-extern size_t dummyfb_get_fbsize(void);
-extern void dummyfb_copy(void* buffer);
+extern void dummyfb_copy(void* buffer, struct dummyfb* dummyfb);
 
 #endif
