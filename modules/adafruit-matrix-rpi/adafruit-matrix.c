@@ -56,7 +56,7 @@ static struct adamtx_enabled_chains adamtx_enabled_chains;
 static int adamtx_rate;
 static int adamtx_fb_rate;
 
-static int adamtx_num_panels = 0;
+static int adamtx_num_panels;
 
 static uint8_t gamma_table[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -464,6 +464,7 @@ static int adamtx_parse_device_tree(struct device* dev) {
 	int err = 0;
 	struct device_node *panel_node, *dev_of_node = dev->of_node;
 	struct matrix_ledpanel *panel;
+	adamtx_num_panels = 0;
 
 	if(!dev_of_node)
 		goto exit_err;
@@ -477,6 +478,8 @@ static int adamtx_parse_device_tree(struct device* dev) {
 		dev_err(dev, "Invalid framebuffer poll rate. Must be in range from 0 to INT_MAX\n");
 		goto exit_err;
 	}
+
+	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz", adamtx_rate, adamtx_fb_rate);
 
 	for(panel_node = of_get_next_child(dev_of_node, NULL); panel_node; panel_node = of_get_next_child(dev_of_node, panel_node)) {
 		panel = vzalloc(sizeof(struct matrix_ledpanel));
@@ -528,7 +531,7 @@ static int adamtx_parse_device_tree(struct device* dev) {
 			goto exit_panel_alloc;
 		}
 
-		if((err = adamtx_of_get_int_range(&panel->chain, panel_node, "chain", 0, 0, 2))) {
+		if((err = adamtx_of_get_int_range(&panel->chain, panel_node, "adamtx-chain", 0, 0, 2))) {
 			dev_err(dev, "Invalid chain. Must be in range from 0 to 2\n");
 			goto exit_panel_alloc;
 		}
@@ -544,7 +547,11 @@ static int adamtx_parse_device_tree(struct device* dev) {
 				adamtx_enabled_chains.chain2 = 1;
 		}
 
+		dev_info(dev, "Panel %d: Resolution: %d px x %d px, Physical position: (%d, %d), Virtual position: (%d, %d), Flip x: %d, Flip y: %d, Chain %d",
+				adamtx_num_panels, panel->xres, panel->yres, panel->virtual_x, panel->virtual_y, panel->realx, panel->realy, panel->flip_x, panel->flip_y, panel->chain);
+
 		adamtx_num_panels++;
+
 	}
 
 	return 0;
@@ -657,7 +664,7 @@ static int adamtx_probe(struct platform_device *device)
 	process_frame(&frame);
 */
 
-	adamtx_update_param.rate = ADAMTX_FBRATE;
+	adamtx_update_param.rate = adamtx_fb_rate;
 	adamtx_update_thread = kthread_create(update_frame, &adamtx_update_param, "adamtx_update");
 	kthread_bind(adamtx_update_thread, 2);
 	if(IS_ERR(adamtx_update_thread))
@@ -668,8 +675,8 @@ static int adamtx_probe(struct platform_device *device)
 	}
 	wake_up_process(adamtx_update_thread);
 
-	adamtx_draw_param.rate = ADAMTX_RATE;
-	adamtx_draw_thread = kthread_create(draw_frame, &adamtx_draw_param, "adamtx_draw@");
+	adamtx_draw_param.rate = adamtx_rate;
+	adamtx_draw_thread = kthread_create(draw_frame, &adamtx_draw_param, "adamtx_draw");
 	kthread_bind(adamtx_draw_thread, 3);
 	if(IS_ERR(adamtx_draw_thread))
 	{
@@ -689,13 +696,13 @@ static int adamtx_probe(struct platform_device *device)
 	}
 	wake_up_process(adamtx_perf_thread);
 
-	adamtx_frameperiod = ktime_set(0, 1000000000UL / ADAMTX_RATE);
+	adamtx_frameperiod = ktime_set(0, 1000000000UL / adamtx_rate);
 	hrtimer_init(&adamtx_frametimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	adamtx_frametimer.function = draw_callback;
 	hrtimer_start(&adamtx_frametimer, adamtx_frameperiod, HRTIMER_MODE_REL);
 	adamtx_frametimer_enabled = 1;
 
-	adamtx_updateperiod = ktime_set(0, 1000000000UL / ADAMTX_FBRATE);
+	adamtx_updateperiod = ktime_set(0, 1000000000UL / adamtx_fb_rate);
 	hrtimer_init(&adamtx_updatetimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	adamtx_updatetimer.function = update_callback;
 	hrtimer_start(&adamtx_updatetimer, adamtx_updateperiod, HRTIMER_MODE_REL);
