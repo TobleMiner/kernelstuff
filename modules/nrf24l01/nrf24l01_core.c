@@ -99,7 +99,7 @@ static int nrf24l01_get_free_id(struct list_head* nrf_list, unsigned int* id)
 	unsigned int id_test;
 	bool id_free;
 	nrf24l01_t* nrf;
-	for(id_test = 0; id_test <= UINT_MAX; id_test++)
+	for(id_test = 0; id_test < UINT_MAX; id_test++)
 	{
 		id_free = true;
 		list_for_each(cursor, nrf_list)
