@@ -567,7 +567,7 @@ static int adamtx_probe(struct platform_device *device)
 		.depth = ADAMTX_DEPTH
 	};
 
-	if((ret = dummyfb_create(dummyfb, dummyfb_param))) {
+	if((ret = dummyfb_create(&dummyfb, dummyfb_param))) {
 		dev_err(&device->dev, "Failed to create framebuffer device\n");
 		goto panels_alloced;
 	}

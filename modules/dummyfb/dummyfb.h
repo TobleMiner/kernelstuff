@@ -45,7 +45,7 @@ struct dummyfb {
 	struct list_head list;
 };
 
-int dummyfb_create(struct dummyfb* dummyfb, struct dummyfb_param param);
+int dummyfb_create(struct dummyfb** dummyfb_ptr, struct dummyfb_param param);
 void dummyfb_destroy(struct dummyfb* dummyfb);
 
 size_t dummyfb_get_fbsize(struct dummyfb* dummyfb);

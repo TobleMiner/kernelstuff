@@ -136,8 +136,9 @@ static int dummyfb_validate_param(struct dummyfb_param param) {
 	return 0;
 }
 
-int dummyfb_create(struct dummyfb* dummyfb, struct dummyfb_param param) {
+int dummyfb_create(struct dummyfb** dummyfb_ptr, struct dummyfb_param param) {
 	int err;
+	struct dummyfb* dummyfb;
 
 	if((err = dummyfb_validate_param(param)))
 		return err;
@@ -177,6 +178,7 @@ int dummyfb_create(struct dummyfb* dummyfb, struct dummyfb_param param) {
 
 	list_add(&dummyfb->list, &dummyfbs);
 
+	*dummyfb_ptr = dummyfb;
 	return 0;
 
 fb_modedb_alloced:
