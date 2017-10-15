@@ -659,4 +659,3 @@ static void __exit adamtx_exit(void)
 
 module_init(adamtx_init);
 module_exit(adamtx_exit);
-
