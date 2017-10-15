@@ -46,8 +46,8 @@ void adamtx_gpio_free()
 
 void adamtx_gpio_set_outputs(uint32_t outputs)
 {
-	outputs &= adamtx_valid_gpio_bits;
 	uint32_t b;
+	outputs &= adamtx_valid_gpio_bits;
 	for(b = 0; b <= 27; ++b)
 	{
 		if(outputs & (1 << b))
