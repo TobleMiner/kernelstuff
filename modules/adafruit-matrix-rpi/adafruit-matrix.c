@@ -47,7 +47,7 @@ static unsigned long current_bcd_time = ADAMTX_BCD_TIME_NS;
 static struct matrix_size adamtx_virtual_size;
 static struct matrix_size adamtx_real_size;
 
-static struct enabled_chains enabled_chains;
+static struct adamtx_enabled_chains adamtx_enabled_chains;
 
 static uint8_t gamma_table[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -181,7 +181,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 			memset(row, 0, columns * sizeof(struct adamtx_panel_io));
 			for(k = 0; k < columns; k++)
 			{
-				if(enabled_chains.chain0) {
+				if(adamtx_enabled_chains.chain0) {
 					row[k].C0_B1 = (frame[row1_base + k].chains[0] & (1 << j)) > 0;
 					row[k].C0_G1 = ((frame[row1_base + k].chains[0] >> 8) & (1 << j)) > 0;
 					row[k].C0_R1 = ((frame[row1_base + k].chains[0] >> 16) & (1 << j)) > 0;
@@ -189,7 +189,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 					row[k].C0_G2 = ((frame[row2_base + k].chains[0] >> 8) & (1 << j)) > 0;
 					row[k].C0_R2 = ((frame[row2_base + k].chains[0] >> 16) & (1 << j)) > 0;
 				}
-				if(enabled_chains.chain1) {
+				if(adamtx_enabled_chains.chain1) {
 					row[k].C1_B1 = (frame[row1_base + k].chains[1] & (1 << j)) > 0;
 					row[k].C1_G1 = ((frame[row1_base + k].chains[1] >> 8) & (1 << j)) > 0;
 					row[k].C1_R1 = ((frame[row1_base + k].chains[1] >> 16) & (1 << j)) > 0;
@@ -197,7 +197,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 					row[k].C1_G2 = ((frame[row2_base + k].chains[1] >> 8) & (1 << j)) > 0;
 					row[k].C1_R2 = ((frame[row2_base + k].chains[1] >> 16) & (1 << j)) > 0;
 				}
-				if(enabled_chains.chain2) {
+				if(adamtx_enabled_chains.chain2) {
 					row[k].C2_B1 = (frame[row1_base + k].chains[2] & (1 << j)) > 0;
 					row[k].C2_G1 = ((frame[row1_base + k].chains[2] >> 8) & (1 << j)) > 0;
 					row[k].C2_R1 = ((frame[row1_base + k].chains[2] >> 16) & (1 << j)) > 0;
@@ -428,11 +428,11 @@ static enum hrtimer_restart perf_callback(struct hrtimer* timer)
 static void __init adamtx_init_gpio(void)
 {
 	uint32_t gpios = (1 << ADAMTX_GPIO_A) | (1 << ADAMTX_GPIO_B) | (1 << ADAMTX_GPIO_C) | (1 << ADAMTX_GPIO_D) | (1 << ADAMTX_GPIO_E) | (1 << ADAMTX_GPIO_OE) | (1 << ADAMTX_GPIO_STR) | (1 << ADAMTX_GPIO_CLK);
-	if(enabled_chains.chain0)
+	if(adamtx_enabled_chains.chain0)
 		gpios |= (1 << ADAMTX_GPIO_C0_R1) | (1 << ADAMTX_GPIO_C0_R2) | (1 << ADAMTX_GPIO_C0_G1) | (1 << ADAMTX_GPIO_C0_G2) | (1 << ADAMTX_GPIO_C0_B1) | (1 << ADAMTX_GPIO_C0_B2);
-	if(enabled_chains.chain1)
+	if(adamtx_enabled_chains.chain1)
 		gpios |= (1 << ADAMTX_GPIO_C1_R1) | (1 << ADAMTX_GPIO_C1_R2) | (1 << ADAMTX_GPIO_C1_G1) | (1 << ADAMTX_GPIO_C1_G2) | (1 << ADAMTX_GPIO_C1_B1) | (1 << ADAMTX_GPIO_C1_B2);
-	if(enabled_chains.chain2)
+	if(adamtx_enabled_chains.chain2)
 		gpios |= (1 << ADAMTX_GPIO_C2_R1) | (1 << ADAMTX_GPIO_C2_R2) | (1 << ADAMTX_GPIO_C2_G1) | (1 << ADAMTX_GPIO_C2_G2) | (1 << ADAMTX_GPIO_C2_B1) | (1 << ADAMTX_GPIO_C2_B2);
 	adamtx_gpio_set_outputs(gpios);
 }
@@ -442,9 +442,9 @@ static int adamtx_probe(struct platform_device *device)
 	int i, j, ret, framesize;
 	
 	// eanble chain 0
-	enabled_chains.chain0 = 1;
-	enabled_chains.chain1 = 1;
-	enabled_chains.chain2 = 0;
+	adamtx_enabled_chains.chain0 = 1;
+	adamtx_enabled_chains.chain1 = 1;
+	adamtx_enabled_chains.chain2 = 0;
 
 	if((ret = adamtx_gpio_alloc()))
 	{

@@ -120,7 +120,7 @@ struct adamtx_processable_frame {
 	struct matrix_ledpanel** panels;
 };
 
-struct enabled_chains {
+struct adamtx_enabled_chains {
     uint8_t chain0: 1;
     uint8_t chain1: 1;
     uint8_t chain2: 1;
