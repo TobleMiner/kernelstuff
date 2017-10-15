@@ -48,9 +48,9 @@ static int dummyfb_check_var(struct fb_var_screeninfo* var, struct fb_info* info
 static int dummyfb_set_par(struct fb_info* info);
 static int dummyfb_mmap(struct fb_info *info, struct vm_area_struct *vma);
 
-size_t dummyfb_get_fbsize(void);
-char* dummyfb_get_fbmem(void);
-void dummyfb_copy(void* buffer);
-void dummyfb_copy_part(void* buffer, size_t len);
+size_t dummyfb_get_fbsize(struct dummyfb* dummyfb);
+char* dummyfb_get_fbmem(struct dummyfb* dummyfb);
+void dummyfb_copy(void* buffer, struct dummyfb* dummyfb);
+void dummyfb_copy_part(void* buffer, off_t offset, size_t len, struct dummyfb* dummyfb);
 
 #endif

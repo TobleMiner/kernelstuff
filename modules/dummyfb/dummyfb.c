@@ -225,29 +225,29 @@ static void __exit dummyfb_exit(void)
 module_init(dummyfb_init);
 module_exit(dummyfb_exit);
 
-/*
-size_t dummyfb_get_fbsize(void)
+
+size_t dummyfb_get_fbsize(struct dummyfb* dummyfb)
 {
-	return DUMMYFB_MEMSIZE;
+	return dummyfb->fbmem_size;
 }
 
-char* dummyfb_get_fbmem(void)
+char* dummyfb_get_fbmem(struct dummyfb* dummyfb)
 {
-	return fbmem;
+	return dummyfb->fbmem;
 }
 
-void dummyfb_copy(void* buffer)
+void dummyfb_copy(void* buffer, struct dummyfb* dummyfb)
 {
-	memcpy(buffer, fbmem, DUMMYFB_MEMSIZE);
+	memcpy(buffer, dummyfb->fbmem, dummyfb->fbmem_size);
 }
 
-void dummyfb_copy_part(void* buffer, size_t len)
+void dummyfb_copy_part(void* buffer, off_t offset, size_t len, struct dummyfb* dummyfb)
 {
-	memcpy(buffer, fbmem, len);
+	memcpy(buffer + offset, dummyfb->fbmem, len);
 }
 
 EXPORT_SYMBOL(dummyfb_get_fbsize);
 EXPORT_SYMBOL(dummyfb_get_fbmem);
 EXPORT_SYMBOL(dummyfb_copy);
 EXPORT_SYMBOL(dummyfb_copy_part);
-*/
+
