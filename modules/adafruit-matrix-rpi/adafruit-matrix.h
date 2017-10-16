@@ -1,6 +1,8 @@
 #ifndef _ADAMTX_H
 #define _ADAMTX_H
 
+#include <linux/ktime.h>
+
 #include "matrix.h"
 #include "../dummyfb/dummyfb.h"
 
@@ -95,6 +97,76 @@ struct adamtx_panel_io {
 	uint32_t C0_G1	: 1;
 };
 
+struct adamtx_update_param {
+	long rate;
+//	struct adamtx* adatmx;
+};
+
+struct adamtx_draw_param {
+	long rate;
+//	struct adamtx* adamtx;
+};
+
+struct adamtx_enabled_chains {
+    uint8_t chain0: 1;
+    uint8_t chain1: 1;
+    uint8_t chain2: 1;
+};
+
+struct adamtx {
+	struct list_head panels;
+	struct adamtx_panel_io* paneldata;
+
+	char* framedata;
+	struct dummyfb* dummyfb;
+
+	struct adamtx_update_param update_param;
+	struct task_struct* update_thread;
+
+	struct adamtx_draw_param draw_param;
+	struct task_struct* draw_thread;
+
+	struct task_struct* perf_thread;
+	int do_perf;
+
+	struct matrix_pixel* intermediate_frame;
+
+	unsigned long current_bcd_base_time;
+
+	struct matrix_size real_size;
+	struct matrix_size virtual_size;
+
+	struct adamtx_enabled_chains enabled_chains;
+
+	int rate;
+	int fb_rate;
+
+
+	struct hrtimer frametimer;
+	ktime_t frameperiod;
+	bool frametimer_enabled;
+
+	struct hrtimer updatetimer;
+	ktime_t updateperiod;
+	bool updatetimer_enabled;
+
+	spinlock_t lock_draw;
+	bool do_draw;
+	bool do_update;
+
+	struct hrtimer perftimer;
+	ktime_t perfperiod;
+	bool perftimer_enabled;
+
+	unsigned long draws;
+	unsigned long draw_irqs;
+	unsigned long draw_time;
+
+	unsigned long updates;
+	unsigned long update_irqs;
+	unsigned long update_time;
+};
+
 struct adamtx_frame {
 	int width;
 	int height;
@@ -105,6 +177,7 @@ struct adamtx_frame {
 	off_t paneloffset;
 	struct matrix_pixel* frame;
 	off_t frameoffset;
+	struct adamtx* adamtx;
 };
 
 struct adamtx_processable_frame {
@@ -116,20 +189,7 @@ struct adamtx_processable_frame {
 	char* frame;
 	struct adamtx_panel_io* iodata;
 	struct list_head* panels;
-};
-
-struct adamtx_enabled_chains {
-    uint8_t chain0: 1;
-    uint8_t chain1: 1;
-    uint8_t chain2: 1;
-};
-
-struct adamtx_update_param {
-	long rate;
-};
-
-struct adamtx_draw_param {
-	long rate;
+	struct adamtx* adamtx;
 };
 
 extern void dummyfb_copy(void* buffer, struct dummyfb* dummyfb);
