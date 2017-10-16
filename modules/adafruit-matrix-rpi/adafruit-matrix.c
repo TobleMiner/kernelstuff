@@ -508,7 +508,7 @@ static int adamtx_parse_device_tree(struct device* dev) {
 		}
 
 		dev_info(dev, "Panel %d: Resolution: %d px x %d px, Physical position: (%d, %d), Virtual position: (%d, %d), Flip x: %d, Flip y: %d, Chain %d",
-				adamtx_num_panels, panel->xres, panel->yres, panel->virtual_x, panel->virtual_y, panel->realx, panel->realy, panel->flip_x, panel->flip_y, panel->chain);
+				adamtx_num_panels, panel->xres, panel->yres, panel->realx, panel->realy, panel->virtual_x, panel->virtual_y, panel->flip_x, panel->flip_y, panel->chain);
 
 		adamtx_num_panels++;
 
