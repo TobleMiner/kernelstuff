@@ -22,10 +22,10 @@ static int dummyfb_mmap(struct fb_info *info, struct vm_area_struct *vma);
 
 static struct fb_ops dummyfb_fbops =
 {
-	.owner =	THIS_MODULE,
+	.owner =		THIS_MODULE,
 	.fb_check_var =	dummyfb_check_var,
 	.fb_set_par =	dummyfb_set_par,
-	.fb_mmap =	dummyfb_mmap
+	.fb_mmap =		dummyfb_mmap
 };
 
 static int dummyfb_check_var(struct fb_var_screeninfo* var, struct fb_info* info)
@@ -51,8 +51,7 @@ static int dummyfb_set_par(struct fb_info* info)
 static int dummyfb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
 	struct dummyfb* dummyfb = info->par;
-	if(remap_pfn_range(vma, vma->vm_start, virt_to_phys((void *)dummyfb->fbmem) >> PAGE_SHIFT, dummyfb->fbmem_size, vma->vm_page_prot) < 0)
-	{
+	if(remap_pfn_range(vma, vma->vm_start, virt_to_phys((void *)dummyfb->fbmem) >> PAGE_SHIFT, dummyfb->fbmem_size, vma->vm_page_prot) < 0) {
 		return -EIO;
 	}
 	return 0;
@@ -99,7 +98,11 @@ void dummyfb_init_monspecs(struct dummyfb* dummyfb) {
 
 	*monspecs = (struct fb_monspecs) {
 		.input =	FB_DISP_RGB,
-		.signal =	FB_SIGNAL_NONE
+		.signal =	FB_SIGNAL_NONE,
+		.vfmin = 	dummyfb->param.rate,
+		.vfmax = 	dummyfb->param.rate,
+		.hfmin = 	dummyfb->param.rate * dummyfb->param.width,
+		.hfmax = 	dummyfb->param.rate * dummyfb->param.width
 	};
 }
 
@@ -113,12 +116,12 @@ int dummyfb_init_modedb(struct dummyfb* dummyfb) {
 	}
 
 	modedb->modes[0] = (struct fb_videomode){
-        .name =     "DEFAULT",
-        .sync =     0,
-        .vmode =    FB_VMODE_NONINTERLACED,
-		.refresh = dummyfb->param.rate,
-		.xres = dummyfb->param.width,
-		.yres = dummyfb->param.height
+        .name =		"DEFAULT",
+        .sync =		0,
+        .vmode =	FB_VMODE_NONINTERLACED,
+		.refresh =	dummyfb->param.rate,
+		.xres =		dummyfb->param.width,
+		.yres =		dummyfb->param.height
 	};
 
 	return 0;
