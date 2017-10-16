@@ -30,38 +30,6 @@ MODULE_AUTHOR("Tobas Schramm");
 MODULE_DESCRIPTION("Adafruit LED matrix driver");
 MODULE_VERSION("0.1");
 
-/*
-static LIST_HEAD(adamtx_panels);
-
-static struct dummyfb* dummyfb;
-
-static char* framedata;
-static struct adamtx_panel_io* paneldata;
-
-static struct adamtx_update_param adamtx_update_param;
-struct task_struct* adamtx_update_thread;
-
-static struct adamtx_draw_param adamtx_draw_param;
-struct task_struct* adamtx_draw_thread;
-
-struct task_struct* adamtx_perf_thread;
-static int adamtx_do_perf = 0;
-
-static struct matrix_pixel* adamtx_intermediate_frame;
-
-static unsigned long current_bcd_time = ADAMTX_BCD_TIME_NS;
-
-static struct matrix_size adamtx_virtual_size;
-static struct matrix_size adamtx_real_size;
-
-static struct adamtx_enabled_chains adamtx_enabled_chains;
-
-static int adamtx_rate;
-static int adamtx_fb_rate;
-
-static int adamtx_num_panels;
-*/
-
 static uint8_t gamma_table[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
@@ -80,24 +48,6 @@ static uint8_t gamma_table[] = {
   177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
   215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
 
-
-/*
-static struct hrtimer adamtx_frametimer;
-static ktime_t adamtx_frameperiod;
-static int adamtx_frametimer_enabled = 0;
-
-static struct hrtimer adamtx_updatetimer;
-static ktime_t adamtx_updateperiod;
-static int adamtx_updatetimer_enabled = 0;
-
-static DEFINE_SPINLOCK(adamtx_lock_draw);
-static int adamtx_do_draw = 0;
-static int adamtx_do_update = 0;
-
-static struct hrtimer adamtx_perftimer;
-static ktime_t adamtx_perfperiod;
-static int adamtx_perftimer_enabled = 0;
-*/
 
 void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 {
@@ -258,12 +208,6 @@ int process_frame(struct adamtx_processable_frame* frame)
 	return 0;
 }
 
-/*
-static unsigned long adamtx_draws = 0;
-static unsigned long adamtx_draw_irqs = 0;
-static unsigned long adamtx_draw_time = 0;
-*/
-
 static int draw_frame(void* arg)
 {
 	unsigned long irqflags;
@@ -289,12 +233,6 @@ static int draw_frame(void* arg)
 	}
 	do_exit(0);	
 }
-
-/*
-static unsigned long adamtx_updates = 0;
-static unsigned long adamtx_update_irqs = 0;
-static unsigned long adamtx_update_time = 0;
-*/
 
 static int update_frame(void* arg)
 {
