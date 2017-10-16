@@ -23,23 +23,23 @@ struct dummyfb_modedb {
 
 struct dummyfb {
 	struct dummyfb_param param;
+	struct dummyfb_modedb modedb;
 
 	char* fbmem;
 	size_t fbmem_size;
 
 	struct fb_info* fbinfo;
-	
-	struct dummyfb_modedb modedb;
-
 	struct fb_monspecs monspecs;
-
 	struct fb_ops fbops;
 
 	struct list_head list;
+
+	atomic_t refcount;
+	bool exiting;
 };
 
 int dummyfb_create(struct dummyfb** dummyfb_ptr, struct dummyfb_param param);
-void dummyfb_destroy(struct dummyfb* dummyfb);
+int dummyfb_destroy(struct dummyfb* dummyfb);
 
 size_t dummyfb_get_fbsize(struct dummyfb* dummyfb);
 char* dummyfb_get_fbmem(struct dummyfb* dummyfb);

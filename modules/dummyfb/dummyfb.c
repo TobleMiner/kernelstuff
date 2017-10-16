@@ -20,13 +20,38 @@ static int dummyfb_check_var(struct fb_var_screeninfo* var, struct fb_info* info
 static int dummyfb_set_par(struct fb_info* info);
 static int dummyfb_mmap(struct fb_info *info, struct vm_area_struct *vma);
 
+static int dummyfb_open(struct fb_info* fbinfo, int user);
+static int dummyfb_release(struct fb_info* fbinfo, int user);
+
 static struct fb_ops dummyfb_fbops =
 {
 	.owner =		THIS_MODULE,
 	.fb_check_var =	dummyfb_check_var,
 	.fb_set_par =	dummyfb_set_par,
-	.fb_mmap =		dummyfb_mmap
+	.fb_mmap =		dummyfb_mmap,
+
+	.fb_open =		dummyfb_open,
+	.fb_release =	dummyfb_release
 };
+
+static int dummyfb_open(struct fb_info* fbinfo, int user) {
+	struct dummyfb* dummyfb = fbinfo->par;
+
+	if(dummyfb->exiting)
+		return -EAGAIN;
+
+	atomic_inc(&dummyfb->refcount);
+
+	return 0;
+}
+
+static int dummyfb_release(struct fb_info* fbinfo, int user) {
+	struct dummyfb* dummyfb = fbinfo->par;
+
+	atomic_dec(&dummyfb->refcount);
+
+	return 0;
+}
 
 static int dummyfb_check_var(struct fb_var_screeninfo* var, struct fb_info* info)
 {
@@ -145,12 +170,13 @@ int dummyfb_create(struct dummyfb** dummyfb_ptr, struct dummyfb_param param) {
 	if((err = dummyfb_validate_param(param)))
 		return err;
 
-	dummyfb = vmalloc(sizeof(struct dummyfb));
+	dummyfb = vzalloc(sizeof(struct dummyfb));
 	if(!dummyfb) {
 		err = -ENOMEM;
 		goto fail;
 	}
 
+	atomic_set(&dummyfb->refcount, 0);
 	dummyfb->param = param;
 
 	dummyfb->fbinfo = framebuffer_alloc(sizeof(struct dummyfb*), NULL);
@@ -197,7 +223,19 @@ fail:
 
 EXPORT_SYMBOL(dummyfb_create);
 
-void dummyfb_destroy(struct dummyfb* dummyfb) {
+int dummyfb_destroy(struct dummyfb* dummyfb) {
+		dummyfb->exiting = true;
+
+		lock_fb_info(dummyfb->fbinfo);
+
+		if(atomic_read(&dummyfb->refcount)) {
+			unlock_fb_info(dummyfb->fbinfo);
+			dummyfb->exiting = false;
+			return -EBUSY;
+		}
+
+		unlock_fb_info(dummyfb->fbinfo);
+
 		if(dummyfb->param.remove)
 			dummyfb->param.remove(dummyfb);
 
@@ -207,7 +245,10 @@ void dummyfb_destroy(struct dummyfb* dummyfb) {
 		dummyfb_free_modedb(dummyfb);
 		kfree(dummyfb->fbmem);
 		framebuffer_release(dummyfb->fbinfo);
+
 		vfree(dummyfb);		
+
+		return 0;
 }
 
 EXPORT_SYMBOL(dummyfb_destroy);
