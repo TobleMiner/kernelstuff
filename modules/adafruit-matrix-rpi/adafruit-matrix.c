@@ -680,7 +680,9 @@ static int adamtx_remove(struct platform_device *device)
 	vfree(adamtx_intermediate_frame);
 	vfree(paneldata);
 	vfree(framedata);
-	dummyfb_destroy(dummyfb);
+	while(dummyfb_destroy(dummyfb)) {
+		usleep_range(100000UL, 500000UL);
+	}
 	free_panels();
 	adamtx_gpio_free();
 	printk(KERN_INFO ADAMTX_NAME ": shutting down\n");
