@@ -387,7 +387,7 @@ static enum hrtimer_restart update_callback(struct hrtimer* timer)
 {
 	struct adamtx* adamtx = container_of(timer, struct adamtx, updatetimer);
 
-	hrtimer_forward_now(timer, adamtx->frameperiod);
+	hrtimer_forward_now(timer, adamtx->updateperiod);
 	adamtx->do_update = 1;
 	adamtx->update_irqs++;
 	return HRTIMER_RESTART;
