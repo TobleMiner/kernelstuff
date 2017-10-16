@@ -714,6 +714,8 @@ static int adamtx_remove(struct platform_device* device)
 	}
 	free_panels(adamtx);
 	adamtx_gpio_free();
+	vfree(adamtx);
+
 	dev_info(&device->dev, "Shutting down\n");
 	return 0;
 }
