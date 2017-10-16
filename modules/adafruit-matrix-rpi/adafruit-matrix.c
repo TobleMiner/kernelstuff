@@ -388,7 +388,7 @@ static enum hrtimer_restart update_callback(struct hrtimer* timer)
 	struct adamtx* adamtx = container_of(timer, struct adamtx, updatetimer);
 
 	hrtimer_forward_now(timer, adamtx->updateperiod);
-	adamtx->do_update = 1;
+	adamtx->do_update = true;
 	adamtx->update_irqs++;
 	return HRTIMER_RESTART;
 }
@@ -398,7 +398,7 @@ static enum hrtimer_restart draw_callback(struct hrtimer* timer)
 	struct adamtx* adamtx = container_of(timer, struct adamtx, frametimer);
 
 	hrtimer_forward_now(timer, adamtx->frameperiod);
-	adamtx->do_draw = 1;
+	adamtx->do_draw = true;
 	adamtx->draw_irqs++;
 	return HRTIMER_RESTART;
 }
@@ -408,7 +408,7 @@ static enum hrtimer_restart perf_callback(struct hrtimer* timer)
 	struct adamtx* adamtx = container_of(timer, struct adamtx, perftimer);
 
 	hrtimer_forward_now(timer, adamtx->perfperiod);
-	adamtx->do_perf = 1;
+	adamtx->do_perf = true;
 
 	return HRTIMER_RESTART;
 }
