@@ -140,7 +140,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 {
 	int i, j, k, addr;
 	struct matrix_pixel* frame = framepart->frame;
-	struct adamtx* adamtx = framepart->adamtx;
+	struct adamtx_enabled_chains* enabled_chains = framepart->enabled_chains;
 	int rows = framepart->height;
 	int columns = framepart->width;
 	int pwm_steps = framepart->pwm_bits;
@@ -155,7 +155,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 			memset(row, 0, columns * sizeof(struct adamtx_panel_io));
 			for(k = 0; k < columns; k++)
 			{
-				if(adamtx->enabled_chains.chain0) {
+				if(enabled_chains->chain0) {
 					row[k].C0_B1 = (frame[row1_base + k].chains[0] & (1 << j)) > 0;
 					row[k].C0_G1 = ((frame[row1_base + k].chains[0] >> 8) & (1 << j)) > 0;
 					row[k].C0_R1 = ((frame[row1_base + k].chains[0] >> 16) & (1 << j)) > 0;
@@ -163,7 +163,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 					row[k].C0_G2 = ((frame[row2_base + k].chains[0] >> 8) & (1 << j)) > 0;
 					row[k].C0_R2 = ((frame[row2_base + k].chains[0] >> 16) & (1 << j)) > 0;
 				}
-				if(adamtx->enabled_chains.chain1) {
+				if(enabled_chains->chain1) {
 					row[k].C1_B1 = (frame[row1_base + k].chains[1] & (1 << j)) > 0;
 					row[k].C1_G1 = ((frame[row1_base + k].chains[1] >> 8) & (1 << j)) > 0;
 					row[k].C1_R1 = ((frame[row1_base + k].chains[1] >> 16) & (1 << j)) > 0;
@@ -171,7 +171,7 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 					row[k].C1_G2 = ((frame[row2_base + k].chains[1] >> 8) & (1 << j)) > 0;
 					row[k].C1_R2 = ((frame[row2_base + k].chains[1] >> 16) & (1 << j)) > 0;
 				}
-				if(adamtx->enabled_chains.chain2) {
+				if(enabled_chains->chain2) {
 					row[k].C2_B1 = (frame[row1_base + k].chains[2] & (1 << j)) > 0;
 					row[k].C2_G1 = ((frame[row1_base + k].chains[2] >> 8) & (1 << j)) > 0;
 					row[k].C2_R1 = ((frame[row1_base + k].chains[2] >> 16) & (1 << j)) > 0;
@@ -191,12 +191,12 @@ void prerender_frame_part(struct adamtx_frame* framepart)
 	}
 }
 
-void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns, struct adamtx* adamtx)
+void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns, unsigned long* current_bcd_base_time)
 {
 	int i, j;
 	int pwm_steps = bits;
 	struct timespec last, now;
-	unsigned long rem_delay, clock_out_delay, bcd_time = adamtx->current_bcd_base_time;
+	unsigned long rem_delay, clock_out_delay, bcd_time = *current_bcd_base_time;
 	ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
 	for(i = rows / 2 - 1; i >= 0; i--)
 	{
@@ -220,10 +220,10 @@ void show_frame(struct adamtx_panel_io* frame, int bits, int rows, int columns, 
 			clock_out_delay = (now.tv_sec - last.tv_sec) * 1000000000UL + (now.tv_nsec - last.tv_nsec);
 			if(clock_out_delay < rem_delay) {
 				if((clock_out_delay < rem_delay) && !j)
-					adamtx->current_bcd_base_time = bcd_time - 50;
+					*current_bcd_base_time = bcd_time - 50;
 				ndelay(rem_delay - clock_out_delay);
 			} else if(clock_out_delay > rem_delay) {
-					adamtx->current_bcd_base_time = bcd_time + 50;
+					*current_bcd_base_time = bcd_time + 50;
 			}
 		}
 	}
@@ -245,13 +245,13 @@ int process_frame(struct adamtx_processable_frame* frame)
 		.rows = frame->rows,
 		.paneldata = frame->iodata,
 		.paneloffset = 0,
-		.frame = frame->adamtx->intermediate_frame,
+		.frame = frame->intermediate_frame,
 		.frameoffset = 0,
 		.pwm_bits = frame->pwm_bits,
-		.adamtx = frame->adamtx
+		.enabled_chains = frame->enabled_chains
 	};
 
-	remap_frame(frame->panels, frame->frame, frame->width, frame->height, frame->adamtx->intermediate_frame, frame->columns, frame->rows);
+	remap_frame(frame->panels, frame->frame, frame->width, frame->height, frame->intermediate_frame, frame->columns, frame->rows);
 
 	render_part(&threadframe);
 
@@ -280,7 +280,7 @@ static int draw_frame(void* arg)
 		adamtx->do_draw = false;
 		spin_lock_irqsave(&adamtx->lock_draw, irqflags);
 		getnstimeofday(&before);
-		show_frame(adamtx->paneldata, ADAMTX_PWM_BITS, adamtx->virtual_size.height, adamtx->virtual_size.width, adamtx);
+		show_frame(adamtx->paneldata, ADAMTX_PWM_BITS, adamtx->virtual_size.height, adamtx->virtual_size.width, &adamtx->current_bcd_base_time);
 		getnstimeofday(&after);
 		adamtx->draw_time += (after.tv_sec - before.tv_sec) * 1000000000UL + (after.tv_nsec - before.tv_nsec);
 		adamtx->draws++;
@@ -325,7 +325,8 @@ static int update_frame(void* arg)
 			.iodata = adamtx->paneldata,
 			.frame = adamtx->framedata,
 			.panels = &adamtx->panels,
-			.adamtx = adamtx
+			.enabled_chains = &adamtx->enabled_chains,
+			.intermediate_frame = adamtx->intermediate_frame
 		};
 
 		spin_lock_irqsave(&adamtx->lock_draw, irqflags);

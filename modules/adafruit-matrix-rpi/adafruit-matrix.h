@@ -177,7 +177,7 @@ struct adamtx_frame {
 	off_t paneloffset;
 	struct matrix_pixel* frame;
 	off_t frameoffset;
-	struct adamtx* adamtx;
+	struct adamtx_enabled_chains* enabled_chains;
 };
 
 struct adamtx_processable_frame {
@@ -189,7 +189,8 @@ struct adamtx_processable_frame {
 	char* frame;
 	struct adamtx_panel_io* iodata;
 	struct list_head* panels;
-	struct adamtx* adamtx;
+	struct adamtx_enabled_chains* enabled_chains;
+	struct matrix_pixel* intermediate_frame;
 };
 
 extern void dummyfb_copy(void* buffer, struct dummyfb* dummyfb);
