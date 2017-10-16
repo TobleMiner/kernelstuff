@@ -98,8 +98,6 @@ void dummyfb_init_monspecs(struct dummyfb* dummyfb) {
 	struct fb_monspecs* monspecs = &dummyfb->monspecs;
 
 	*monspecs = (struct fb_monspecs) {
-		.modedb = dummyfb->modedb.modes,
-		.modedb_len = dummyfb->modedb.num_modes,
 		.input =	FB_DISP_RGB,
 		.signal =	FB_SIGNAL_NONE
 	};
