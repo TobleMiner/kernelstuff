@@ -75,6 +75,7 @@ static void dummyfb_init_fb_info(struct dummyfb* dummyfb)
 	fbinfo->var.yres = dummyfb->param.height;
 	fbinfo->var.xres_virtual = dummyfb->param.width;
 	fbinfo->var.yres_virtual = dummyfb->param.height;
+	fbinfo->var.pixclock = KHZ2PICOS(dummyfb->param.height * dummyfb->param.width * dummyfb->param.rate + 999UL) * 1000;
 	fbinfo->var.red.length = 8;
 	fbinfo->var.red.offset = 16;
 	fbinfo->var.green.length = 8;
