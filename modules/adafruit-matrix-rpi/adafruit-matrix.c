@@ -356,7 +356,7 @@ static int show_perf(void* arg)
             usleep_range(5000, 10000);
         if(kthread_should_stop())
             break;
-		adamtx->do_perf = true;
+		adamtx->do_perf = false;
 
 		spin_lock_irqsave(&adamtx->lock_draw, irqflags);
 
