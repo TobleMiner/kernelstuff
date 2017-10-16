@@ -4,13 +4,6 @@
 #include <linux/types.h>
 #include <linux/fb.h>
 
-#define DUMMYFB_DEFAULT_WIDTH 64
-#define DUMMYFB_DEFAULT_HEIGHT 64
-#define DUMMYFB_DEFAULT_DEPTH 24
-#define DUMMYFB_DEFAULT_REFRESH 60
-
-#define DUMMYFB_MEMSIZE (dummyfb_width * dummyfb_height * (dummyfb_depth >> 3))
-
 struct dummyfb;
 
 struct dummyfb_param {
