@@ -50,14 +50,17 @@ struct matrix_ledpanel* matrix_get_panel_at_real(struct list_head* panels, int x
 void matrix_panel_get_local_position(struct matrix_pos* pos, struct matrix_ledpanel* panel, int x, int y)
 {
 	int tmp;
+	struct matrix_size panel_size;
 
 	pos->x = x - panel->realx;
 	pos->y = y - panel->realy;
+
+	matrix_panel_get_size_real(panel, &panel_size);
 	if(panel->flip_x) {
-		pos->x = panel->xres - pos->x - 1;
+		pos->x = panel_size.width - pos->x - 1;
 	}
 	if(panel->flip_y) {
-		pos->y = panel->yres - pos->y - 1;
+		pos->y = panel_size.height - pos->y - 1;
 	}
 
 	if(panel->rotation % 2) {
