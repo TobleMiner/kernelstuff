@@ -446,6 +446,11 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 			goto exit_panel_alloc;
 		}
 
+		if((err = adamtx_of_get_int_range(&panel->rotation, panel_node, "adamtx-rotation", 0, 0, 3))) {
+			dev_err(dev, "Invalid rotation. Must be in range from 0 to 3\n");
+			goto exit_panel_alloc;
+		}
+
 		if((err = adamtx_of_get_int_range(&panel->chain, panel_node, "adamtx-chain", 0, 0, 2))) {
 			dev_err(dev, "Invalid chain. Must be in range from 0 to 2\n");
 			goto exit_panel_alloc;
@@ -519,8 +524,8 @@ static int adamtx_probe(struct platform_device* device)
 	adamtx_init_gpio(adamtx);
 
 	// Calculate real and virtual display size (smallest rectangle around all displays)
-	matrix_panel_get_size_real(&adamtx->real_size, &adamtx->panels);
-	matrix_panel_get_size_virtual(&adamtx->virtual_size, &adamtx->panels);
+	matrix_get_size_real(&adamtx->real_size, &adamtx->panels);
+	matrix_get_size_virtual(&adamtx->virtual_size, &adamtx->panels);
 
 	dev_info(&device->dev, "Calculated real (user) size: (%d, %d)\n", adamtx->real_size.width, adamtx->real_size.height);
 	dev_info(&device->dev, "Calculated virtual (technical) size: (%d, %d)\n", adamtx->virtual_size.width, adamtx->virtual_size.height);

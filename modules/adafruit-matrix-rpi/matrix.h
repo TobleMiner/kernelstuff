@@ -22,6 +22,7 @@ struct matrix_ledpanel {
 	int	flip_x;
 	int	flip_y;
 	int chain;
+	int rotation;
 	struct list_head list;
 };
 
@@ -51,8 +52,8 @@ void matrix_panel_get_local_position(struct matrix_pos* pos, struct matrix_ledpa
 
 void matrix_panel_get_position(struct matrix_pos* pos, struct matrix_ledpanel* panel, int x, int y);
 
-void matrix_panel_get_size_virtual(struct matrix_size* size, struct list_head* panels);
+void matrix_get_size_virtual(struct matrix_size* size, struct list_head* panels);
 
-void matrix_panel_get_size_real(struct matrix_size* size, struct list_head* panels);
+void matrix_get_size_real(struct matrix_size* size, struct list_head* panels);
 
 #endif
