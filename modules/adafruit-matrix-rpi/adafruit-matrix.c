@@ -563,7 +563,7 @@ static int adamtx_probe(struct platform_device* device)
 	}
 
 	remap_size = adamtx->virtual_size.height * adamtx->virtual_size.width * sizeof(struct matrix_pixel);
-	if(!(adamtx->intermediate_frame = vmalloc(remap_size))) {
+	if(!(adamtx->intermediate_frame = vzalloc(remap_size))) {
 		ret = -ENOMEM;
 		dev_err(&device->dev, "Failed to allocate intermediate frame memory\n");
 		goto paneldata_alloced;
