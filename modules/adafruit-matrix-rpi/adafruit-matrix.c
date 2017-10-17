@@ -449,8 +449,8 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 			goto exit_panel_alloc;
 		}
 
-		if((err = adamtx_of_get_int_range(&panel->rotation, panel_node, "adamtx-rotation", 0, 0, 3))) {
-			dev_err(dev, "Invalid rotation. Must be in range from 0 to 3\n");
+		if((err = adamtx_of_get_int_range(&panel->rotate, panel_node, "adamtx-rotate", 0, 0, 1))) {
+			dev_err(dev, "Invalid rotation flag. Must be either 0 or 1\n");
 			goto exit_panel_alloc;
 		}
 
@@ -470,8 +470,8 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 				adamtx->enabled_chains.chain2 = 1;
 		}
 
-		dev_info(dev, "Panel %d: Resolution: %d px x %d px, Physical position: (%d, %d), Virtual position: (%d, %d), Flip x: %d, Flip y: %d, Chain %d",
-				adamtx_num_panels, panel->xres, panel->yres, panel->realx, panel->realy, panel->virtual_x, panel->virtual_y, panel->flip_x, panel->flip_y, panel->chain);
+		dev_info(dev, "Panel %d: Resolution: %d px x %d px, Physical position: (%d, %d), Virtual position: (%d, %d), Flip x: %d, Flip y: %d, Rotate: %d, Chain %d",
+				adamtx_num_panels, panel->xres, panel->yres, panel->realx, panel->realy, panel->virtual_x, panel->virtual_y, panel->flip_x, panel->flip_y, panel->rotate, panel->chain);
 
 		adamtx_num_panels++;
 

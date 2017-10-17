@@ -21,6 +21,7 @@
                                         adamtx-real-y = <0>;
                                         adamtx-flip-x = <1>;
                                         adamtx-flip-y = <0>;
+                                        adamtx-rotate = <0>;
                                         adamtx-chain = <1>;
                                 };
                                 lower-panel@1 {
@@ -32,6 +33,7 @@
                                         adamtx-real-y = <32>;
                                         adamtx-flip-x = <1>;
                                         adamtx-flip-y = <0>;
+                                        adamtx-rotate = <0>;
                                         adamtx-chain = <0>;
                                 };
                         };

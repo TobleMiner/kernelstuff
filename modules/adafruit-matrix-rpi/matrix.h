@@ -22,7 +22,7 @@ struct matrix_ledpanel {
 	int	flip_x;
 	int	flip_y;
 	int chain;
-	int rotation;
+	int rotate;
 	struct list_head list;
 };
 

@@ -6,7 +6,7 @@
 
 static void matrix_panel_get_size_real(struct matrix_ledpanel* panel, struct matrix_size* size)
 {
-	if(panel->rotation % 2) {
+	if(panel->rotate) {
 		size->width = panel->yres;
 		size->height = panel->xres;
 	} else {
@@ -63,7 +63,7 @@ void matrix_panel_get_local_position(struct matrix_pos* pos, struct matrix_ledpa
 		pos->y = panel_size.height - pos->y - 1;
 	}
 
-	if(panel->rotation % 2) {
+	if(panel->rotate) {
 		tmp = pos->x;
 		pos->x = pos->y;
 		pos->y = tmp;
