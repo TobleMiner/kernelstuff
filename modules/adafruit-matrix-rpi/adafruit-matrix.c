@@ -231,7 +231,7 @@ static int draw_frame(void* arg)
 		spin_unlock_irqrestore(&adamtx->lock_draw, irqflags);
 		yield();
 	}
-	do_exit(0);	
+	do_exit(0);
 }
 
 static int update_frame(void* arg)
