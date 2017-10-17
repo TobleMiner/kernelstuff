@@ -290,13 +290,13 @@ void dummyfb_copy(void* buffer, struct dummyfb* dummyfb)
 	memcpy(buffer, dummyfb->fbmem, dummyfb->fbmem_size);
 }
 
-void dummyfb_copy_part(void* buffer, off_t offset, size_t len, struct dummyfb* dummyfb)
+void dummyfb_copy_chunk(void* buffer, size_t len, struct dummyfb* dummyfb)
 {
-	memcpy(buffer + offset, dummyfb->fbmem, len);
+	memcpy(buffer, dummyfb->fbmem, len);
 }
 
 EXPORT_SYMBOL(dummyfb_get_fbsize);
 EXPORT_SYMBOL(dummyfb_get_fbmem);
 EXPORT_SYMBOL(dummyfb_copy);
-EXPORT_SYMBOL(dummyfb_copy_part);
+EXPORT_SYMBOL(dummyfb_copy_chunk);
 

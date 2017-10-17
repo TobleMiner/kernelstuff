@@ -36,4 +36,4 @@ Copy all data from framebuffer:
 ```void dummyfb_copy(void* buffer, struct dummyfb* dummyfb)```
 
 Copy chunk of data from framebuffer:
-```void dummyfb_copy_part(void* buffer, off_t offset, size_t len, struct dummyfb* dummyfb)```
+```void dummyfb_copy_chunk(void* buffer, size_t len, struct dummyfb* dummyfb)```

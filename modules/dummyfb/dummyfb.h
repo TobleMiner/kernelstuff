@@ -44,6 +44,6 @@ int dummyfb_destroy(struct dummyfb* dummyfb);
 size_t dummyfb_get_fbsize(struct dummyfb* dummyfb);
 char* dummyfb_get_fbmem(struct dummyfb* dummyfb);
 void dummyfb_copy(void* buffer, struct dummyfb* dummyfb);
-void dummyfb_copy_part(void* buffer, off_t offset, size_t len, struct dummyfb* dummyfb);
+void dummyfb_copy_chunk(void* buffer, size_t len, struct dummyfb* dummyfb);
 
 #endif
