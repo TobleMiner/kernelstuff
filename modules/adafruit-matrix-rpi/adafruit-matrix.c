@@ -78,6 +78,9 @@ void remap_frame(struct list_head* panels, char* from, int width_from, int heigh
 	for(i = 0; i < height_from; i++) {
 		for(j = 0; j < width_from; j++) {
 			panel = matrix_get_panel_at_real(panels, j, i);
+			if(!panel)
+				continue;
+
 			matrix_panel_get_position(&pos, panel, j, i);
 			offset = i * width_from * ADAMTX_PIX_LEN + j * ADAMTX_PIX_LEN;
 			pixel = &to[pos.y * width_to + pos.x];
