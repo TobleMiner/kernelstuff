@@ -124,10 +124,10 @@ void dummyfb_init_monspecs(struct dummyfb* dummyfb) {
 	*monspecs = (struct fb_monspecs) {
 		.input =	FB_DISP_RGB,
 		.signal =	FB_SIGNAL_NONE,
-		.vfmin = 	dummyfb->param.rate,
-		.vfmax = 	dummyfb->param.rate,
-		.hfmin = 	dummyfb->param.rate * dummyfb->param.width,
-		.hfmax = 	dummyfb->param.rate * dummyfb->param.width
+		.vfmin =	dummyfb->param.rate,
+		.vfmax =	dummyfb->param.rate,
+		.hfmin =	dummyfb->param.rate * dummyfb->param.width,
+		.hfmax =	dummyfb->param.rate * dummyfb->param.width
 	};
 }
 
@@ -141,9 +141,9 @@ int dummyfb_init_modedb(struct dummyfb* dummyfb) {
 	}
 
 	modedb->modes[0] = (struct fb_videomode){
-        .name =		"DEFAULT",
-        .sync =		0,
-        .vmode =	FB_VMODE_NONINTERLACED,
+		.name =		"DEFAULT",
+		.sync =		0,
+		.vmode =	FB_VMODE_NONINTERLACED,
 		.refresh =	dummyfb->param.rate,
 		.xres =		dummyfb->param.width,
 		.yres =		dummyfb->param.height
@@ -246,7 +246,7 @@ int dummyfb_destroy(struct dummyfb* dummyfb) {
 		kfree(dummyfb->fbmem);
 		framebuffer_release(dummyfb->fbinfo);
 
-		vfree(dummyfb);		
+		vfree(dummyfb);
 
 		return 0;
 }
@@ -264,7 +264,7 @@ static void __exit dummyfb_exit(void)
 {
 	struct dummyfb *dummyfb, *dummyfb_next;
 	printk(KERN_INFO "dummyfb: REMOVE");
-	
+
 	list_for_each_entry_safe(dummyfb, dummyfb_next, &dummyfbs, list) {
 		dummyfb_destroy(dummyfb);
 	}
