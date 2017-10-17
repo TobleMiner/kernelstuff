@@ -3,7 +3,7 @@ ADAMTX
 
 A simple framebuffer driver for large Adafruit LED matrix panels on Raspberry PI 3
 
-# Copiling
+# Compiling
 
 Assuming you have kernel headers and build tools installed compiling is pretty straight forward:
 
