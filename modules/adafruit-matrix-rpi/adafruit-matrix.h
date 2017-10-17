@@ -108,9 +108,9 @@ struct adamtx_draw_param {
 };
 
 struct adamtx_enabled_chains {
-    uint8_t chain0: 1;
-    uint8_t chain1: 1;
-    uint8_t chain2: 1;
+	uint8_t chain0: 1;
+	uint8_t chain1: 1;
+	uint8_t chain2: 1;
 };
 
 struct adamtx {

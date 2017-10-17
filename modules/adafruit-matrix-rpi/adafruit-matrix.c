@@ -290,11 +290,11 @@ static int show_perf(void* arg)
 	struct adamtx* adamtx = arg;
 
 	while(!kthread_should_stop())
-    {
-        while(!adamtx->do_perf && !kthread_should_stop())
-            usleep_range(5000, 10000);
-        if(kthread_should_stop())
-            break;
+	{
+		while(!adamtx->do_perf && !kthread_should_stop())
+		usleep_range(5000, 10000);
+		if(kthread_should_stop())
+			break;
 		adamtx->do_perf = false;
 
 		spin_lock_irqsave(&adamtx->lock_draw, irqflags);
@@ -501,7 +501,7 @@ static int adamtx_probe(struct platform_device* device)
 		ret = -ENOMEM;
 		goto none_alloced;
 	}
-	
+
 	adamtx->panels = (struct list_head) LIST_HEAD_INIT(adamtx->panels);
 	spin_lock_init(&adamtx->lock_draw);
 
@@ -556,9 +556,9 @@ static int adamtx_probe(struct platform_device* device)
 
 	remap_size = adamtx->virtual_size.height * adamtx->virtual_size.width * sizeof(struct matrix_pixel);
 	if(!(adamtx->intermediate_frame = vmalloc(remap_size))) {
-        ret = -ENOMEM;
+		ret = -ENOMEM;
 		dev_err(&device->dev, "Failed to allocate intermediate frame memory\n");
-        goto paneldata_alloced;
+		goto paneldata_alloced;
 	}
 
 	adamtx->update_param.rate = adamtx->fb_rate;
