@@ -20,9 +20,15 @@ creates a new framebuffer device and populates the supplied dummyfb structure po
 
 The function
 
-```void dummyfb_destroy(struct dummyfb* dummyfb)```
+```int dummyfb_destroy(struct dummyfb* dummyfb)```
 
-tears down a dummyfb instance, destroying the associated framebuffer device.
+tears down a dummyfb instance, destroying the associated framebuffer device. A non-zero return value indicates that the device is busy and can not be destroyed. In that case just
+loop until zero is returned:
+```
+while(dummyfb_destroy(dummyfb)) {
+	usleep_range(100000, 500000);
+}
+```
 
 ## Accessing the framebuffer
 
