@@ -4,7 +4,7 @@
 
 #include "matrix.h"
 
-static void matrix_panel_get_size_real(struct matrix_ledpanel* panel, struct matrix_size* size)
+static void matrix_panel_get_size_real(struct matrix_size* size, struct matrix_ledpanel* panel)
 {
 	if(panel->rotate) {
 		size->width = panel->yres;
@@ -18,7 +18,7 @@ static void matrix_panel_get_size_real(struct matrix_ledpanel* panel, struct mat
 int matrix_panel_contains_real(struct matrix_ledpanel* panel, int x, int y)
 {
 	struct matrix_size size_real;
-	matrix_panel_get_size_real(panel, &size_real);
+	matrix_panel_get_size_real(&size_real, panel);
 	return x >= panel->realx && x < panel->realx + size_real.width && y >= panel->realy && y < panel->realy + size_real.height;
 }
 
@@ -55,7 +55,7 @@ void matrix_panel_get_local_position(struct matrix_pos* pos, struct matrix_ledpa
 	pos->x = x - panel->realx;
 	pos->y = y - panel->realy;
 
-	matrix_panel_get_size_real(panel, &panel_size);
+	matrix_panel_get_size_real(&panel_size, panel);
 	if(panel->flip_x) {
 		pos->x = panel_size.width - pos->x - 1;
 	}
@@ -120,7 +120,7 @@ void matrix_get_size_real(struct matrix_size* size, struct list_head* panels) {
 	size->height = 0;
 	list_for_each_entry(panel, panels, list) {
 
-		matrix_panel_get_size_real(panel, &size_real);
+		matrix_panel_get_size_real(&size_real, panel);
 
 		current_width = size_real.width + panel->realx;
 		if(current_width > size->width)
