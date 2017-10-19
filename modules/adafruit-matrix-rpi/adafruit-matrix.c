@@ -609,7 +609,6 @@ static int adamtx_probe(struct platform_device* device)
 	wake_up_process(adamtx->draw_thread);
 
 	adamtx->perf_thread = kthread_create(show_perf, adamtx, "adamtx_perf");
-	kthread_bind(adamtx->perf_thread, 1);
 	if(IS_ERR(adamtx->perf_thread))
 	{
 		ret = PTR_ERR(adamtx->perf_thread);
