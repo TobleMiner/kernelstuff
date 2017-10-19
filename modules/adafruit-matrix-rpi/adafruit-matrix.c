@@ -150,7 +150,7 @@ void prerender_frame(struct adamtx_prerender_frame* frame)
 void show_frame(struct adamtx* adamtx)
 {
 	int i, j, remap_line = 0, prerender_line = 0;
-	struct adamtx_panel_io* frame = adamtx->paneldata;
+	struct adamtx_panel_io* paneldata = adamtx->paneldata_out;
 	int pwm_steps = ADAMTX_PWM_BITS;
 	int rows = adamtx->virtual_size.height;
 	int columns = adamtx->virtual_size.width;
@@ -185,7 +185,7 @@ void show_frame(struct adamtx* adamtx)
 		{
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
 			getnstimeofday(&last);
-			adamtx_clock_out_row(frame + i * pwm_steps * columns + j * columns, columns);
+			adamtx_clock_out_row(paneldata + i * pwm_steps * columns + j * columns, columns);
 			if(!j) {
 				adamtx_set_address(i);
 			}
@@ -238,7 +238,7 @@ void show_frame(struct adamtx* adamtx)
 			}
 		}
 	}
-	//adamtx->paneldata = xchg(&adamtx->paneldata_out, adamtx->paneldata);
+	adamtx->paneldata = xchg(&adamtx->paneldata_out, adamtx->paneldata);
 	ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
 }
 
