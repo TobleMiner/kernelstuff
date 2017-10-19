@@ -221,7 +221,7 @@ void show_frame(struct adamtx* adamtx)
 					while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line) {
 						adamtx_prerender_frame.offset = prerender_line;
 						prerender_frame(&adamtx_prerender_frame);
-						prerender_line++;
+						prerender_line += 2;
 						getnstimeofday(&now);
 						last_delay = ADAMTX_KTIME_DIFF(now, last);
 						if(rem_delay >= last_delay)
