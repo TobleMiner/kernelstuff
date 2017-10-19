@@ -171,28 +171,23 @@ struct adamtx {
 	unsigned long update_time;
 };
 
-struct adamtx_frame {
-	int width;
-	int height;
-	int vertical_offset;
+struct adamtx_remap_frame {
+	struct matrix_size* real_size;
+	struct matrix_size* virtual_size;
+	int offset;
 	int rows;
 	int pwm_bits;
-	struct adamtx_panel_io* paneldata;
-	off_t paneloffset;
-	struct matrix_pixel* frame;
-	off_t frameoffset;
-	struct adamtx_enabled_chains* enabled_chains;
+	struct list_head* panels;
+	char* src;
+	struct matrix_pixel* dst;
 };
 
-struct adamtx_processable_frame {
-	int width;
-	int height;
-	int columns;
+struct adamtx_prerender_frame {
+	struct matrix_size* real_size;
+	int offset;
 	int rows;
 	int pwm_bits;
-	char* frame;
 	struct adamtx_panel_io* iodata;
-	struct list_head* panels;
 	struct adamtx_enabled_chains* enabled_chains;
 	struct matrix_pixel* intermediate_frame;
 };
