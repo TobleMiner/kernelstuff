@@ -99,12 +99,10 @@ struct adamtx_panel_io {
 
 struct adamtx_update_param {
 	long rate;
-//	struct adamtx* adatmx;
 };
 
 struct adamtx_draw_param {
 	long rate;
-//	struct adamtx* adamtx;
 };
 
 struct adamtx_enabled_chains {
