@@ -122,9 +122,13 @@ struct adamtx {
 
 	struct adamtx_update_param update_param;
 	struct task_struct* update_thread;
+	bool update_thread_bind;
+	unsigned int update_thread_cpu;
 
 	struct adamtx_draw_param draw_param;
 	struct task_struct* draw_thread;
+	bool draw_thread_bind;
+	unsigned int draw_thread_cpu;
 
 	struct task_struct* perf_thread;
 	int do_perf;

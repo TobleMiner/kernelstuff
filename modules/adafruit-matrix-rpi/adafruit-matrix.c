@@ -355,15 +355,24 @@ static enum hrtimer_restart perf_callback(struct hrtimer* timer)
 	return HRTIMER_RESTART;
 }
 
-static int adamtx_of_get_int(struct device_node* of_node, const char* name, int def) {
+static int adamtx_of_get_int(int* dest, struct device_node* of_node, const char* name)
+{
+	int err = -ENOENT;
 	const void* of_prop;
-	if((of_prop = of_get_property(of_node, name, NULL)))
-		return be32_to_cpup(of_prop);
+	if((of_prop = of_get_property(of_node, name, NULL))) {
+		err = 0;
+		*dest = be32_to_cpup(of_prop);
+	}
+	return err;
+}
+
+static int adamtx_of_get_int_default(struct device_node* of_node, const char* name, int def) {
+	adamtx_of_get_int(&def, of_node, name);
 	return def;
 }
 
 static int adamtx_of_get_int_range(int* dest, struct device_node* of_node, const char* name, int def, int min, int max) {
-	int value = adamtx_of_get_int(of_node, name, def);
+	int value = adamtx_of_get_int_default(of_node, name, def);
 	if(value > max || value < min)
 		return -EINVAL;
 	*dest = value;
@@ -396,6 +405,9 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 		dev_err(dev, "Invalid framebuffer poll rate. Must be in range from 0 to INT_MAX\n");
 		goto exit_err;
 	}
+
+	adamtx->draw_thread_bind = !adamtx_of_get_int(&adamtx->draw_thread_cpu, dev_of_node, "adamtx-bind-draw");
+	adamtx->update_thread_bind = !adamtx_of_get_int(&adamtx->update_thread_cpu, dev_of_node, "adamtx-bind-update");
 
 	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz", adamtx->rate, adamtx->fb_rate);
 
@@ -571,7 +583,9 @@ static int adamtx_probe(struct platform_device* device)
 
 	adamtx->update_param.rate = adamtx->fb_rate;
 	adamtx->update_thread = kthread_create(update_frame, &adamtx->update_param, "adamtx_update");
-	kthread_bind(adamtx->update_thread, 2);
+	if(adamtx->update_thread_bind)
+		kthread_bind(adamtx->update_thread, adamtx->update_thread_cpu);
+
 	if(IS_ERR(adamtx->update_thread))
 	{
 		ret = PTR_ERR(adamtx->update_thread);
@@ -582,7 +596,9 @@ static int adamtx_probe(struct platform_device* device)
 
 	adamtx->draw_param.rate = adamtx->rate;
 	adamtx->draw_thread = kthread_create(draw_frame, &adamtx->draw_param, "adamtx_draw");
-	kthread_bind(adamtx->draw_thread, 3);
+	if(adamtx->draw_thread_bind)
+		kthread_bind(adamtx->draw_thread, adamtx->draw_thread_cpu);
+
 	if(IS_ERR(adamtx->draw_thread))
 	{
 		ret = PTR_ERR(adamtx->draw_thread);

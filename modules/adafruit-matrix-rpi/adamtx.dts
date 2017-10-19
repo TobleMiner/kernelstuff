@@ -12,6 +12,8 @@
                                 compatible = "adafruit,adamtx";
                                 adamtx-rate = <120>;
                                 adamtx-fb-rate = <60>;
+                                adamtx-bind-draw = <3>;
+                                adamtx-bind-update = <2>;
                                 upper-panel@0 {
                                         adamtx-xres = <64>;
                                         adamtx-yres = <32>;
