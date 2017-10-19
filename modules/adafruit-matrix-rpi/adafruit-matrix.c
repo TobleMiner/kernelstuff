@@ -583,8 +583,6 @@ static int adamtx_probe(struct platform_device* device)
 
 	adamtx->update_param.rate = adamtx->fb_rate;
 	adamtx->update_thread = kthread_create(update_frame, &adamtx->update_param, "adamtx_update");
-	if(adamtx->update_thread_bind)
-		kthread_bind(adamtx->update_thread, adamtx->update_thread_cpu);
 
 	if(IS_ERR(adamtx->update_thread))
 	{
@@ -592,12 +590,13 @@ static int adamtx_probe(struct platform_device* device)
 		dev_err(&device->dev, "Failed to create update thread\n");
 		goto interframe_alloced;
 	}
+	if(adamtx->update_thread_bind)
+		kthread_bind(adamtx->update_thread, adamtx->update_thread_cpu);
+
 	wake_up_process(adamtx->update_thread);
 
 	adamtx->draw_param.rate = adamtx->rate;
 	adamtx->draw_thread = kthread_create(draw_frame, &adamtx->draw_param, "adamtx_draw");
-	if(adamtx->draw_thread_bind)
-		kthread_bind(adamtx->draw_thread, adamtx->draw_thread_cpu);
 
 	if(IS_ERR(adamtx->draw_thread))
 	{
@@ -605,6 +604,8 @@ static int adamtx_probe(struct platform_device* device)
 		dev_err(&device->dev, "Failed to create draw thread\n");
 		goto interframe_alloced;
 	}
+	if(adamtx->draw_thread_bind)
+		kthread_bind(adamtx->draw_thread, adamtx->draw_thread_cpu);
 	wake_up_process(adamtx->draw_thread);
 
 	adamtx->perf_thread = kthread_create(show_perf, adamtx, "adamtx_perf");
