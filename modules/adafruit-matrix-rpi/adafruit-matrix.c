@@ -156,7 +156,6 @@ void show_frame(struct adamtx* adamtx)
 	int columns = adamtx->virtual_size.width;
 	struct timespec last, now;
 	unsigned long rem_delay, clock_out_delay, last_delay, bcd_time = adamtx->current_bcd_base_time;
-	bool remapped = false;
 
 	struct adamtx_remap_frame adamtx_remap_frame = {
 		.real_size = &adamtx->real_size,
@@ -207,25 +206,19 @@ void show_frame(struct adamtx* adamtx)
 
 				rem_delay -= clock_out_delay;
 
-process_frame:
-				if(!remapped) {
-					while(rem_delay > adamtx->update_remap_ns_per_line) {
-						adamtx_remap_frame.offset = remap_line;
-						remap_frame(&adamtx_remap_frame);
-						remap_line++;
-						getnstimeofday(&now);
-						last_delay = ADAMTX_KTIME_DIFF(now, last);
-						if(rem_delay >= last_delay)
-							rem_delay -= last_delay;
-						adamtx->update_remap_ns_per_line = adamtx->update_remap_ns_per_line / 2 + last_delay / 2;
-						getnstimeofday(&last);
-						if(remap_line == adamtx_remap_frame.real_size->height) {
-							remapped = true;
-							goto process_frame;
-						}
-					}
-				} else if(prerender_line < adamtx_prerender_frame.virtual_size->height) {
-					while(rem_delay > adamtx->update_prerender_ns_per_line) {
+				while(remap_line < adamtx_remap_frame.real_size->height && rem_delay > adamtx->update_remap_ns_per_line) {
+					adamtx_remap_frame.offset = remap_line;
+					remap_frame(&adamtx_remap_frame);
+					remap_line++;
+					getnstimeofday(&now);
+					last_delay = ADAMTX_KTIME_DIFF(now, last);
+					if(rem_delay >= last_delay)
+						rem_delay -= last_delay;
+					adamtx->update_remap_ns_per_line = adamtx->update_remap_ns_per_line / 2 + last_delay / 2;
+					getnstimeofday(&last);
+				}
+				if(remap_line >= adamtx_remap_frame.real_size->height) {
+					while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line) {
 						adamtx_prerender_frame.offset = prerender_line;
 						prerender_frame(&adamtx_prerender_frame);
 						prerender_line++;
@@ -235,8 +228,6 @@ process_frame:
 							rem_delay -= last_delay;
 						adamtx->update_prerender_ns_per_line = adamtx->update_prerender_ns_per_line / 2 + last_delay / 2;
 						getnstimeofday(&last);
-						if(prerender_line >= adamtx_prerender_frame.virtual_size->height)
-							break;
 					}
 				}
 				ndelay(rem_delay);
