@@ -76,8 +76,8 @@ void remap_frame(struct adamtx_remap_frame* frame)
 	struct matrix_ledpanel* panel;
 	struct matrix_pos pos;
 	struct matrix_pixel* pixel;
-	struct matrix_size* virtual_size = frame->virtual_size;
 	struct matrix_size* real_size = frame->real_size;
+	struct matrix_size* virtual_size = frame->virtual_size;
 	for(line = frame->offset; line < frame->offset + frame->rows; line++) {
 		for(column = 0; column < real_size->width; column++) {
 			panel = matrix_get_panel_at_real(frame->panels, column, line);
@@ -98,7 +98,6 @@ void prerender_frame(struct adamtx_prerender_frame* frame)
 {
 	int line, j, col, addr;
 	struct matrix_pixel* render_frame = frame->intermediate_frame;
-	struct matrix_size* virtual_size = frame->virtual_size;
 	int rows = frame->virtual_size->height;
 	int columns = frame->virtual_size->width;
 	int pwm_steps = frame->pwm_bits;
@@ -270,11 +269,8 @@ static int draw_frame(void* arg)
 
 static int update_frame(void* arg)
 {
-	int err = 0;
-	unsigned long irqflags;
 	struct timespec before;
 	struct timespec after;
-//	struct adamtx_processable_frame frame;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
 	struct adamtx* adamtx = container_of(param, struct adamtx, update_param);
 
@@ -286,31 +282,12 @@ static int update_frame(void* arg)
 			break;
 		adamtx->do_update = false;
 
-		dummyfb_copy(adamtx->framedata, adamtx->dummyfb);
-
-/*		frame = (struct adamtx_processable_frame){
-			.width = adamtx->real_size.width,
-			.height = adamtx->real_size.height,
-			.columns = adamtx->virtual_size.width,
-			.rows = adamtx->virtual_size.height,
-			.pwm_bits = ADAMTX_PWM_BITS,
-			.iodata = adamtx->paneldata,
-			.frame = adamtx->framedata,
-			.panels = &adamtx->panels,
-			.enabled_chains = &adamtx->enabled_chains,
-			.intermediate_frame = adamtx->intermediate_frame
-		};
-
-		spin_lock_irqsave(&adamtx->lock_draw, irqflags);
 		getnstimeofday(&before);
-		err = process_frame(&frame);
+		dummyfb_copy(adamtx->framedata, adamtx->dummyfb);
 		getnstimeofday(&after);
-		adamtx->update_time += (after.tv_sec - before.tv_sec) * 1000000000UL + (after.tv_nsec - before.tv_nsec);
+		adamtx->update_time += ADAMTX_KTIME_DIFF(after, before);
 		adamtx->updates++;
-		spin_unlock_irqrestore(&adamtx->lock_draw, irqflags);
-*/
-		if(err)
-			do_exit(err);
+
 		yield();
 	}
 
