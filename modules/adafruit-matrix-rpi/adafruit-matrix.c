@@ -197,7 +197,7 @@ void show_frame(struct adamtx* adamtx)
 
 			getnstimeofday(&now);
 			rem_delay = (1 << j) * bcd_time;
-			clock_out_delay = ADAMTX_KTIME_DIFF(now, last);
+			clock_out_delay = ADAMTX_TIMESPEC_DIFF(now, last);
 
 			if(clock_out_delay < rem_delay) {
 				if((clock_out_delay < rem_delay) && !j)
@@ -205,24 +205,24 @@ void show_frame(struct adamtx* adamtx)
 
 				rem_delay -= clock_out_delay;
 
-				while(remap_line < adamtx_remap_frame.real_size->height && rem_delay > adamtx->update_remap_ns_per_line) {
+				while(remap_line < adamtx_remap_frame.real_size->height && rem_delay > adamtx->update_remap_ns_per_line * 3 / 2) {
 					adamtx_remap_frame.offset = remap_line;
 					remap_frame(&adamtx_remap_frame);
 					remap_line++;
 					getnstimeofday(&now);
-					last_delay = ADAMTX_KTIME_DIFF(now, last);
+					last_delay = ADAMTX_TIMESPEC_DIFF(now, last);
 					if(rem_delay >= last_delay)
 						rem_delay -= last_delay;
 					adamtx->update_remap_ns_per_line = adamtx->update_remap_ns_per_line / 2 + last_delay / 2;
 					getnstimeofday(&last);
 				}
 				if(remap_line >= adamtx_remap_frame.real_size->height) {
-					while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line) {
+					while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line * 3 / 2) {
 						adamtx_prerender_frame.offset = prerender_line;
 						prerender_frame(&adamtx_prerender_frame);
 						prerender_line += 2;
 						getnstimeofday(&now);
-						last_delay = ADAMTX_KTIME_DIFF(now, last);
+						last_delay = ADAMTX_TIMESPEC_DIFF(now, last);
 						if(rem_delay >= last_delay)
 							rem_delay -= last_delay;
 						adamtx->update_prerender_ns_per_line = adamtx->update_prerender_ns_per_line / 2 + last_delay / 2;
@@ -259,7 +259,7 @@ static int draw_frame(void* arg)
 		getnstimeofday(&before);
 		show_frame(adamtx);
 		getnstimeofday(&after);
-		adamtx->draw_time += ADAMTX_KTIME_DIFF(after, before);
+		adamtx->draw_time += ADAMTX_TIMESPEC_DIFF(after, before);
 		adamtx->draws++;
 		spin_unlock_irqrestore(&adamtx->lock_draw, irqflags);
 		yield();
@@ -285,7 +285,7 @@ static int update_frame(void* arg)
 		getnstimeofday(&before);
 		dummyfb_copy(adamtx->framedata, adamtx->dummyfb);
 		getnstimeofday(&after);
-		adamtx->update_time += ADAMTX_KTIME_DIFF(after, before);
+		adamtx->update_time += ADAMTX_TIMESPEC_DIFF(after, before);
 		adamtx->updates++;
 
 		yield();

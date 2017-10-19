@@ -61,7 +61,7 @@
 // Macros
 #define ADAMTX_BITS_TO_BYTES(bits) (bits >> 3)
 #define ADAMTX_PIX_LEN ADAMTX_BITS_TO_BYTES(ADAMTX_DEPTH)
-#define ADAMTX_KTIME_DIFF(now, last) ((now).tv_sec - (last).tv_sec) * 1000000000UL + ((now).tv_nsec - (last).tv_nsec)
+#define ADAMTX_TIMESPEC_DIFF(now, last) ((now).tv_sec - (last).tv_sec) * 1000000000UL + ((now).tv_nsec - (last).tv_nsec)
 
 // Typdedefs
 struct adamtx_panel_io {
