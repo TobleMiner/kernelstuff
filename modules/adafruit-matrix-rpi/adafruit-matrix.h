@@ -183,7 +183,7 @@ struct adamtx_remap_frame {
 };
 
 struct adamtx_prerender_frame {
-	struct matrix_size* real_size;
+	struct matrix_size* virtual_size;
 	int offset;
 	int rows;
 	int pwm_bits;

@@ -79,17 +79,17 @@ void remap_frame(struct adamtx_remap_frame* frame)
 	struct matrix_size* virtual_size = frame->virtual_size;
 	struct matrix_size* real_size = frame->real_size;
 	for(line = frame->offset; line < frame->offset + frame->rows; line++) {
-		for(column = 0; column < virtual_size->width; column++) {
+		for(column = 0; column < real_size->width; column++) {
 			panel = matrix_get_panel_at_real(frame->panels, column, line);
 			if(!panel)
 				continue;
 
 			matrix_panel_get_position(&pos, panel, column, line);
-			offset = line * virtual_size->width * ADAMTX_PIX_LEN + column * ADAMTX_PIX_LEN;
-			pixel = &frame->dst[pos.y * real_size->width + pos.x];
+			offset = line * real_size->width * ADAMTX_PIX_LEN + column * ADAMTX_PIX_LEN;
+			pixel = &frame->dst[pos.y * virtual_size->width + pos.x];
 			pixel->chains[panel->chain] = gamma_table[(unsigned char)frame->src[offset]] |
-										gamma_table[(unsigned char)frame->src[offset + 1]] << 8 |
-										gamma_table[(unsigned char)frame->src[offset + 2]] << 16;
+				gamma_table[(unsigned char)frame->src[offset + 1]] << 8 |
+				gamma_table[(unsigned char)frame->src[offset + 2]] << 16;
 		}
 	}
 }
@@ -98,17 +98,18 @@ void prerender_frame(struct adamtx_prerender_frame* frame)
 {
 	int line, j, col, addr;
 	struct matrix_pixel* render_frame = frame->intermediate_frame;
-	struct matrix_size* real_size = frame->real_size;
-	int rows = frame->real_size->height;
-	int columns = frame->real_size->width;
+	struct matrix_size* virtual_size = frame->virtual_size;
+	int rows = frame->virtual_size->height;
+	int columns = frame->virtual_size->width;
 	int pwm_steps = frame->pwm_bits;
-	struct adamtx_panel_io row[columns];
+	struct adamtx_panel_io* row;
 	int vertical_offset = frame->offset / 2;
+	line = vertical_offset;
 	for(line = vertical_offset; line < vertical_offset + frame->rows / 2; line++) {
 		int row1_base = line * columns;
 		int row2_base = (rows / 2 + line) * columns;
 		for(j = 0; j < pwm_steps; j++) {
-			memset(row, 0, columns * sizeof(struct adamtx_panel_io));
+			row = frame->iodata + line * pwm_steps * columns + j * columns;
 			for(col = 0; col < columns; col++) {
 				if(frame->enabled_chains->chain0) {
 					row[col].C0_B1 = (render_frame[row1_base + col].chains[0] & (1 << j)) > 0;
@@ -135,21 +136,21 @@ void prerender_frame(struct adamtx_prerender_frame* frame)
 					row[col].C2_R2 = ((render_frame[row2_base + col].chains[2] >> 16) & (1 << j)) > 0;
 				}
 				if(j == 0)
-					addr = (line + 1) % (frame->rows / 2);
+					addr = (line + 1) % (rows / 2);
 				else
 					addr = line;
 				*((uint32_t*)(&row[col])) |= (addr << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
 				row[col].E = addr >> 4;
 			}
-			memcpy(frame->iodata + line * pwm_steps * columns + j * columns, row, columns * sizeof(struct adamtx_panel_io));
 		}
 	}
 }
 
+
 void show_frame(struct adamtx* adamtx)
 {
 	int i, j, remap_line = 0, prerender_line = 0;
-	struct adamtx_panel_io* frame = adamtx->paneldata_out;
+	struct adamtx_panel_io* frame = adamtx->paneldata;
 	int pwm_steps = ADAMTX_PWM_BITS;
 	int rows = adamtx->virtual_size.height;
 	int columns = adamtx->virtual_size.width;
@@ -163,14 +164,15 @@ void show_frame(struct adamtx* adamtx)
 		.offset = 0,
 		.rows = 1,
 		.pwm_bits = pwm_steps,
+		.panels = &adamtx->panels,
 		.src = adamtx->framedata,
 		.dst = adamtx->intermediate_frame
 	};
 
 	struct adamtx_prerender_frame adamtx_prerender_frame = {
-		.real_size = &adamtx->real_size,
+		.virtual_size = &adamtx->virtual_size,
 		.offset = 0,
-		.rows = 1,
+		.rows = 2,
 		.pwm_bits = pwm_steps,
 		.iodata = adamtx->paneldata,
 		.enabled_chains = &adamtx->enabled_chains,
@@ -217,14 +219,13 @@ process_frame:
 							rem_delay -= last_delay;
 						adamtx->update_remap_ns_per_line = adamtx->update_remap_ns_per_line / 2 + last_delay / 2;
 						getnstimeofday(&last);
-						if(remap_line == adamtx_remap_frame.virtual_size->height) {
+						if(remap_line == adamtx_remap_frame.real_size->height) {
 							remapped = true;
 							goto process_frame;
 						}
 					}
-				} else if(prerender_line < adamtx_prerender_frame.real_size->height / 2) {
+				} else if(prerender_line < adamtx_prerender_frame.virtual_size->height) {
 					while(rem_delay > adamtx->update_prerender_ns_per_line) {
-//						printk(KERN_INFO "Prerendering line %d of %d\n", prerender_line, processing_frame.rows);
 						adamtx_prerender_frame.offset = prerender_line;
 						prerender_frame(&adamtx_prerender_frame);
 						prerender_line++;
@@ -234,7 +235,7 @@ process_frame:
 							rem_delay -= last_delay;
 						adamtx->update_prerender_ns_per_line = adamtx->update_prerender_ns_per_line / 2 + last_delay / 2;
 						getnstimeofday(&last);
-						if(prerender_line >= adamtx_prerender_frame.real_size->height / 2)
+						if(prerender_line >= adamtx_prerender_frame.virtual_size->height)
 							break;
 					}
 				}
