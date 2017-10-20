@@ -16,7 +16,7 @@ Assuming you have kernel headers and build tools installed compiling is pretty s
 Installation should be pretty easy, too:
 
 1. Ensure you are still in the **parent**  directory of this directory
-2. Copy ```dummyfb/dummyfb.ko``` and ```adafruit-matrix-rpi/adafruit_matrix.ko``` to you kernel module directory (most likely ```/usr/lib/modules/$YOUR_KERNEL_VERSION/```)
+2. Copy ```dummyfb/dummyfb.ko``` and ```adafruit-matrix-rpi/adamtx.ko``` to you kernel module directory (most likely ```/usr/lib/modules/$YOUR_KERNEL_VERSION/```)
 3. Run ```depmod -a```
 
 
