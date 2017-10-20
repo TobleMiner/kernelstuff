@@ -1,7 +1,7 @@
 ADAMTX
 ======
 
-A simple framebuffer driver for large Adafruit LED matrix panels on Raspberry PI 3
+A simple framebuffer driver for large Adafruit/HUB75 LED matrix panels on Raspberry PI 3
 
 # Compiling
 
