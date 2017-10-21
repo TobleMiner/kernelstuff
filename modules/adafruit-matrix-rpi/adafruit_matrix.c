@@ -550,7 +550,6 @@ static int adamtx_probe(struct platform_device* device)
 		goto gpio_alloced;
 
 	if(adamtx->enable_dma) {
-		//TODO: Setup dma channel
 		adamtx->dma_channel = dma_request_chan(&device->dev, "gpio");
 		if(IS_ERR(adamtx->dma_channel)) {
 			ret = PTR_ERR(adamtx->dma_channel);
@@ -603,11 +602,27 @@ static int adamtx_probe(struct platform_device* device)
 		goto paneldata_alloced;
 	}
 
+	if(adamtx->enable_dma) {
+		adamtx->dma_len = adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * (1 << ADAMTX_PWM_BITS);
+		dev_info(&device->dev, "Allocating %lu kB DMA buffers\n", adamtx->dma_len / 1024UL);
+		if(!(adamtx->dma_iodata = kzalloc(adamtx->dma_len * sizeof(struct adamtx_dma_block), GFP_KERNEL | GFP_DMA))) {
+			ret = -ENOMEM;
+			dev_err(&device->dev, "Failed to allocate dma buffer\n");
+			goto paneldata_out_alloced;
+		}
+
+		if(!(adamtx->dma_iodata_out = kzalloc(adamtx->dma_len * sizeof(struct adamtx_dma_block), GFP_KERNEL | GFP_DMA))) {
+			ret = -ENOMEM;
+			dev_err(&device->dev, "Failed to allocate dma output buffer\n");
+			goto dma_data_alloced;
+		}
+	}
+
 	remap_size = adamtx->virtual_size.height * adamtx->virtual_size.width * sizeof(struct matrix_pixel);
 	if(!(adamtx->intermediate_frame = vzalloc(remap_size))) {
 		ret = -ENOMEM;
 		dev_err(&device->dev, "Failed to allocate intermediate frame memory\n");
-		goto paneldata_out_alloced;
+		goto dma_data_out_alloced;
 	}
 
 	adamtx->update_param.rate = adamtx->fb_rate;
@@ -671,6 +686,12 @@ interframe_alloced:
 	vfree(adamtx->intermediate_frame);
 paneldata_out_alloced:
 	vfree(adamtx->paneldata_out);
+dma_data_out_alloced:
+	if(adamtx->enable_dma)
+		kfree(adamtx->dma_iodata_out);
+dma_data_alloced:
+	if(adamtx->enable_dma)
+		kfree(adamtx->dma_iodata);
 paneldata_alloced:
 	vfree(adamtx->paneldata);
 framedata_alloced:
@@ -703,8 +724,11 @@ static int adamtx_remove(struct platform_device* device)
 	kthread_stop(adamtx->draw_thread);
 	kthread_stop(adamtx->update_thread);
 	kthread_stop(adamtx->perf_thread);
-	if(adamtx->enable_dma)
+	if(adamtx->enable_dma) {
 		dma_release_channel(adamtx->dma_channel);
+		kfree(adamtx->dma_iodata_out);
+		kfree(adamtx->dma_iodata);
+	}
 	vfree(adamtx->intermediate_frame);
 	vfree(adamtx->paneldata);
 	vfree(adamtx->framedata);

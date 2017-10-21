@@ -96,6 +96,13 @@ struct adamtx_panel_io {
 	uint32_t C0_G1	: 1;
 };
 
+struct adamtx_dma_block {
+	uint32_t set;
+	uint32_t set1;
+	uint32_t reserved;
+	uint32_t clear;
+};
+
 struct adamtx_update_param {
 	long rate;
 };
@@ -173,6 +180,9 @@ struct adamtx {
 
 	bool enable_dma;
 	struct dma_chan* dma_channel;
+	size_t dma_len;
+	struct adamtx_dma_block* dma_iodata;
+	struct adamtx_dma_block* dma_iodata_out;
 };
 
 struct adamtx_remap_frame {
