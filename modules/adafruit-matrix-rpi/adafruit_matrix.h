@@ -180,8 +180,11 @@ struct adamtx {
 
 	bool enable_dma;
 	struct dma_chan* dma_channel;
+	struct dma_slave_config dma_config;
 	size_t dma_len;
+	dma_addr_t dma_mapping_iodata;
 	struct adamtx_dma_block* dma_iodata;
+	dma_addr_t dma_mapping_iodata_out;
 	struct adamtx_dma_block* dma_iodata_out;
 };
 

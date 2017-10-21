@@ -16,6 +16,7 @@
 #include <linux/of.h>
 #include <linux/atomic.h>
 #include <linux/dmaengine.h>
+#include <linux/dma-mapping.h>
 
 #include "matrix.h"
 #include "adafruit_matrix.h"
@@ -625,6 +626,37 @@ static int adamtx_probe(struct platform_device* device)
 		goto dma_data_out_alloced;
 	}
 
+	if(adamtx->enable_dma) {
+		adamtx->dma_config = (struct dma_slave_config) {
+			.dst_addr = ADAMTX_PERIPHERAL_BASE + ADAMTX_GPIO_OFFSET + ADAMTX_GPIO_SET_OFFSET,
+			.dst_addr_width = DMA_SLAVE_BUSWIDTH_16_BYTES,
+			.dst_maxburst = 1,
+			.device_fc = false,
+			.slave_id = 0
+		};
+
+		adamtx->dma_mapping_iodata = dma_map_single(&device->dev, adamtx->dma_iodata, adamtx->dma_len, DMA_MEM_TO_DEV);
+		if((ret = dma_mapping_error(&device->dev, adamtx->dma_mapping_iodata))) {
+			dev_err(&device->dev, "Failed to map dma iodata\n");
+			goto interframe_alloced;
+		}
+
+		adamtx->dma_mapping_iodata_out = dma_map_single(&device->dev, adamtx->dma_iodata_out, adamtx->dma_len, DMA_MEM_TO_DEV);
+		if((ret = dma_mapping_error(&device->dev, adamtx->dma_mapping_iodata))) {
+			dev_err(&device->dev, "Failed to map dma iodata_out\n");
+			goto iodata_mapped;
+		}
+
+		struct dma_async_tx_descriptor* dma_desc = dmaengine_prep_dma_cyclic(adamtx->dma_channel, adamtx->dma_mapping_iodata, adamtx->dma_len, adamtx->dma_len, DMA_MEM_TO_DEV, 0);
+		if(!dma_desc) {
+			dev_err(&device->dev, "Failed to prepare cyclic DMA\n");
+			goto iodata_out_mapped;
+		}
+
+		dmaengine_submit(dma_desc);
+		dma_async_issue_pending(adamtx->dma_channel);
+	}
+
 	adamtx->update_param.rate = adamtx->fb_rate;
 	adamtx->update_thread = kthread_create(update_frame, &adamtx->update_param, "adamtx_update");
 
@@ -632,7 +664,7 @@ static int adamtx_probe(struct platform_device* device)
 	{
 		ret = PTR_ERR(adamtx->update_thread);
 		dev_err(&device->dev, "Failed to create update thread\n");
-		goto interframe_alloced;
+		goto dma_initialized;
 	}
 	if(adamtx->update_thread_bind)
 		kthread_bind(adamtx->update_thread, adamtx->update_thread_cpu);
@@ -646,7 +678,7 @@ static int adamtx_probe(struct platform_device* device)
 	{
 		ret = PTR_ERR(adamtx->draw_thread);
 		dev_err(&device->dev, "Failed to create draw thread\n");
-		goto interframe_alloced;
+		goto update_thread_started;
 	}
 	if(adamtx->draw_thread_bind)
 		kthread_bind(adamtx->draw_thread, adamtx->draw_thread_cpu);
@@ -657,15 +689,17 @@ static int adamtx_probe(struct platform_device* device)
 	{
 		ret = PTR_ERR(adamtx->perf_thread);
 		dev_err(&device->dev, "Failed to create perf thread\n");
-		goto interframe_alloced;
+		goto draw_thread_started;
 	}
 	wake_up_process(adamtx->perf_thread);
 
-	adamtx->frameperiod = ktime_set(0, 1000000000UL / adamtx->rate);
-	hrtimer_init(&adamtx->frametimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	adamtx->frametimer.function = draw_callback;
-	hrtimer_start(&adamtx->frametimer, adamtx->frameperiod, HRTIMER_MODE_REL);
-	adamtx->frametimer_enabled = true;
+	if(!adamtx->enable_dma) {
+		adamtx->frameperiod = ktime_set(0, 1000000000UL / adamtx->rate);
+		hrtimer_init(&adamtx->frametimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		adamtx->frametimer.function = draw_callback;
+		hrtimer_start(&adamtx->frametimer, adamtx->frameperiod, HRTIMER_MODE_REL);
+		adamtx->frametimer_enabled = true;
+	}
 
 	adamtx->updateperiod = ktime_set(0, 1000000000UL / adamtx->fb_rate);
 	hrtimer_init(&adamtx->updatetimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
@@ -682,6 +716,19 @@ static int adamtx_probe(struct platform_device* device)
 	dev_info(&device->dev, "Initialized\n");
 	return 0;
 
+draw_thread_started:
+	kthread_stop(adamtx->draw_thread);
+update_thread_started:
+	kthread_stop(adamtx->update_thread);
+dma_initialized:
+	if(adamtx->enable_dma)
+		dmaengine_terminate_sync(adamtx->dma_channel);
+iodata_out_mapped:
+	if(adamtx->enable_dma)
+		dma_unmap_single(&device->dev, adamtx->dma_mapping_iodata_out, adamtx->dma_len, DMA_MEM_TO_DEV);
+iodata_mapped:
+	if(adamtx->enable_dma)
+		dma_unmap_single(&device->dev, adamtx->dma_mapping_iodata, adamtx->dma_len, DMA_MEM_TO_DEV);
 interframe_alloced:
 	vfree(adamtx->intermediate_frame);
 paneldata_out_alloced:
@@ -725,8 +772,11 @@ static int adamtx_remove(struct platform_device* device)
 	kthread_stop(adamtx->update_thread);
 	kthread_stop(adamtx->perf_thread);
 	if(adamtx->enable_dma) {
+		dmaengine_terminate_sync(adamtx->dma_channel);
 		dma_release_channel(adamtx->dma_channel);
+		dma_unmap_single(&device->dev, adamtx->dma_mapping_iodata_out, adamtx->dma_len, DMA_MEM_TO_DEV);
 		kfree(adamtx->dma_iodata_out);
+		dma_unmap_single(&device->dev, adamtx->dma_mapping_iodata, adamtx->dma_len, DMA_MEM_TO_DEV);
 		kfree(adamtx->dma_iodata);
 	}
 	vfree(adamtx->intermediate_frame);
