@@ -15,6 +15,7 @@
 #include <linux/list.h>
 #include <linux/of.h>
 #include <linux/atomic.h>
+#include <linux/dmaengine.h>
 
 #include "matrix.h"
 #include "adafruit_matrix.h"
@@ -419,7 +420,9 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 	adamtx->draw_thread_bind = !adamtx_of_get_int(&adamtx->draw_thread_cpu, dev_of_node, "adamtx-bind-draw");
 	adamtx->update_thread_bind = !adamtx_of_get_int(&adamtx->update_thread_cpu, dev_of_node, "adamtx-bind-update");
 
-	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz", adamtx->rate, adamtx->fb_rate);
+	adamtx->enable_dma = !!adamtx_of_get_int_default(dev_of_node, "adamtx-dma", 1);
+
+	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz, DMA: %d\n", adamtx->rate, adamtx->fb_rate, adamtx->enable_dma);
 
 	for(panel_node = of_get_next_child(dev_of_node, NULL); panel_node; panel_node = of_get_next_child(dev_of_node, panel_node)) {
 		panel = vzalloc(sizeof(struct matrix_ledpanel));
@@ -546,6 +549,16 @@ static int adamtx_probe(struct platform_device* device)
 	if((ret = adamtx_parse_device_tree(&device->dev, adamtx)))
 		goto gpio_alloced;
 
+	if(adamtx->enable_dma) {
+		//TODO: Setup dma channel
+		adamtx->dma_channel = dma_request_chan(&device->dev, "gpio");
+		if(IS_ERR(adamtx->dma_channel)) {
+			ret = PTR_ERR(adamtx->dma_channel);
+			dev_err(&device->dev, "Failed to allocate DMA channel\n");
+			goto panels_alloced;
+		}
+	}
+
 	adamtx_init_gpio(adamtx);
 
 	// Calculate real and virtual display size (smallest rectangle around all displays)
@@ -567,7 +580,7 @@ static int adamtx_probe(struct platform_device* device)
 
 	if((ret = dummyfb_create(&adamtx->dummyfb, dummyfb_param))) {
 		dev_err(&device->dev, "Failed to create framebuffer device\n");
-		goto panels_alloced;
+		goto dma_alloced;
 	}
 
 	fbsize = adamtx->real_size.height * adamtx->real_size.width * ADAMTX_PIX_LEN;
@@ -664,6 +677,9 @@ framedata_alloced:
 	vfree(adamtx->framedata);
 dummyfb_alloced:
 	dummyfb_destroy(adamtx->dummyfb);
+dma_alloced:
+	if(adamtx->enable_dma)
+		dma_release_channel(adamtx->dma_channel);
 panels_alloced:
 	free_panels(adamtx);
 gpio_alloced:
@@ -687,6 +703,8 @@ static int adamtx_remove(struct platform_device* device)
 	kthread_stop(adamtx->draw_thread);
 	kthread_stop(adamtx->update_thread);
 	kthread_stop(adamtx->perf_thread);
+	if(adamtx->enable_dma)
+		dma_release_channel(adamtx->dma_channel);
 	vfree(adamtx->intermediate_frame);
 	vfree(adamtx->paneldata);
 	vfree(adamtx->framedata);

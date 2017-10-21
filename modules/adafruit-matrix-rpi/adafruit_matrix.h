@@ -2,6 +2,7 @@
 #define _ADAMTX_H
 
 #include <linux/ktime.h>
+#include <linux/dmaengine.h>
 
 #include "matrix.h"
 #include "../dummyfb/dummyfb.h"
@@ -169,6 +170,9 @@ struct adamtx {
 	unsigned long updates;
 	unsigned long update_irqs;
 	unsigned long update_time;
+
+	bool enable_dma;
+	struct dma_chan* dma_channel;
 };
 
 struct adamtx_remap_frame {
