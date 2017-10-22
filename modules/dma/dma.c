@@ -41,7 +41,11 @@ struct dma_chan* dma_channel;
 struct dma_async_tx_descriptor* dma_desc;
 dma_cookie_t dma_cookie;
 
-#define DMA_NUM_BLOCKS 10
+#define DMA_NUM_BLOCKS 5
+
+void multi_dma_complete(void* param) {
+	printk(KERN_INFO "Multi DMA finished\n");
+}
 
 void dma_complete(void* param) {
 	printk(KERN_INFO "DMA finished\n");
@@ -114,35 +118,36 @@ static int dma_probe(struct platform_device* device)
 	}
 	dev_info(&device->dev, "Sent 5 conventional high pulse\n");
 
-	dev_info(&device->dev, "Sending 5 DMA high pulse\n");
+
 
 	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
-		if(!(i % 2))
-			dma_iodata[0].set = (1 << dma_gpio);
-		else
-			dma_iodata[0].clear = (1 << dma_gpio);
+		dma_iodata[i].set = (1 << dma_gpio);
+		dma_iodata[i].clear = (1 << dma_gpio);
 	}
 
-// Doesn't work for shit
-/*	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
+	dev_info(&device->dev, "Sending 5 DMA high pulse via single DMA\n");
+
+	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
 		dma_desc = dma_channel->device->device_prep_dma_memcpy(dma_channel,
 			dma_mapping_gpio,
 			dma_mapping_data + i * sizeof(struct dma_block), DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_PREP_INTERRUPT);
 
 		dma_desc->callback = dma_complete;
 
-//		dev_info(&device->dev, "Setting level to HIGH via DMA\n");
-
 		dma_cookie = dmaengine_submit(dma_desc);
 	}
 	dma_async_issue_pending(dma_channel);
-*/
 
+	dev_info(&device->dev, "Sent 5 DMA high pulses via single DMA\n");
+
+
+
+	dev_info(&device->dev, "Sending 5 DMA high pulse via multi DMA\n");
 	dma_desc = dma_channel->device->device_prep_dma_memcpy(dma_channel,
 		dma_mapping_gpio,
-		dma_mapping_data + i * sizeof(struct dma_block), DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_PREP_INTERRUPT);
+		dma_mapping_data, DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_PREP_INTERRUPT);
 
-	dma_desc->callback = dma_complete;
+	dma_desc->callback = multi_dma_complete;
 
 	desc = container_of(dma_desc, struct bcm2835_desc, vd.tx);
 
@@ -154,7 +159,7 @@ static int dma_probe(struct platform_device* device)
 		control_block->length = DMA_CB_TXFR_LEN_YLENGTH(DMA_NUM_BLOCKS) | DMA_CB_TXFR_LEN_XLENGTH((uint16_t)sizeof(struct dma_block));
 		control_block->stride = DMA_CB_STRIDE_D_STRIDE(-((int16_t)sizeof(struct dma_block))) | DMA_CB_STRIDE_S_STRIDE(0);
 
-		printk("DMA flags: %x\n", control_block->info);
+		printk("DMA flags: 0x%x\n", control_block->info);
 
 		printk(KERN_INFO "DMA X LENGTH: %u\n", (((uint32_t*)control_block)[3]) & 0xFFFF);
 		printk(KERN_INFO "DMA Y LENGTH: %u\n", (((uint32_t*)control_block)[3]) >> 16 & 0x3FFF);
@@ -162,17 +167,19 @@ static int dma_probe(struct platform_device* device)
 		printk(KERN_INFO "DMA S STRIDE: %d\n", (int16_t)(((uint32_t*)control_block)[4] & 0xFFFF));
 		printk(KERN_INFO "DMA D STRIDE: %d\n", (int16_t)(((uint32_t*)control_block)[4] >> 16 & 0xFFFF));
 
+		control_block->src = dma_mapping_data;
 		control_block->dst = dma_mapping_gpio;
-		printk(KERN_INFO "DMA DST: %x\n", ((uint32_t*)control_block)[2]);
-		printk(KERN_INFO "DMA SRC: %x\n", ((uint32_t*)control_block)[1]);
-		printk(KERN_INFO "DMA SRC end: %x\n", dma_mapping_data + DMA_NUM_BLOCKS * sizeof(struct dma_block));
+		printk(KERN_INFO "DMA DST: 0x%x\n", ((uint32_t*)control_block)[2]);
+		printk(KERN_INFO "DMA SRC: 0x%x\n", ((uint32_t*)control_block)[1]);
+		printk(KERN_INFO "DMA SRC end: 0x%x\n", dma_mapping_data + DMA_NUM_BLOCKS * sizeof(struct dma_block));
 
-//		break;
+		break;
 	}
 	dma_cookie = dmaengine_submit(dma_desc);
+	dma_async_issue_pending(dma_channel);
 
+	dev_info(&device->dev, "Sent 5 DMA high pulses via multi DMA\n");
 
-	dev_info(&device->dev, "Sent 5 DMA high pulse\n");
 
 	return 0;
 
