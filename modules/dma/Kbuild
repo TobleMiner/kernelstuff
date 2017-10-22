@@ -1,0 +1,4 @@
+obj-m := dmatest.o
+ccflags-y := -Ofast
+dmatest-y := dma.o
+dmatest-obs := $(dmatest-y)

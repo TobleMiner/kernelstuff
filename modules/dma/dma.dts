@@ -1,0 +1,19 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+        compatible = "brcm,bcm2835", "brcm,bcm2708", "brcm,bcm2709";
+
+        fragment@0 {
+                target-path = "/";
+                __overlay__ {
+                        dmatest@0 {
+                                status = "okay";
+                                compatible = "testing,dma";
+                                dmas = <0xa 0x5>;
+                                dma-names = "gpio";
+                                dma-gpio = <14>;
+                        };
+                };
+        };
+};
