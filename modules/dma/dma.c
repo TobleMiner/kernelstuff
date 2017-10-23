@@ -118,14 +118,14 @@ static int dma_probe(struct platform_device* device)
 	}
 	dev_info(&device->dev, "Sent 5 conventional high pulse\n");
 
-
+	usleep_range(10000, 50000);
 
 	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
 		dma_iodata[i].set = (1 << dma_gpio);
 		dma_iodata[i].clear = (1 << dma_gpio);
 	}
 
-	dev_info(&device->dev, "Sending 5 DMA high pulse via single DMA\n");
+	dev_info(&device->dev, "Sending 5 DMA high pulses via single DMA\n");
 
 	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
 		dma_desc = dma_channel->device->device_prep_dma_memcpy(dma_channel,
@@ -140,12 +140,16 @@ static int dma_probe(struct platform_device* device)
 
 	dev_info(&device->dev, "Sent 5 DMA high pulses via single DMA\n");
 
+	usleep_range(10000, 50000);
 
-
-	dev_info(&device->dev, "Sending 5 DMA high pulse via multi DMA\n");
-	dma_desc = dma_channel->device->device_prep_dma_memcpy(dma_channel,
+	dev_info(&device->dev, "Sending 5 DMA high pulses via multi DMA\n");
+/*	dma_desc = dma_channel->device->device_prep_dma_memcpy(dma_channel,
 		dma_mapping_gpio,
 		dma_mapping_data, DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_PREP_INTERRUPT);
+*/
+	dma_desc = dmaengine_prep_dma_cyclic(dma_channel,
+		dma_mapping_data, DMA_NUM_BLOCKS * sizeof(struct dma_block),
+		DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_MEM_TO_DEV, 0);
 
 	dma_desc->callback = multi_dma_complete;
 
@@ -155,7 +159,7 @@ static int dma_probe(struct platform_device* device)
 	for(i = 0; i < desc->frames; i++) {
 		control_block = desc->cb_list[i].cb;
 		printk(KERN_INFO "Got control block with transfer length %zu\n", control_block->length);
-		control_block->info = BCM2835_DMA_TDMODE | BCM2835_DMA_NO_WIDE_BURSTS | BCM2835_DMA_D_INC | BCM2835_DMA_S_INC | BCM2835_DMA_INT_EN;
+		control_block->info = BCM2835_DMA_TDMODE | BCM2835_DMA_NO_WIDE_BURSTS | BCM2835_DMA_D_INC | BCM2835_DMA_S_INC/* | BCM2835_DMA_INT_EN*/;
 		control_block->length = DMA_CB_TXFR_LEN_YLENGTH(DMA_NUM_BLOCKS) | DMA_CB_TXFR_LEN_XLENGTH((uint16_t)sizeof(struct dma_block));
 		control_block->stride = DMA_CB_STRIDE_D_STRIDE(-((int16_t)sizeof(struct dma_block))) | DMA_CB_STRIDE_S_STRIDE(0);
 
@@ -173,8 +177,10 @@ static int dma_probe(struct platform_device* device)
 		printk(KERN_INFO "DMA SRC: 0x%x\n", ((uint32_t*)control_block)[1]);
 		printk(KERN_INFO "DMA SRC end: 0x%x\n", dma_mapping_data + DMA_NUM_BLOCKS * sizeof(struct dma_block));
 
+//		control_block->next = __pa(control_block);
 		break;
 	}
+
 	dma_cookie = dmaengine_submit(dma_desc);
 	dma_async_issue_pending(dma_channel);
 
@@ -183,11 +189,12 @@ static int dma_probe(struct platform_device* device)
 
 	return 0;
 
+dma_started:
+	dmaengine_terminate_sync(dma_channel);
 dma_configured:
 dma_alloced:
-	dma_unmap_single(&device->dev, dma_mapping_data, DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_BIDIRECTIONAL);
+	dma_free_coherent(&device->dev, DMA_NUM_BLOCKS * sizeof(struct dma_block), dma_iodata, dma_mapping_data);
 chan_alloced:
-	dmaengine_terminate_sync(dma_channel);
 	dma_release_channel(dma_channel);
 gpio_alloced:
 	gpio_free(dma_gpio);
@@ -197,9 +204,12 @@ exit_err:
 
 static int dma_remove(struct platform_device* device)
 {
-	dma_unmap_single(&device->dev, dma_mapping_data, DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_BIDIRECTIONAL);
-	dmaengine_terminate_sync(dma_channel);
+	while(dmaengine_terminate_sync(dma_channel)) {
+		dev_warn(&device->dev, "Failed to terminate DMA, retrying...");
+		msleep(500);
+	}
 	dma_release_channel(dma_channel);
+	dma_free_coherent(&device->dev, DMA_NUM_BLOCKS * sizeof(struct dma_block), dma_iodata, dma_mapping_data);
 	gpio_free(dma_gpio);
 	return 0;
 }
