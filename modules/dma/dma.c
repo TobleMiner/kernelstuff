@@ -28,8 +28,6 @@ MODULE_AUTHOR("Tobas Schramm");
 MODULE_DESCRIPTION("Example DMA driver");
 MODULE_VERSION("0.1");
 
-unsigned int dma_gpio;
-
 dma_addr_t dma_mapping_gpio;
 dma_addr_t dma_mapping_data;
 
@@ -43,6 +41,17 @@ dma_cookie_t dma_cookie;
 
 #define DMA_NUM_BLOCKS 5
 
+#define DMA_NUM_GPIOS 14
+
+unsigned int dma_gpios[DMA_NUM_GPIOS] = {
+	// Address lines
+	22, 23, 24, 25, 15,
+	// Misc
+	18, 4, 17,
+	// Chain 0
+	11, 8, 27, 9, 7, 10
+};
+
 void multi_dma_complete(void* param) {
 	printk(KERN_INFO "Multi DMA finished\n");
 }
@@ -51,32 +60,19 @@ void dma_complete(void* param) {
 	printk(KERN_INFO "DMA finished\n");
 }
 
-static int dma_of_get_int(int* dest, struct device_node* of_node, const char* name)
-{
-	int err = -ENOENT;
-	const void* of_prop;
-	if((of_prop = of_get_property(of_node, name, NULL))) {
-		err = 0;
-		*dest = be32_to_cpup(of_prop);
-	}
-	return err;
-}
-
-static int dma_of_get_int_default(struct device_node* of_node, const char* name, int def) {
-	dma_of_get_int(&def, of_node, name);
-	return def;
-}
-
-
 static int dma_probe(struct platform_device* device)
 {
-	int err, i;
+	int err, i, gpio_count;
+	uint32_t gpio_bitmask = 0;
 	struct bcm2835_desc* desc;
 	struct bcm2835_dma_cb* control_block;
-	dma_gpio = dma_of_get_int_default(device->dev.of_node, "dma-gpio", 14);
-	if((err = gpio_request_one(dma_gpio, GPIOF_DIR_OUT, "dma-gpio"))) {
-		dev_err(&device->dev, "Failed to allocate gpio %u\n", dma_gpio);
-		goto exit_err;
+
+	for(gpio_count = 0; gpio_count < DMA_NUM_GPIOS; gpio_count++) {
+		if((err = gpio_request_one(dma_gpios[gpio_count], GPIOF_DIR_OUT, NULL))) {
+			dev_err(&device->dev, "Failed to allocate gpio %u\n", dma_gpios[gpio_count]);
+			goto gpio_alloced;
+		}
+		gpio_bitmask |= (1 << dma_gpios[gpio_count]);
 	}
 
 	dma_channel = dma_request_chan(&device->dev, "gpio");
@@ -112,17 +108,19 @@ static int dma_probe(struct platform_device* device)
 
 	dev_info(&device->dev, "Sending 5 conventional high pulse\n");
 	for(i = 0; i < 5; i++) {
-		gpio_set_value(dma_gpio, 0);
-		gpio_set_value(dma_gpio, 1);
-		gpio_set_value(dma_gpio, 0);
+		for(gpio_count = 0; gpio_count < DMA_NUM_GPIOS; gpio_count++) {
+			gpio_set_value(gpio_count, 0);
+			gpio_set_value(gpio_count, 1);
+			gpio_set_value(gpio_count, 0);
+		}
 	}
 	dev_info(&device->dev, "Sent 5 conventional high pulse\n");
 
 	usleep_range(10000, 50000);
 
 	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
-		dma_iodata[i].set = (1 << dma_gpio);
-		dma_iodata[i].clear = (1 << dma_gpio);
+		dma_iodata[i].set = gpio_bitmask;
+		dma_iodata[i].clear = gpio_bitmask;
 	}
 
 	dev_info(&device->dev, "Sending 5 DMA high pulses via single DMA\n");
@@ -130,7 +128,7 @@ static int dma_probe(struct platform_device* device)
 	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
 		dma_desc = dma_channel->device->device_prep_dma_memcpy(dma_channel,
 			dma_mapping_gpio,
-			dma_mapping_data + i * sizeof(struct dma_block), DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_PREP_INTERRUPT);
+			dma_mapping_data + i * sizeof(struct dma_block), sizeof(struct dma_block), DMA_PREP_INTERRUPT);
 
 		dma_desc->callback = dma_complete;
 
@@ -197,20 +195,25 @@ dma_alloced:
 chan_alloced:
 	dma_release_channel(dma_channel);
 gpio_alloced:
-	gpio_free(dma_gpio);
+	for(i = 0; i <= gpio_count; i++) {
+		gpio_free(dma_gpios[i]);
+	}
 exit_err:
 	return err;
 }
 
 static int dma_remove(struct platform_device* device)
 {
+	int i;
 	while(dmaengine_terminate_sync(dma_channel)) {
 		dev_warn(&device->dev, "Failed to terminate DMA, retrying...");
 		msleep(500);
 	}
 	dma_release_channel(dma_channel);
 	dma_free_coherent(&device->dev, DMA_NUM_BLOCKS * sizeof(struct dma_block), dma_iodata, dma_mapping_data);
-	gpio_free(dma_gpio);
+	for(i = 0; i < DMA_NUM_GPIOS; i++) {
+		gpio_free(dma_gpios[i]);
+	}
 	return 0;
 }
 
