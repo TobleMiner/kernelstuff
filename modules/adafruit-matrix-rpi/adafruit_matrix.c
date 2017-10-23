@@ -17,10 +17,12 @@
 #include <linux/atomic.h>
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
+#include <linux/scatterlist.h>
 
 #include "matrix.h"
 #include "adafruit_matrix.h"
 #include "io.h"
+#include "bcm2835.h"
 
 #include "../dummyfb/dummyfb.h"
 
@@ -207,7 +209,7 @@ void show_frame(struct adamtx* adamtx)
 
 				rem_delay -= clock_out_delay;
 
-				while(remap_line < adamtx_remap_frame.real_size->height && rem_delay > adamtx->update_remap_ns_per_line * 3 / 2) {
+				while(remap_line < adamtx_remap_frame.real_size->height && rem_delay > adamtx->update_remap_ns_per_line * 2) {
 					adamtx_remap_frame.offset = remap_line;
 					remap_frame(&adamtx_remap_frame);
 					remap_line++;
@@ -219,7 +221,7 @@ void show_frame(struct adamtx* adamtx)
 					getnstimeofday(&last);
 				}
 				if(remap_line >= adamtx_remap_frame.real_size->height) {
-					while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line * 3 / 2) {
+					while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line * 2) {
 						adamtx_prerender_frame.offset = prerender_line;
 						prerender_frame(&adamtx_prerender_frame);
 						prerender_line += 2;
@@ -286,6 +288,9 @@ static int update_frame(void* arg)
 
 		getnstimeofday(&before);
 		dummyfb_copy(adamtx->framedata, adamtx->dummyfb);
+		if(adamtx->enable_dma) {
+			//TODO: Prerender data for DMA
+		}
 		getnstimeofday(&after);
 		adamtx->update_time += ADAMTX_TIMESPEC_DIFF(after, before);
 		adamtx->updates++;
@@ -331,6 +336,9 @@ static int show_perf(void* arg)
 		printk(KERN_INFO ADAMTX_NAME ": %ld updates/s\t%ld irqs/s\t%lu ns/update\n", perf_adamtx_updates, perf_adamtx_update_irqs, perf_adamtx_updates != 0 ? perf_adamtx_update_time / perf_adamtx_updates : 0);
 		printk(KERN_INFO ADAMTX_NAME ": %ld draws/s\t%ld irqs/s\t%lu ns/draw\n", perf_adamtx_draws, perf_adamtx_draw_irqs, perf_adamtx_draws != 0 ? perf_adamtx_draw_time / perf_adamtx_draws : 0);
 		printk(KERN_INFO ADAMTX_NAME ": update_remap_ns_per_line: %ld ns\tupdate_prerender_ns_per_line: %ld ns\n", adamtx->update_remap_ns_per_line, adamtx->update_prerender_ns_per_line);
+		struct dma_tx_state tx_state;
+		int state = dmaengine_tx_status(adamtx->dma_channel, adamtx->dma_cookie, &tx_state);
+		printk(KERN_INFO ADAMTX_NAME ": DMA state: %d, remaining: %d\n", state, tx_state.residue);
 		yield();
 	}
 
@@ -524,9 +532,13 @@ static void adamtx_init_gpio(struct adamtx* adamtx)
 	adamtx_gpio_set_outputs(gpios);
 }
 
+	void dma_complete(void* unused) {
+//	printk(KERN_INFO "DMA complete\n");
+}
+
 static int adamtx_probe(struct platform_device* device)
 {
-	int ret;
+	int ret, i;
 	size_t fbsize, iosize, remap_size;
 	struct dummyfb_param dummyfb_param;
 	struct adamtx* adamtx;
@@ -557,6 +569,7 @@ static int adamtx_probe(struct platform_device* device)
 			dev_err(&device->dev, "Failed to allocate DMA channel\n");
 			goto panels_alloced;
 		}
+		dev_info(&device->dev, "Got DMA channel %d\n", adamtx->dma_channel->chan_id);
 	}
 
 	adamtx_init_gpio(adamtx);
@@ -603,20 +616,24 @@ static int adamtx_probe(struct platform_device* device)
 		goto paneldata_alloced;
 	}
 
+	unsigned int len;
 	if(adamtx->enable_dma) {
-		adamtx->dma_len = adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * (1 << ADAMTX_PWM_BITS);
-		dev_info(&device->dev, "Allocating %lu kB DMA buffers\n", adamtx->dma_len / 1024UL);
-		if(!(adamtx->dma_iodata = kzalloc(adamtx->dma_len * sizeof(struct adamtx_dma_block), GFP_KERNEL | GFP_DMA))) {
+		//adamtx->dma_len = adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * (1 << ADAMTX_PWM_BITS);
+		adamtx->dma_len = 128;
+		dev_info(&device->dev, "Allocating %lu kB DMA buffers\n", adamtx->dma_len * sizeof(struct adamtx_dma_block) / 1024UL);
+		if(!(adamtx->dma_iodata = dma_alloc_coherent(&device->dev, adamtx->dma_len * sizeof(struct adamtx_dma_block), &adamtx->dma_mapping_iodata, GFP_KERNEL | GFP_DMA32))) {
 			ret = -ENOMEM;
 			dev_err(&device->dev, "Failed to allocate dma buffer\n");
 			goto paneldata_out_alloced;
 		}
 
-		if(!(adamtx->dma_iodata_out = kzalloc(adamtx->dma_len * sizeof(struct adamtx_dma_block), GFP_KERNEL | GFP_DMA))) {
-			ret = -ENOMEM;
-			dev_err(&device->dev, "Failed to allocate dma output buffer\n");
-			goto dma_data_alloced;
+		memset(adamtx->dma_iodata, 0x00, adamtx->dma_len * sizeof(struct adamtx_dma_block));
+
+		for(len = 0; len < adamtx->dma_len; len++) {
+			adamtx->dma_iodata[len].clear = ADAMTX_VALID_GPIO_BITS;
+			adamtx->dma_iodata[len].set = ADAMTX_VALID_GPIO_BITS;
 		}
+
 	}
 
 	remap_size = adamtx->virtual_size.height * adamtx->virtual_size.width * sizeof(struct matrix_pixel);
@@ -627,30 +644,67 @@ static int adamtx_probe(struct platform_device* device)
 	}
 
 	if(adamtx->enable_dma) {
+		dev_info(&device->dev, "DMA_COMPLETE: %d, DMA_IN_PROGRESS %d, DMA_PAUSED %d, DMA_ERROR %d\n", DMA_COMPLETE, DMA_IN_PROGRESS, DMA_PAUSED, DMA_ERROR);
+
+		adamtx->dma_mapping_gpio = ADAMTX_PERIPHERAL_BUS_BASE + ADAMTX_GPIO_OFFSET + ADAMTX_GPIO_SET_OFFSET;
+
+		memset(&adamtx->dma_config, 0, sizeof(adamtx->dma_config));
 		adamtx->dma_config = (struct dma_slave_config) {
-			.dst_addr = ADAMTX_PERIPHERAL_BASE + ADAMTX_GPIO_OFFSET + ADAMTX_GPIO_SET_OFFSET,
-			.dst_addr_width = DMA_SLAVE_BUSWIDTH_16_BYTES,
-			.dst_maxburst = 1,
-			.device_fc = false,
-			.slave_id = 0
+			.direction = DMA_MEM_TO_DEV,
+			.dst_addr = adamtx->dma_mapping_gpio,
+			.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES,
 		};
 
-		adamtx->dma_mapping_iodata = dma_map_single(&device->dev, adamtx->dma_iodata, adamtx->dma_len, DMA_MEM_TO_DEV);
-		if((ret = dma_mapping_error(&device->dev, adamtx->dma_mapping_iodata))) {
-			dev_err(&device->dev, "Failed to map dma iodata\n");
-			goto interframe_alloced;
+		if((ret = dmaengine_slave_config(adamtx->dma_channel, &adamtx->dma_config))) {
+			dev_err(&device->dev, "Failed to configure dma slave device\n");
+			goto resource_mapped;
 		}
 
-		adamtx->dma_mapping_iodata_out = dma_map_single(&device->dev, adamtx->dma_iodata_out, adamtx->dma_len, DMA_MEM_TO_DEV);
-		if((ret = dma_mapping_error(&device->dev, adamtx->dma_mapping_iodata))) {
-			dev_err(&device->dev, "Failed to map dma iodata_out\n");
-			goto iodata_mapped;
-		}
+		printk(KERN_INFO "Fucking chan: %p\n", adamtx->dma_channel);
+		printk(KERN_INFO "Fucking device: %p\n", adamtx->dma_channel->device);
+		printk(KERN_INFO "Fucking prep: %p\n", adamtx->dma_channel->device->device_prep_dma_cyclic);
 
-		struct dma_async_tx_descriptor* dma_desc = dmaengine_prep_dma_cyclic(adamtx->dma_channel, adamtx->dma_mapping_iodata, adamtx->dma_len, adamtx->dma_len, DMA_MEM_TO_DEV, 0);
+		struct dma_async_tx_descriptor* dma_desc;
+
+		dma_desc = dmaengine_prep_dma_cyclic(adamtx->dma_channel,
+			adamtx->dma_mapping_iodata, adamtx->dma_len * sizeof(struct adamtx_dma_block),
+			adamtx->dma_len * sizeof(struct adamtx_dma_block), DMA_MEM_TO_DEV, 0);
+
 		if(!dma_desc) {
+			ret = -EINVAL;
 			dev_err(&device->dev, "Failed to prepare cyclic DMA\n");
 			goto iodata_out_mapped;
+		}
+
+		dma_desc->callback = dma_complete;
+		dma_desc->callback_param = adamtx;
+
+		struct bcm2835_desc* desc = container_of(dma_desc, struct bcm2835_desc, vd.tx);
+
+		printk(KERN_INFO "Got %u frames in chain\n", desc->frames);
+		for(i = 0; i < desc->frames; i++) {
+			struct bcm2835_dma_cb* control_block = desc->cb_list[i].cb;
+			printk(KERN_INFO "Got control block with transfer length %zu\n", control_block->length);
+			control_block->info = BCM2835_DMA_TDMODE | BCM2835_DMA_NO_WIDE_BURSTS | BCM2835_DMA_D_INC | BCM2835_DMA_S_INC/* | BCM2835_DMA_INT_EN*/;
+			control_block->length = DMA_CB_TXFR_LEN_YLENGTH(adamtx->dma_len) | DMA_CB_TXFR_LEN_XLENGTH((uint16_t)sizeof(struct adamtx_dma_block));
+			control_block->stride = DMA_CB_STRIDE_D_STRIDE(-((int16_t)sizeof(struct adamtx_dma_block))) | DMA_CB_STRIDE_S_STRIDE(0);
+
+			printk("DMA flags: 0x%x\n", control_block->info);
+
+			printk(KERN_INFO "DMA X LENGTH: %u\n", (((uint32_t*)control_block)[3]) & 0xFFFF);
+			printk(KERN_INFO "DMA Y LENGTH: %u\n", (((uint32_t*)control_block)[3]) >> 16 & 0x3FFF);
+
+			printk(KERN_INFO "DMA S STRIDE: %d\n", (int16_t)(((uint32_t*)control_block)[4] & 0xFFFF));
+			printk(KERN_INFO "DMA D STRIDE: %d\n", (int16_t)(((uint32_t*)control_block)[4] >> 16 & 0xFFFF));
+
+//			control_block->src = adamtx->dma_mapping_iodata;
+			control_block->dst = adamtx->dma_mapping_gpio;
+			printk(KERN_INFO "DMA DST: 0x%x\n", ((uint32_t*)control_block)[2]);
+			printk(KERN_INFO "DMA SRC: 0x%x\n", ((uint32_t*)control_block)[1]);
+			printk(KERN_INFO "DMA SRC end: 0x%x\n", adamtx->dma_mapping_iodata + adamtx->dma_len * sizeof(struct adamtx_dma_block));
+
+//			control_block->next = __pa(control_block);
+			break;
 		}
 
 		dmaengine_submit(dma_desc);
@@ -724,21 +778,16 @@ dma_initialized:
 	if(adamtx->enable_dma)
 		dmaengine_terminate_sync(adamtx->dma_channel);
 iodata_out_mapped:
-	if(adamtx->enable_dma)
-		dma_unmap_single(&device->dev, adamtx->dma_mapping_iodata_out, adamtx->dma_len, DMA_MEM_TO_DEV);
+resource_mapped:
 iodata_mapped:
-	if(adamtx->enable_dma)
-		dma_unmap_single(&device->dev, adamtx->dma_mapping_iodata, adamtx->dma_len, DMA_MEM_TO_DEV);
 interframe_alloced:
 	vfree(adamtx->intermediate_frame);
 paneldata_out_alloced:
 	vfree(adamtx->paneldata_out);
 dma_data_out_alloced:
-	if(adamtx->enable_dma)
-		kfree(adamtx->dma_iodata_out);
 dma_data_alloced:
 	if(adamtx->enable_dma)
-		kfree(adamtx->dma_iodata);
+		dma_free_coherent(&device->dev, adamtx->dma_len * sizeof(struct adamtx_dma_block), adamtx->dma_iodata, adamtx->dma_mapping_iodata);
 paneldata_alloced:
 	vfree(adamtx->paneldata);
 framedata_alloced:
@@ -774,10 +823,7 @@ static int adamtx_remove(struct platform_device* device)
 	if(adamtx->enable_dma) {
 		dmaengine_terminate_sync(adamtx->dma_channel);
 		dma_release_channel(adamtx->dma_channel);
-		dma_unmap_single(&device->dev, adamtx->dma_mapping_iodata_out, adamtx->dma_len, DMA_MEM_TO_DEV);
-		kfree(adamtx->dma_iodata_out);
-		dma_unmap_single(&device->dev, adamtx->dma_mapping_iodata, adamtx->dma_len, DMA_MEM_TO_DEV);
-		kfree(adamtx->dma_iodata);
+		dma_free_coherent(&device->dev, adamtx->dma_len * sizeof(struct adamtx_dma_block), adamtx->dma_iodata, adamtx->dma_mapping_iodata);
 	}
 	vfree(adamtx->intermediate_frame);
 	vfree(adamtx->paneldata);

@@ -1,0 +1,35 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+        compatible = "brcm,bcm2835", "brcm,bcm2708", "brcm,bcm2709";
+
+        fragment@0 {
+                target-path = "/";
+                __overlay__ {
+                        adamtx@0 {
+                                status = "okay";
+                                compatible = "adafruit,adamtx";
+                                dmas = <0xa 0x5>;
+                                dma-names = "gpio";
+                                adamtx-rate = <120>;
+                                adamtx-fb-rate = <60>;
+                                adamtx-bind-draw = <3>;
+                                adamtx-bind-update = <2>;
+                                adamtx-dma = <1>;
+                                upper-panel@0 {
+                                        adamtx-xres = <32>;
+                                        adamtx-yres = <16>;
+                                        adamtx-virtual-x = <0>;
+                                        adamtx-virtual-y = <0>;
+                                        adamtx-real-x = <0>;
+                                        adamtx-real-y = <0>;
+                                        adamtx-flip-x = <1>;
+                                        adamtx-flip-y = <0>;
+                                        adamtx-rotate = <0>;
+                                        adamtx-chain = <0>;
+                                };
+                        };
+                };
+        };
+};

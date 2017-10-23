@@ -184,8 +184,9 @@ struct adamtx {
 	size_t dma_len;
 	dma_addr_t dma_mapping_iodata;
 	struct adamtx_dma_block* dma_iodata;
-	dma_addr_t dma_mapping_iodata_out;
-	struct adamtx_dma_block* dma_iodata_out;
+	dma_cookie_t dma_cookie;
+
+	dma_addr_t dma_mapping_gpio;
 };
 
 struct adamtx_remap_frame {

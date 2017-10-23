@@ -9,14 +9,7 @@ uint32_t* adamtx_gpio_clr = NULL;
 
 uint32_t* adamtx_gpio_map = NULL;
 
-const uint32_t adamtx_valid_gpio_bits = ((1 <<  0) | (1 <<  1) | // RPi 1 - Revision 1 accessible
-   (1 <<  2) | (1 <<  3) | // RPi 1 - Revision 2 accessible
-   (1 <<  4) | (1 <<  7) | (1 << 8) | (1 <<  9) |
-   (1 << 10) | (1 << 11) | (1 << 14) | (1 << 15)| (1 <<17) | (1 << 18) |
-   (1 << 22) | (1 << 23) | (1 << 24) | (1 << 25)| (1 << 27) |
-   // support for A+/B+ and RPi2 with additional GPIO pins.
-   (1 <<  5) | (1 <<  6) | (1 << 12) | (1 << 13) | (1 << 16) |
-   (1 << 19) | (1 << 20) | (1 << 21) | (1 << 26));
+const uint32_t adamtx_valid_gpio_bits = ADAMTX_VALID_GPIO_BITS;
 
 int adamtx_gpio_alloc()
 {
@@ -31,8 +24,8 @@ int adamtx_gpio_alloc()
 	{
 		return -EIO;
 	}
-	adamtx_gpio_set = adamtx_gpio_map + ADAMTX_GPIO_SET_OFFSET;
-	adamtx_gpio_clr = adamtx_gpio_map + ADAMTX_GPIO_CLR_OFFSET;	
+	adamtx_gpio_set = adamtx_gpio_map + ADAMTX_GPIO_SET_OFFSET / sizeof(uint32_t);
+	adamtx_gpio_clr = adamtx_gpio_map + ADAMTX_GPIO_CLR_OFFSET / sizeof(uint32_t);
 	return 0;
 }
 
