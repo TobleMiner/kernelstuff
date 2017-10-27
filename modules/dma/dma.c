@@ -19,6 +19,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/scatterlist.h>
 #include <linux/gpio.h>
+#include <linux/kallsyms.h>
 
 #include "dma.h"
 #include "bcm2835.h"
@@ -39,7 +40,8 @@ struct dma_chan* dma_channel;
 struct dma_async_tx_descriptor* dma_desc;
 dma_cookie_t dma_cookie;
 
-#define DMA_NUM_BLOCKS 5
+#define DMA_BLOCK_SIZE (65536 / 2)
+#define DMA_NUM_BLOCKS (DMA_BLOCK_SIZE / sizeof(struct dma_block))
 
 #define DMA_NUM_GPIOS 14
 
@@ -63,9 +65,13 @@ void dma_complete(void* param) {
 static int dma_probe(struct platform_device* device)
 {
 	int err, i, gpio_count;
+	struct list_head* dma_channels;
 	uint32_t gpio_bitmask = 0;
 	struct bcm2835_desc* desc;
 	struct bcm2835_dma_cb* control_block;
+	struct bcm2835_chan* bcm_channel;
+	struct dma_device* dev_cursor;
+	struct dma_chan* chan_cursor;
 
 	for(gpio_count = 0; gpio_count < DMA_NUM_GPIOS; gpio_count++) {
 		if((err = gpio_request_one(dma_gpios[gpio_count], GPIOF_DIR_OUT, NULL))) {
@@ -75,6 +81,20 @@ static int dma_probe(struct platform_device* device)
 		gpio_bitmask |= (1 << dma_gpios[gpio_count]);
 	}
 
+	struct list_head* dma_chan_list = (struct list_head*)kallsyms_lookup_name("dma_device_list");
+	if(dma_chan_list) {
+		list_for_each_entry(dev_cursor, dma_chan_list, global_node) {
+			dev_info(&device->dev, "Got DMA device with %d channels\n", dev_cursor->chancnt);
+			list_for_each_entry(chan_cursor, &dev_cursor->channels, device_node) {
+				dev_info(&device->dev, "Got channel %d with %d users\n", chan_cursor->chan_id, chan_cursor->client_count);
+				bcm_channel = container_of(chan_cursor, struct bcm2835_chan, vc.chan);
+				dev_info(&device->dev, "\tActual channel: %d is_lite: %d\n", bcm_channel->ch, bcm_channel->is_lite_channel);
+			}
+		}
+	} else {
+		dev_warn(&device->dev, "Failed to fetch dma device list\n");
+	}
+
 	dma_channel = dma_request_chan(&device->dev, "gpio");
 	if(IS_ERR(dma_channel)) {
 		err = PTR_ERR(dma_channel);
@@ -82,7 +102,10 @@ static int dma_probe(struct platform_device* device)
 		goto gpio_alloced;
 	}
 
-	dev_info(&device->dev, "Got dma channel %d\n", dma_channel->chan_id);
+	dev_info(&device->dev, "Got DMA channel %d\n", dma_channel->chan_id);
+
+	dev_info(&device->dev, "Actual DMA channel: %d\n", container_of(dma_channel, struct bcm2835_chan, vc.chan)->ch);
+	dev_info(&device->dev, "Is lite channel: %d\n", container_of(dma_channel, struct bcm2835_chan, vc.chan)->is_lite_channel);
 
 	if(!(dma_iodata = dma_alloc_coherent(&device->dev, DMA_NUM_BLOCKS * sizeof(struct dma_block), &dma_mapping_data, GFP_KERNEL | GFP_DMA32))) {
 		err = -ENOMEM;
@@ -119,13 +142,33 @@ static int dma_probe(struct platform_device* device)
 	usleep_range(10000, 50000);
 
 	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
-		dma_iodata[i].set = gpio_bitmask;
-		dma_iodata[i].clear = gpio_bitmask;
+		dma_iodata[i].set = BIT(ADAMTX_GPIO_CLK);
+		dma_iodata[i].clear = BIT(ADAMTX_GPIO_CLK);
+		if(i == 0/*((i * sizeof(struct dma_block)) % DMA_BLOCK_SIZE) && i == 0*/) {
+			dma_iodata[i].set |= BIT(ADAMTX_GPIO_STR);
+			dma_iodata[i].clear |= BIT(ADAMTX_GPIO_STR);
+		}
+		if(i % 2) {
+			dma_iodata[i].set |= BIT(ADAMTX_GPIO_A);
+			dma_iodata[i].clear |= BIT(ADAMTX_GPIO_A);
+		}
+		if(i % 3) {
+			dma_iodata[i].set |= BIT(ADAMTX_GPIO_B);
+			dma_iodata[i].clear |= BIT(ADAMTX_GPIO_B);
+		}
+		if(i % 4) {
+			dma_iodata[i].set |= BIT(ADAMTX_GPIO_C);
+			dma_iodata[i].clear |= BIT(ADAMTX_GPIO_C);
+		}
+		if(i % 5) {
+			dma_iodata[i].set |= BIT(ADAMTX_GPIO_D);
+			dma_iodata[i].clear |= BIT(ADAMTX_GPIO_D);
+		}
 	}
 
 	dev_info(&device->dev, "Sending 5 DMA high pulses via single DMA\n");
 
-	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
+/*	for(i = 0; i < DMA_NUM_BLOCKS; i++) {
 		dma_desc = dma_channel->device->device_prep_dma_memcpy(dma_channel,
 			dma_mapping_gpio,
 			dma_mapping_data + i * sizeof(struct dma_block), sizeof(struct dma_block), DMA_PREP_INTERRUPT);
@@ -135,7 +178,7 @@ static int dma_probe(struct platform_device* device)
 		dma_cookie = dmaengine_submit(dma_desc);
 	}
 	dma_async_issue_pending(dma_channel);
-
+*/
 	dev_info(&device->dev, "Sent 5 DMA high pulses via single DMA\n");
 
 	usleep_range(10000, 50000);
@@ -147,7 +190,7 @@ static int dma_probe(struct platform_device* device)
 */
 	dma_desc = dmaengine_prep_dma_cyclic(dma_channel,
 		dma_mapping_data, DMA_NUM_BLOCKS * sizeof(struct dma_block),
-		DMA_NUM_BLOCKS * sizeof(struct dma_block), DMA_MEM_TO_DEV, 0);
+		DMA_BLOCK_SIZE, DMA_MEM_TO_DEV, 0);
 
 	dma_desc->callback = multi_dma_complete;
 
@@ -158,7 +201,7 @@ static int dma_probe(struct platform_device* device)
 		control_block = desc->cb_list[i].cb;
 		printk(KERN_INFO "Got control block with transfer length %zu\n", control_block->length);
 		control_block->info = BCM2835_DMA_TDMODE | BCM2835_DMA_NO_WIDE_BURSTS | BCM2835_DMA_D_INC | BCM2835_DMA_S_INC/* | BCM2835_DMA_INT_EN*/;
-		control_block->length = DMA_CB_TXFR_LEN_YLENGTH(DMA_NUM_BLOCKS) | DMA_CB_TXFR_LEN_XLENGTH((uint16_t)sizeof(struct dma_block));
+		control_block->length = DMA_CB_TXFR_LEN_YLENGTH(control_block->length / sizeof(struct dma_block)) | DMA_CB_TXFR_LEN_XLENGTH((uint16_t)sizeof(struct dma_block));
 		control_block->stride = DMA_CB_STRIDE_D_STRIDE(-((int16_t)sizeof(struct dma_block))) | DMA_CB_STRIDE_S_STRIDE(0);
 
 		printk("DMA flags: 0x%x\n", control_block->info);
@@ -169,14 +212,19 @@ static int dma_probe(struct platform_device* device)
 		printk(KERN_INFO "DMA S STRIDE: %d\n", (int16_t)(((uint32_t*)control_block)[4] & 0xFFFF));
 		printk(KERN_INFO "DMA D STRIDE: %d\n", (int16_t)(((uint32_t*)control_block)[4] >> 16 & 0xFFFF));
 
-		control_block->src = dma_mapping_data;
+		//control_block->src = dma_mapping_data;
 		control_block->dst = dma_mapping_gpio;
+
+/*		struct dma_block* dma_block = phys_to_virt((phys_addr_t)control_block[1]);
+		dma_block->set = BIT(ADAMTX_GPIO_STR);
+		dma_block->clear = BIT(ADAMTX_GPIO_STR);
+*/
 		printk(KERN_INFO "DMA DST: 0x%x\n", ((uint32_t*)control_block)[2]);
 		printk(KERN_INFO "DMA SRC: 0x%x\n", ((uint32_t*)control_block)[1]);
 		printk(KERN_INFO "DMA SRC end: 0x%x\n", dma_mapping_data + DMA_NUM_BLOCKS * sizeof(struct dma_block));
 
 //		control_block->next = __pa(control_block);
-		break;
+//		break;
 	}
 
 	dma_cookie = dmaengine_submit(dma_desc);
