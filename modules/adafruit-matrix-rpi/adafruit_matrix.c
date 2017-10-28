@@ -30,7 +30,8 @@
 #define ADAMTX_GPIO_LO(gpio) adamtx_gpio_clr_bits((1 << gpio))
 #define ADAMTX_GPIO_SET(gpio, state) (state ? ADAMTX_GPIO_HI(gpio) : ADAMTX_GPIO_LO(gpio))
 
-#define ADAMTX_DMA_STEPS_PER_PIXEL 3
+#define ADAMTX_DMA_STEPS_PER_PIXEL 1
+#define ADAMTX_DMA_ADDRESS_STEPS 2
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
@@ -141,7 +142,7 @@ void prerender_frame(struct adamtx_prerender_frame* frame)
 					row[col].C2_R2 = ((render_frame[row2_base + col].chains[2] >> 16) & (1 << j)) > 0;
 				}
 				if(j == 0)
-					addr = (line - 1) % (rows / 2);
+					addr = (line + 1) % (rows / 2);
 				else
 					addr = line;
 				*((uint32_t*)(&row[col])) |= (addr << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
@@ -276,7 +277,8 @@ static int draw_frame(void* arg)
 static int update_frame(void* arg)
 {
 	int i, line, line_base, line_dma_base, pwm_step, pwm_stride, pwm_base, pwm_dma_base, column, column_base, column_dma_base;
-	struct adamtx_dma_block last_dma_block;
+	struct adamtx_dma_block last_dma_block, next_dma_block;
+	struct adamtx_panel_io io_address;
 	struct timespec before, after;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
 	struct adamtx* adamtx = container_of(param, struct adamtx, update_param);
@@ -301,6 +303,8 @@ static int update_frame(void* arg)
 		.enabled_chains = &adamtx->enabled_chains,
 		.intermediate_frame = adamtx->intermediate_frame
 	};
+
+	memset(&io_address, 0, sizeof(io_address));
 
 	printk(KERN_INFO ADAMTX_NAME ": Update spacing: %lu us", 1000000UL / param->rate);
 	while(!kthread_should_stop()) {
@@ -327,12 +331,24 @@ static int update_frame(void* arg)
 */			i = 0;
 			for(line = adamtx->virtual_size.height / 2 - 1; line >= 0; line--) {
 				line_base = line * ADAMTX_PWM_BITS * adamtx->virtual_size.width;
-				line_dma_base = ADAMTX_DMA_STEPS_PER_PIXEL * line * BIT(ADAMTX_PWM_BITS) * adamtx->virtual_size.width;
+				line_dma_base = ADAMTX_DMA_STEPS_PER_PIXEL * line * BIT(ADAMTX_PWM_BITS) * adamtx->virtual_size.width + line * ADAMTX_DMA_ADDRESS_STEPS;
+
+//				continue;
 
 				for(pwm_step = 0; pwm_step < ADAMTX_PWM_BITS; pwm_step++) {
 					pwm_base = line_base + pwm_step * adamtx->virtual_size.width;
 //					for(pwm_stride = BIT(pwm_step) - 1; pwm_stride < BIT(pwm_step + 1) - ((pwm_step == ADAMTX_PWM_BITS - 1) ? 0 : 1); pwm_stride++) {
 						pwm_dma_base = line_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * (BIT(pwm_step) - 1) * adamtx->virtual_size.width;
+
+						if(pwm_step == 1) {
+							adamtx->dma_iodata[pwm_dma_base].set = BIT(ADAMTX_GPIO_OE);
+							adamtx->dma_iodata[pwm_dma_base++].clear = ADAMTX_GPIO_MASK_ADDRESS;
+							*((uint32_t*)&io_address) = (line << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
+							io_address.E = line >> 4;
+							adamtx->dma_iodata[pwm_dma_base].set = *((uint32_t*)&io_address);
+							adamtx->dma_iodata[pwm_dma_base++].clear = BIT(ADAMTX_GPIO_OE);
+							line_dma_base += ADAMTX_DMA_ADDRESS_STEPS;
+						}
 
 						for(column = 0; column < adamtx->virtual_size.width; column++) {
 							column_base = pwm_base + column;
@@ -346,15 +362,16 @@ static int update_frame(void* arg)
 							}
 
 
-							adamtx->dma_iodata[column_dma_base].set = ((uint32_t*)adamtx->paneldata)[column_base] & ADAMTX_VALID_GPIO_BITS;
+//							last_dma_block = adamtx->dma_iodata[(column_dma_base - ADAMTX_DMA_STEPS_PER_PIXEL) % adamtx->dma_len];
+//							next_dma_block = adamtx->dma_iodata[(column_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL) % adamtx->dma_len];
+							adamtx->dma_iodata[column_dma_base].set = (((uint32_t*)adamtx->paneldata)[column_base] & ADAMTX_VALID_GPIO_BITS & ~ADAMTX_GPIO_MASK_ADDRESS) | BIT(ADAMTX_GPIO_CLK);
 //							if(adamtx->dma_iodata[column_dma_base].set & ~ADAMTX_GPIO_MASK_ADDRESS)
 //								printk(KERN_WARNING "Got not null pixel @%d, DMA: %d\n", column_base, column_dma_base);
-							adamtx->dma_iodata[column_dma_base].clear = (~adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS; (~((uint32_t*)adamtx->paneldata)[column_base]) & ADAMTX_VALID_GPIO_BITS;
-							adamtx->dma_iodata[column_dma_base + 1].set = BIT(ADAMTX_GPIO_CLK);
-							adamtx->dma_iodata[column_dma_base + 1].clear = BIT(ADAMTX_GPIO_CLK);
 							if(column == (adamtx->virtual_size.width - 1))
-								adamtx->dma_iodata[column_dma_base + 2].set = BIT(ADAMTX_GPIO_STR);
-							adamtx->dma_iodata[column_dma_base + 2].clear = (BIT(ADAMTX_GPIO_STR) | (((uint32_t*)adamtx->paneldata)[column_base]) & ~ADAMTX_GPIO_MASK_ADDRESS) & ADAMTX_VALID_GPIO_BITS;
+								adamtx->dma_iodata[column_dma_base].set |= BIT(ADAMTX_GPIO_STR);
+							adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_STR) | adamtx->dma_iodata[column_dma_base].set;
+//							adamtx->dma_iodata[column_dma_base + 1].clear = (BIT(ADAMTX_GPIO_STR) | (((uint32_t*)adamtx->paneldata)[column_base]) & ~ADAMTX_GPIO_MASK_ADDRESS) & ADAMTX_VALID_GPIO_BITS;
+//							adamtx->dma_iodata[0].clear = ADAMTX_VALID_GPIO_BITS;
 
 /*							last_dma_block = adamtx->dma_iodata[(column_dma_base - 2) % adamtx->dma_len];
 							if(column_dma_base) {
@@ -739,7 +756,11 @@ static int adamtx_probe(struct platform_device* device)
 	}
 
 	if(adamtx->enable_dma) {
-		adamtx->dma_len = adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * (1 << ADAMTX_PWM_BITS) * ADAMTX_DMA_STEPS_PER_PIXEL;
+		adamtx->dma_len =
+			// Actual image data
+			adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * (1 << ADAMTX_PWM_BITS) * ADAMTX_DMA_STEPS_PER_PIXEL +
+			// Extra DMA transfers for address switching
+			adamtx->virtual_size.height / 2 * ADAMTX_DMA_ADDRESS_STEPS;
 		dev_info(&device->dev, "Allocating %lu kB DMA buffers\n", adamtx->dma_len * sizeof(struct adamtx_dma_block) / 1024UL);
 		if(!(adamtx->dma_iodata = dma_alloc_coherent(&device->dev, adamtx->dma_len * sizeof(struct adamtx_dma_block), &adamtx->dma_mapping_iodata, GFP_KERNEL | GFP_DMA32))) {
 			ret = -ENOMEM;
