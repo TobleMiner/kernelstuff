@@ -600,6 +600,8 @@ static int adamtx_probe(struct platform_device* device)
 	size_t fbsize, iosize, remap_size;
 	struct dummyfb_param dummyfb_param;
 	struct adamtx* adamtx;
+	struct dma_async_tx_descriptor* dma_desc;
+	struct bcm2835_desc* desc;
 	size_t len;
 
 	if(!(adamtx = vzalloc(sizeof(struct adamtx)))) {
@@ -727,16 +729,13 @@ static int adamtx_probe(struct platform_device* device)
 			goto iodata_out_mapped;
 		}
 
-		dma_desc->callback = dma_complete;
-		dma_desc->callback_param = adamtx;
-
-		struct bcm2835_desc* desc = container_of(dma_desc, struct bcm2835_desc, vd.tx);
+		desc = container_of(dma_desc, struct bcm2835_desc, vd.tx);
 
 		printk(KERN_INFO "Got %u frames in chain\n", desc->frames);
 		for(i = 0; i < desc->frames; i++) {
 			struct bcm2835_dma_cb* control_block = desc->cb_list[i].cb;
 			printk(KERN_INFO "Got control block with transfer length %zu @0x%x\n", control_block->length, __pa(control_block));
-			control_block->info = BCM2835_DMA_TDMODE | BCM2835_DMA_NO_WIDE_BURSTS | BCM2835_DMA_D_INC | BCM2835_DMA_S_INC/* | BCM2835_DMA_INT_EN*/;
+			control_block->info = BCM2835_DMA_TDMODE | BCM2835_DMA_NO_WIDE_BURSTS | BCM2835_DMA_D_INC | BCM2835_DMA_S_INC;
 			control_block->length = DMA_CB_TXFR_LEN_YLENGTH(control_block->length / sizeof(struct adamtx_dma_block)) | DMA_CB_TXFR_LEN_XLENGTH((uint16_t)sizeof(struct adamtx_dma_block));
 			control_block->stride = DMA_CB_STRIDE_D_STRIDE(-((int16_t)sizeof(struct adamtx_dma_block))) | DMA_CB_STRIDE_S_STRIDE(0);
 
