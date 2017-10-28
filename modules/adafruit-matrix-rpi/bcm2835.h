@@ -166,7 +166,8 @@ struct bcm2835_desc {
 #define BCM2835_FROM_CHAN(chan) container_of((chan), struct bcm2835_chan, vc.chan)
 #define BCM2835_DESC_FROM_TX(tx) container_of((tx), struct bcm2835_desc, vd.tx)
 
-#define DMA_CB_TXFR_LEN_YLENGTH(y) (((y - 1) & 0x3fff) << 16)
+//#define DMA_CB_TXFR_LEN_YLENGTH(y) (((y - 1) & 0x3fff) << 16)
+#define DMA_CB_TXFR_LEN_YLENGTH(y) (((y) & 0x3fff) << 16)
 #define DMA_CB_TXFR_LEN_XLENGTH(x) ((x)&0xffff)
 
 #define DMA_CB_STRIDE_D_STRIDE(x) (((x)&0xffff) << 16)

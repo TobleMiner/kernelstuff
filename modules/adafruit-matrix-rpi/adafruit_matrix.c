@@ -30,6 +30,8 @@
 #define ADAMTX_GPIO_LO(gpio) adamtx_gpio_clr_bits((1 << gpio))
 #define ADAMTX_GPIO_SET(gpio, state) (state ? ADAMTX_GPIO_HI(gpio) : ADAMTX_GPIO_LO(gpio))
 
+#define ADAMTX_DMA_STEPS_PER_PIXEL 3
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
 MODULE_DESCRIPTION("Adafruit LED matrix driver");
@@ -139,7 +141,7 @@ void prerender_frame(struct adamtx_prerender_frame* frame)
 					row[col].C2_R2 = ((render_frame[row2_base + col].chains[2] >> 16) & (1 << j)) > 0;
 				}
 				if(j == 0)
-					addr = (line + 1) % (rows / 2);
+					addr = (line - 1) % (rows / 2);
 				else
 					addr = line;
 				*((uint32_t*)(&row[col])) |= (addr << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
@@ -273,10 +275,32 @@ static int draw_frame(void* arg)
 
 static int update_frame(void* arg)
 {
-	struct timespec before;
-	struct timespec after;
+	int i, line, line_base, line_dma_base, pwm_step, pwm_stride, pwm_base, pwm_dma_base, column, column_base, column_dma_base;
+	struct adamtx_dma_block last_dma_block;
+	struct timespec before, after;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
 	struct adamtx* adamtx = container_of(param, struct adamtx, update_param);
+
+	struct adamtx_remap_frame adamtx_remap_frame = {
+		.real_size = &adamtx->real_size,
+		.virtual_size = &adamtx->virtual_size,
+		.offset = 0,
+		.rows = adamtx->real_size.height,
+		.pwm_bits = ADAMTX_PWM_BITS,
+		.panels = &adamtx->panels,
+		.src = adamtx->framedata,
+		.dst = adamtx->intermediate_frame
+	};
+
+	struct adamtx_prerender_frame adamtx_prerender_frame = {
+		.virtual_size = &adamtx->virtual_size,
+		.offset = 0,
+		.rows = adamtx->virtual_size.height,
+		.pwm_bits = ADAMTX_PWM_BITS,
+		.iodata = adamtx->paneldata,
+		.enabled_chains = &adamtx->enabled_chains,
+		.intermediate_frame = adamtx->intermediate_frame
+	};
 
 	printk(KERN_INFO ADAMTX_NAME ": Update spacing: %lu us", 1000000UL / param->rate);
 	while(!kthread_should_stop()) {
@@ -290,7 +314,102 @@ static int update_frame(void* arg)
 		dummyfb_copy(adamtx->framedata, adamtx->dummyfb);
 		if(adamtx->enable_dma) {
 			//TODO: Prerender data for DMA
-		}
+			remap_frame(&adamtx_remap_frame);
+			prerender_frame(&adamtx_prerender_frame);
+
+/*			int* accessed = vzalloc(adamtx->dma_len * sizeof(int));
+			if(accessed)
+				for(i = 0; i < adamtx->dma_len; i++)
+					accessed[i] = -1;
+			else
+				printk(KERN_WARNING "Failed to allocate access tracker\n");
+
+*/			i = 0;
+			for(line = adamtx->virtual_size.height / 2 - 1; line >= 0; line--) {
+				line_base = line * ADAMTX_PWM_BITS * adamtx->virtual_size.width;
+				line_dma_base = ADAMTX_DMA_STEPS_PER_PIXEL * line * BIT(ADAMTX_PWM_BITS) * adamtx->virtual_size.width;
+
+				for(pwm_step = 0; pwm_step < ADAMTX_PWM_BITS; pwm_step++) {
+					pwm_base = line_base + pwm_step * adamtx->virtual_size.width;
+//					for(pwm_stride = BIT(pwm_step) - 1; pwm_stride < BIT(pwm_step + 1) - ((pwm_step == ADAMTX_PWM_BITS - 1) ? 0 : 1); pwm_stride++) {
+						pwm_dma_base = line_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * (BIT(pwm_step) - 1) * adamtx->virtual_size.width;
+
+						for(column = 0; column < adamtx->virtual_size.width; column++) {
+							column_base = pwm_base + column;
+							column_dma_base = pwm_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * column;
+/*							if(pwm_step == ADAMTX_PWM_BITS && column = adamtx->virtual_size.width - 1)
+								printk(KERN_INFO "Line %d ends @%u\n", line, column_dma_base);
+*/
+							if(column_dma_base + 1 >= adamtx->dma_len) {
+								printk(KERN_WARNING "DMA index out of range! %zu > %zu\n", column_dma_base + 1, adamtx->dma_len - 1);
+								continue;
+							}
+
+
+							adamtx->dma_iodata[column_dma_base].set = ((uint32_t*)adamtx->paneldata)[column_base] & ADAMTX_VALID_GPIO_BITS;
+//							if(adamtx->dma_iodata[column_dma_base].set & ~ADAMTX_GPIO_MASK_ADDRESS)
+//								printk(KERN_WARNING "Got not null pixel @%d, DMA: %d\n", column_base, column_dma_base);
+							adamtx->dma_iodata[column_dma_base].clear = (~adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS; (~((uint32_t*)adamtx->paneldata)[column_base]) & ADAMTX_VALID_GPIO_BITS;
+							adamtx->dma_iodata[column_dma_base + 1].set = BIT(ADAMTX_GPIO_CLK);
+							adamtx->dma_iodata[column_dma_base + 1].clear = BIT(ADAMTX_GPIO_CLK);
+							if(column == (adamtx->virtual_size.width - 1))
+								adamtx->dma_iodata[column_dma_base + 2].set = BIT(ADAMTX_GPIO_STR);
+							adamtx->dma_iodata[column_dma_base + 2].clear = (BIT(ADAMTX_GPIO_STR) | (((uint32_t*)adamtx->paneldata)[column_base]) & ~ADAMTX_GPIO_MASK_ADDRESS) & ADAMTX_VALID_GPIO_BITS;
+
+/*							last_dma_block = adamtx->dma_iodata[(column_dma_base - 2) % adamtx->dma_len];
+							if(column_dma_base) {
+								adamtx->dma_iodata[column_dma_base].set = BIT(ADAMTX_GPIO_CLK); //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
+								adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_CLK); //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;								adamtx->dma_iodata[column_dma_base].set |= BIT(ADAMTX_GPIO_STR);
+								adamtx->dma_iodata[column_dma_base].clear |= BIT(ADAMTX_GPIO_STR);
+							}
+							adamtx->dma_iodata[column_dma_base + 1].set = 0; //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
+							adamtx->dma_iodata[column_dma_base + 1].clear = 0; //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;
+							i++;
+							i %= adamtx->virtual_size.height / 2;
+*/
+/*							adamtx->dma_iodata[column_dma_base].set = BIT(ADAMTX_GPIO_CLK); //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
+							adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_CLK); //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;
+							adamtx->dma_iodata[column_dma_base + 1].set = BIT(ADAMTX_GPIO_CLK); //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
+							adamtx->dma_iodata[column_dma_base + 1].clear = BIT(ADAMTX_GPIO_CLK); //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;
+							adamtx->dma_iodata[0].set = BIT(ADAMTX_GPIO_STR) | BIT(ADAMTX_GPIO_CLK); //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
+							adamtx->dma_iodata[0].clear = BIT(ADAMTX_GPIO_STR) | BIT(ADAMTX_GPIO_CLK); //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;
+
+*/
+/*							if(accessed) {
+								if(accessed[column_dma_base] != -1)
+									printk(KERN_WARNING "Duplicate DMA (base) at %u (%u, %u, %u), old: %d, new: %d\n", column_dma_base, line, pwm_stride, column, accessed[column_dma_base], column_base);
+								accessed[column_dma_base] = column_base;
+								if(accessed[column_dma_base + 1] != -1)
+									printk(KERN_WARNING "Duplicate DMA (extended) at %u (%u, %u, %u), old: %d, new: %d\n", column_dma_base + 1, line, pwm_stride, column, accessed[column_dma_base + 1], column_base);
+								accessed[column_dma_base + 1] = column_base;
+							}
+*/
+/*							adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_CLK);
+							adamtx->dma_iodata[column_dma_base].set = BIT(ADAMTX_GPIO_CLK);
+							adamtx->dma_iodata[column_dma_base + 1].clear = BIT(ADAMTX_GPIO_CLK);
+							adamtx->dma_iodata[column_dma_base + 1].set = BIT(ADAMTX_GPIO_CLK);
+*/						}
+//					}
+				}
+			}
+
+/*			if(accessed) {
+				for(i = 0; i < adamtx->dma_len; i++)
+					if(accessed[i] == -1)
+						printk(KERN_WARNING "Position %u skipped during DMA\n", i);
+
+				vfree(accessed);
+			}
+*/
+//			printk(KERN_INFO "DMA last pos: line_base: %u, pwm_base: %u, column_base: %u / %u\n", line_dma_base, pwm_dma_base, column_dma_base, adamtx->dma_len - 1);
+
+/*			for(i = 0; i < adamtx->dma_len; i++) {
+				if(!(i % 5)) {
+					adamtx->dma_iodata[i].clear = BIT(ADAMTX_GPIO_CLK);
+					adamtx->dma_iodata[i].set = BIT(ADAMTX_GPIO_CLK);
+				}
+			}
+*/		}
 		getnstimeofday(&after);
 		adamtx->update_time += ADAMTX_TIMESPEC_DIFF(after, before);
 		adamtx->updates++;
@@ -536,12 +655,15 @@ static void adamtx_init_gpio(struct adamtx* adamtx)
 //	printk(KERN_INFO "DMA complete\n");
 }
 
+#define ADAMTX_MIN(a, b) ((a) < (b) ? (a) : (b))
+
 static int adamtx_probe(struct platform_device* device)
 {
 	int ret, i;
 	size_t fbsize, iosize, remap_size;
 	struct dummyfb_param dummyfb_param;
 	struct adamtx* adamtx;
+	size_t len;
 
 	if(!(adamtx = vzalloc(sizeof(struct adamtx)))) {
 		ret = -ENOMEM;
@@ -616,10 +738,8 @@ static int adamtx_probe(struct platform_device* device)
 		goto paneldata_alloced;
 	}
 
-	unsigned int len;
 	if(adamtx->enable_dma) {
-		//adamtx->dma_len = adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * (1 << ADAMTX_PWM_BITS);
-		adamtx->dma_len = 128;
+		adamtx->dma_len = adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * (1 << ADAMTX_PWM_BITS) * ADAMTX_DMA_STEPS_PER_PIXEL;
 		dev_info(&device->dev, "Allocating %lu kB DMA buffers\n", adamtx->dma_len * sizeof(struct adamtx_dma_block) / 1024UL);
 		if(!(adamtx->dma_iodata = dma_alloc_coherent(&device->dev, adamtx->dma_len * sizeof(struct adamtx_dma_block), &adamtx->dma_mapping_iodata, GFP_KERNEL | GFP_DMA32))) {
 			ret = -ENOMEM;
@@ -627,13 +747,15 @@ static int adamtx_probe(struct platform_device* device)
 			goto paneldata_out_alloced;
 		}
 
+		dev_info(&device->dev, "DMA buffer is @%p\n", adamtx->dma_iodata);
+
 		memset(adamtx->dma_iodata, 0x00, adamtx->dma_len * sizeof(struct adamtx_dma_block));
 
-		for(len = 0; len < adamtx->dma_len; len++) {
+/*		for(len = 0; len < adamtx->dma_len; len++) {
 			adamtx->dma_iodata[len].clear = ADAMTX_VALID_GPIO_BITS;
 			adamtx->dma_iodata[len].set = ADAMTX_VALID_GPIO_BITS;
 		}
-
+*/
 	}
 
 	remap_size = adamtx->virtual_size.height * adamtx->virtual_size.width * sizeof(struct matrix_pixel);
@@ -666,9 +788,13 @@ static int adamtx_probe(struct platform_device* device)
 
 		struct dma_async_tx_descriptor* dma_desc;
 
+		len = adamtx->dma_len * sizeof(struct adamtx_dma_block);
+		while(len > (0x3fff * sizeof(struct adamtx_dma_block)) || (adamtx->dma_len * sizeof(struct adamtx_dma_block)) % len)
+			len--;
+
 		dma_desc = dmaengine_prep_dma_cyclic(adamtx->dma_channel,
 			adamtx->dma_mapping_iodata, adamtx->dma_len * sizeof(struct adamtx_dma_block),
-			adamtx->dma_len * sizeof(struct adamtx_dma_block), DMA_MEM_TO_DEV, 0);
+			len, DMA_MEM_TO_DEV, 0);
 
 		if(!dma_desc) {
 			ret = -EINVAL;
@@ -684,9 +810,9 @@ static int adamtx_probe(struct platform_device* device)
 		printk(KERN_INFO "Got %u frames in chain\n", desc->frames);
 		for(i = 0; i < desc->frames; i++) {
 			struct bcm2835_dma_cb* control_block = desc->cb_list[i].cb;
-			printk(KERN_INFO "Got control block with transfer length %zu\n", control_block->length);
+			printk(KERN_INFO "Got control block with transfer length %zu @0x%x\n", control_block->length, __pa(control_block));
 			control_block->info = BCM2835_DMA_TDMODE | BCM2835_DMA_NO_WIDE_BURSTS | BCM2835_DMA_D_INC | BCM2835_DMA_S_INC/* | BCM2835_DMA_INT_EN*/;
-			control_block->length = DMA_CB_TXFR_LEN_YLENGTH(adamtx->dma_len) | DMA_CB_TXFR_LEN_XLENGTH((uint16_t)sizeof(struct adamtx_dma_block));
+			control_block->length = DMA_CB_TXFR_LEN_YLENGTH(control_block->length / sizeof(struct adamtx_dma_block)) | DMA_CB_TXFR_LEN_XLENGTH((uint16_t)sizeof(struct adamtx_dma_block));
 			control_block->stride = DMA_CB_STRIDE_D_STRIDE(-((int16_t)sizeof(struct adamtx_dma_block))) | DMA_CB_STRIDE_S_STRIDE(0);
 
 			printk("DMA flags: 0x%x\n", control_block->info);
@@ -702,9 +828,10 @@ static int adamtx_probe(struct platform_device* device)
 			printk(KERN_INFO "DMA DST: 0x%x\n", ((uint32_t*)control_block)[2]);
 			printk(KERN_INFO "DMA SRC: 0x%x\n", ((uint32_t*)control_block)[1]);
 			printk(KERN_INFO "DMA SRC end: 0x%x\n", adamtx->dma_mapping_iodata + adamtx->dma_len * sizeof(struct adamtx_dma_block));
+			printk(KERN_INFO "DMA NEXT: 0x%x\n", control_block->next);
 
-//			control_block->next = __pa(control_block);
-			break;
+//			control_block->next = __pa(desc->cb_list[(i + 1) % desc->frames].cb);
+//			break;
 		}
 
 		dmaengine_submit(dma_desc);
