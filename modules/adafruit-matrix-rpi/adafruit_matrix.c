@@ -602,6 +602,7 @@ static int adamtx_probe(struct platform_device* device)
 	struct adamtx* adamtx;
 	struct dma_async_tx_descriptor* dma_desc;
 	struct bcm2835_desc* desc;
+	struct bcm2835_chan* bcm_channel;
 	size_t len;
 
 	if(!(adamtx = vzalloc(sizeof(struct adamtx)))) {
@@ -631,6 +632,16 @@ static int adamtx_probe(struct platform_device* device)
 			goto panels_alloced;
 		}
 		dev_info(&device->dev, "Got DMA channel %d\n", adamtx->dma_channel->chan_id);
+
+		// More pi-specific hackery
+		bcm_channel = BCM2835_CHAN_FROM_DMA_CHAN(adamtx->dma_channel);
+		dev_info(&device->dev, "DMA channel %d maps to BCM2835 DMA channel %d\n", adamtx->dma_channel->chan_id, bcm_channel->ch);
+		if(bcm_channel->is_lite_channel) {
+			dev_err(&device->dev, "BCM2835 DMA channel %d is a DMA lite channel. We need a fully featured channel for 2D DMA mode\n", bcm_channel->ch);
+			ret = -ENODEV;
+			goto dma_alloced;
+		}
+		dev_info(&device->dev, "BCM2835 DMA channel %d is fully featured. Continuing\n", bcm_channel->ch);
 	}
 
 	adamtx_init_gpio(adamtx);
