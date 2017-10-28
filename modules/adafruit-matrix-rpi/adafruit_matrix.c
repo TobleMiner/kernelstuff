@@ -276,8 +276,7 @@ static int draw_frame(void* arg)
 
 static int update_frame(void* arg)
 {
-	int i, line, line_base, line_dma_base, pwm_step, pwm_stride, pwm_base, pwm_dma_base, column, column_base, column_dma_base;
-	struct adamtx_dma_block last_dma_block, next_dma_block;
+	int line, line_base, line_dma_base, pwm_step, pwm_base, pwm_dma_base, column, column_base, column_dma_base;
 	struct adamtx_panel_io io_address;
 	struct timespec before, after;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
