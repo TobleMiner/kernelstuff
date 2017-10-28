@@ -2,6 +2,7 @@
 #include <linux/errno.h>
 #include <linux/io.h>
 
+#include "adafruit_matrix.h"
 #include "io.h"
 
 uint32_t* adamtx_gpio_set = NULL;
@@ -11,15 +12,15 @@ uint32_t* adamtx_gpio_map = NULL;
 
 const uint32_t adamtx_valid_gpio_bits = ADAMTX_VALID_GPIO_BITS;
 
-int adamtx_gpio_alloc()
+int adamtx_gpio_alloc(struct adamtx* adamtx)
 {
 	#ifdef ADAMTX_REQUEST_EXCLUSIVE_GPIO
-	if(request_mem_region(ADAMTX_PERIPHERAL_BASE + ADAMTX_GPIO_OFFSET, ADAMTX_REGISTER_BLOCK_SIZE, "ADAMTX_GPIO") == NULL)
+	if(request_mem_region(adamtx->peripheral_base + ADAMTX_GPIO_OFFSET, ADAMTX_REGISTER_BLOCK_SIZE, "ADAMTX_GPIO") == NULL)
 	{
 		return -EIO;
 	}
 	#endif
-	adamtx_gpio_map = ioremap_nocache(ADAMTX_PERIPHERAL_BASE + ADAMTX_GPIO_OFFSET, ADAMTX_REGISTER_BLOCK_SIZE);
+	adamtx_gpio_map = ioremap_nocache(adamtx->peripheral_base + ADAMTX_GPIO_OFFSET, ADAMTX_REGISTER_BLOCK_SIZE);
 	if(adamtx_gpio_map == NULL)
 	{
 		return -EIO;
@@ -29,11 +30,11 @@ int adamtx_gpio_alloc()
 	return 0;
 }
 
-void adamtx_gpio_free()
+void adamtx_gpio_free(struct adamtx* adamtx)
 {
 	iounmap(adamtx_gpio_map);
 	#ifdef ADAMTX_REQUEST_EXCLUSIVE_GPIO
-	release_mem_region(ADAMTX_PERIPHERAL_BASE + ADAMTX_GPIO_OFFSET, ADAMTX_REGISTER_BLOCK_SIZE);
+	release_mem_region(adamtx->peripheral_base + ADAMTX_GPIO_OFFSET, ADAMTX_REGISTER_BLOCK_SIZE);
 	#endif
 }
 

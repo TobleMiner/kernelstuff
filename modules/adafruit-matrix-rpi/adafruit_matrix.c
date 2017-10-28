@@ -486,12 +486,17 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 		goto exit_err;
 	}
 
+	if((err = adamtx_of_get_int(&adamtx->peripheral_base, dev_of_node, "adamtx-peripheral-base"))) {
+		dev_err(dev, "Missing peripheral base address\n");
+		goto exit_err;
+	}
+
 	adamtx->draw_thread_bind = !adamtx_of_get_int(&adamtx->draw_thread_cpu, dev_of_node, "adamtx-bind-draw");
 	adamtx->update_thread_bind = !adamtx_of_get_int(&adamtx->update_thread_cpu, dev_of_node, "adamtx-bind-update");
 
 	adamtx->enable_dma = !!adamtx_of_get_int_default(dev_of_node, "adamtx-dma", 0);
 
-	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz, DMA: %d\n", adamtx->rate, adamtx->fb_rate, adamtx->enable_dma);
+	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz, DMA: %d, Peripheral base address: 0x%x\n", adamtx->rate, adamtx->fb_rate, adamtx->enable_dma, adamtx->peripheral_base);
 
 	for(panel_node = of_get_next_child(dev_of_node, NULL); panel_node; panel_node = of_get_next_child(dev_of_node, panel_node)) {
 		panel = vzalloc(sizeof(struct matrix_ledpanel));
@@ -615,21 +620,21 @@ static int adamtx_probe(struct platform_device* device)
 
 	platform_set_drvdata(device, adamtx);
 
-	if((ret = adamtx_gpio_alloc()))
+	if((ret = adamtx_parse_device_tree(&device->dev, adamtx)))
+		goto adamtx_alloced;
+
+	if((ret = adamtx_gpio_alloc(adamtx)))
 	{
 		printk(KERN_WARNING ADAMTX_NAME ": failed to allocate gpios (%d)\n", ret);
-		goto adamtx_alloced;
+		goto panels_alloced;
 	}
-
-	if((ret = adamtx_parse_device_tree(&device->dev, adamtx)))
-		goto gpio_alloced;
 
 	if(adamtx->enable_dma) {
 		adamtx->dma_channel = dma_request_chan(&device->dev, "gpio");
 		if(IS_ERR(adamtx->dma_channel)) {
 			ret = PTR_ERR(adamtx->dma_channel);
 			dev_err(&device->dev, "Failed to allocate DMA channel\n");
-			goto panels_alloced;
+			goto gpio_alloced;
 		}
 		dev_info(&device->dev, "Got DMA channel %d\n", adamtx->dma_channel->chan_id);
 
@@ -855,10 +860,10 @@ dummyfb_alloced:
 dma_alloced:
 	if(adamtx->enable_dma)
 		dma_release_channel(adamtx->dma_channel);
+gpio_alloced:
+	adamtx_gpio_free(adamtx);
 panels_alloced:
 	free_panels(adamtx);
-gpio_alloced:
-	adamtx_gpio_free();
 adamtx_alloced:
 	vfree(adamtx);
 none_alloced:
@@ -890,7 +895,7 @@ static int adamtx_remove(struct platform_device* device)
 		usleep_range(100000UL, 500000UL);
 	}
 	free_panels(adamtx);
-	adamtx_gpio_free();
+	adamtx_gpio_free(adamtx);
 	vfree(adamtx);
 
 	dev_info(&device->dev, "Shutting down\n");

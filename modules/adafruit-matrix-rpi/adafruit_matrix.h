@@ -185,6 +185,8 @@ struct adamtx {
 	dma_addr_t dma_mapping_iodata;
 	struct adamtx_dma_block* dma_iodata;
 	dma_addr_t dma_mapping_gpio;
+
+	uint32_t peripheral_base;
 };
 
 struct adamtx_remap_frame {

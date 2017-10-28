@@ -17,6 +17,8 @@
                                 adamtx-bind-draw = <3>;
                                 adamtx-bind-update = <2>;
                                 adamtx-dma = <1>;
+                                adamtx-peripheral-base = <0x3F000000>;
+
                                 upper-panel@0 {
                                         adamtx-xres = <32>;
                                         adamtx-yres = <16>;

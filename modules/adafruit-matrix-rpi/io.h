@@ -22,9 +22,9 @@
 #define ADAMTX_INP_GPIO(g) *(adamtx_gpio_map+((g)/10)) &= ~(7<<(((g)%10)*3))
 #define ADAMTX_OUT_GPIO(g) *(adamtx_gpio_map+((g)/10)) |= (1<<(((g)%10)*3))
 
-int adamtx_gpio_alloc(void);
+int adamtx_gpio_alloc(struct adamtx* adamtx);
 
-void adamtx_gpio_free(void);
+void adamtx_gpio_free(struct adamtx* adamtx);
 
 void adamtx_gpio_set_outputs(uint32_t outputs);
 
