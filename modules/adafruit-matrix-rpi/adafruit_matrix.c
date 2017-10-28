@@ -592,10 +592,6 @@ static void adamtx_init_gpio(struct adamtx* adamtx)
 	adamtx_gpio_set_outputs(gpios);
 }
 
-	void dma_complete(void* unused) {
-//	printk(KERN_INFO "DMA complete\n");
-}
-
 #define ADAMTX_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 static int adamtx_probe(struct platform_device* device)
