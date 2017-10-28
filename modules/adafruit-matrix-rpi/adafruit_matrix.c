@@ -317,116 +317,44 @@ static int update_frame(void* arg)
 		getnstimeofday(&before);
 		dummyfb_copy(adamtx->framedata, adamtx->dummyfb);
 		if(adamtx->enable_dma) {
-			//TODO: Prerender data for DMA
 			remap_frame(&adamtx_remap_frame);
 			prerender_frame(&adamtx_prerender_frame);
 
-/*			int* accessed = vzalloc(adamtx->dma_len * sizeof(int));
-			if(accessed)
-				for(i = 0; i < adamtx->dma_len; i++)
-					accessed[i] = -1;
-			else
-				printk(KERN_WARNING "Failed to allocate access tracker\n");
-
-*/			i = 0;
 			for(line = adamtx->virtual_size.height / 2 - 1; line >= 0; line--) {
 				line_base = line * ADAMTX_PWM_BITS * adamtx->virtual_size.width;
 				line_dma_base = ADAMTX_DMA_STEPS_PER_PIXEL * line * BIT(ADAMTX_PWM_BITS) * adamtx->virtual_size.width + line * ADAMTX_DMA_ADDRESS_STEPS;
 
-//				continue;
-
 				for(pwm_step = 0; pwm_step < ADAMTX_PWM_BITS; pwm_step++) {
 					pwm_base = line_base + pwm_step * adamtx->virtual_size.width;
-//					for(pwm_stride = BIT(pwm_step) - 1; pwm_stride < BIT(pwm_step + 1) - ((pwm_step == ADAMTX_PWM_BITS - 1) ? 0 : 1); pwm_stride++) {
-						pwm_dma_base = line_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * (BIT(pwm_step) - 1) * adamtx->virtual_size.width;
+					pwm_dma_base = line_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * (BIT(pwm_step) - 1) * adamtx->virtual_size.width;
 
-						if(pwm_step == 1) {
-							adamtx->dma_iodata[pwm_dma_base].set = BIT(ADAMTX_GPIO_OE);
-							adamtx->dma_iodata[pwm_dma_base++].clear = ADAMTX_GPIO_MASK_ADDRESS;
-							*((uint32_t*)&io_address) = (line << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
-							io_address.E = line >> 4;
-							adamtx->dma_iodata[pwm_dma_base].set = *((uint32_t*)&io_address);
-							adamtx->dma_iodata[pwm_dma_base++].clear = BIT(ADAMTX_GPIO_OE);
-							line_dma_base += ADAMTX_DMA_ADDRESS_STEPS;
+					if(pwm_step == 1) {
+						adamtx->dma_iodata[pwm_dma_base].set = BIT(ADAMTX_GPIO_OE);
+						adamtx->dma_iodata[pwm_dma_base++].clear = ADAMTX_GPIO_MASK_ADDRESS;
+						*((uint32_t*)&io_address) = (line << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
+						io_address.E = line >> 4;
+						adamtx->dma_iodata[pwm_dma_base].set = *((uint32_t*)&io_address);
+						adamtx->dma_iodata[pwm_dma_base++].clear = BIT(ADAMTX_GPIO_OE);
+						line_dma_base += ADAMTX_DMA_ADDRESS_STEPS;
+					}
+
+					for(column = 0; column < adamtx->virtual_size.width; column++) {
+						column_base = pwm_base + column;
+						column_dma_base = pwm_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * column;
+						if(column_dma_base + 1 >= adamtx->dma_len) {
+							printk(KERN_WARNING "DMA index out of range! %zu > %zu\n", column_dma_base + 1, adamtx->dma_len - 1);
+							continue;
 						}
 
-						for(column = 0; column < adamtx->virtual_size.width; column++) {
-							column_base = pwm_base + column;
-							column_dma_base = pwm_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * column;
-/*							if(pwm_step == ADAMTX_PWM_BITS && column = adamtx->virtual_size.width - 1)
-								printk(KERN_INFO "Line %d ends @%u\n", line, column_dma_base);
-*/
-							if(column_dma_base + 1 >= adamtx->dma_len) {
-								printk(KERN_WARNING "DMA index out of range! %zu > %zu\n", column_dma_base + 1, adamtx->dma_len - 1);
-								continue;
-							}
-
-
-//							last_dma_block = adamtx->dma_iodata[(column_dma_base - ADAMTX_DMA_STEPS_PER_PIXEL) % adamtx->dma_len];
-//							next_dma_block = adamtx->dma_iodata[(column_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL) % adamtx->dma_len];
-							adamtx->dma_iodata[column_dma_base].set = (((uint32_t*)adamtx->paneldata)[column_base] & ADAMTX_VALID_GPIO_BITS & ~ADAMTX_GPIO_MASK_ADDRESS) | BIT(ADAMTX_GPIO_CLK);
-//							if(adamtx->dma_iodata[column_dma_base].set & ~ADAMTX_GPIO_MASK_ADDRESS)
-//								printk(KERN_WARNING "Got not null pixel @%d, DMA: %d\n", column_base, column_dma_base);
-							if(column == (adamtx->virtual_size.width - 1))
-								adamtx->dma_iodata[column_dma_base].set |= BIT(ADAMTX_GPIO_STR);
-							adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_STR) | adamtx->dma_iodata[column_dma_base].set;
-//							adamtx->dma_iodata[column_dma_base + 1].clear = (BIT(ADAMTX_GPIO_STR) | (((uint32_t*)adamtx->paneldata)[column_base]) & ~ADAMTX_GPIO_MASK_ADDRESS) & ADAMTX_VALID_GPIO_BITS;
-//							adamtx->dma_iodata[0].clear = ADAMTX_VALID_GPIO_BITS;
-
-/*							last_dma_block = adamtx->dma_iodata[(column_dma_base - 2) % adamtx->dma_len];
-							if(column_dma_base) {
-								adamtx->dma_iodata[column_dma_base].set = BIT(ADAMTX_GPIO_CLK); //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
-								adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_CLK); //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;								adamtx->dma_iodata[column_dma_base].set |= BIT(ADAMTX_GPIO_STR);
-								adamtx->dma_iodata[column_dma_base].clear |= BIT(ADAMTX_GPIO_STR);
-							}
-							adamtx->dma_iodata[column_dma_base + 1].set = 0; //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
-							adamtx->dma_iodata[column_dma_base + 1].clear = 0; //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;
-							i++;
-							i %= adamtx->virtual_size.height / 2;
-*/
-/*							adamtx->dma_iodata[column_dma_base].set = BIT(ADAMTX_GPIO_CLK); //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
-							adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_CLK); //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;
-							adamtx->dma_iodata[column_dma_base + 1].set = BIT(ADAMTX_GPIO_CLK); //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
-							adamtx->dma_iodata[column_dma_base + 1].clear = BIT(ADAMTX_GPIO_CLK); //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;
-							adamtx->dma_iodata[0].set = BIT(ADAMTX_GPIO_STR) | BIT(ADAMTX_GPIO_CLK); //(i << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
-							adamtx->dma_iodata[0].clear = BIT(ADAMTX_GPIO_STR) | BIT(ADAMTX_GPIO_CLK); //((uint32_t)last_dma_block.set & ~(uint32_t)adamtx->dma_iodata[column_dma_base].set) & ADAMTX_VALID_GPIO_BITS;
-
-*/
-/*							if(accessed) {
-								if(accessed[column_dma_base] != -1)
-									printk(KERN_WARNING "Duplicate DMA (base) at %u (%u, %u, %u), old: %d, new: %d\n", column_dma_base, line, pwm_stride, column, accessed[column_dma_base], column_base);
-								accessed[column_dma_base] = column_base;
-								if(accessed[column_dma_base + 1] != -1)
-									printk(KERN_WARNING "Duplicate DMA (extended) at %u (%u, %u, %u), old: %d, new: %d\n", column_dma_base + 1, line, pwm_stride, column, accessed[column_dma_base + 1], column_base);
-								accessed[column_dma_base + 1] = column_base;
-							}
-*/
-/*							adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_CLK);
-							adamtx->dma_iodata[column_dma_base].set = BIT(ADAMTX_GPIO_CLK);
-							adamtx->dma_iodata[column_dma_base + 1].clear = BIT(ADAMTX_GPIO_CLK);
-							adamtx->dma_iodata[column_dma_base + 1].set = BIT(ADAMTX_GPIO_CLK);
-*/						}
-//					}
+						adamtx->dma_iodata[column_dma_base].set = (((uint32_t*)adamtx->paneldata)[column_base] & ADAMTX_VALID_GPIO_BITS & ~ADAMTX_GPIO_MASK_ADDRESS) | BIT(ADAMTX_GPIO_CLK);
+						if(column == (adamtx->virtual_size.width - 1))
+							adamtx->dma_iodata[column_dma_base].set |= BIT(ADAMTX_GPIO_STR);
+						adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_STR) | adamtx->dma_iodata[column_dma_base].set;
+					}
 				}
 			}
+		}
 
-/*			if(accessed) {
-				for(i = 0; i < adamtx->dma_len; i++)
-					if(accessed[i] == -1)
-						printk(KERN_WARNING "Position %u skipped during DMA\n", i);
-
-				vfree(accessed);
-			}
-*/
-//			printk(KERN_INFO "DMA last pos: line_base: %u, pwm_base: %u, column_base: %u / %u\n", line_dma_base, pwm_dma_base, column_dma_base, adamtx->dma_len - 1);
-
-/*			for(i = 0; i < adamtx->dma_len; i++) {
-				if(!(i % 5)) {
-					adamtx->dma_iodata[i].clear = BIT(ADAMTX_GPIO_CLK);
-					adamtx->dma_iodata[i].set = BIT(ADAMTX_GPIO_CLK);
-				}
-			}
-*/		}
 		getnstimeofday(&after);
 		adamtx->update_time += ADAMTX_TIMESPEC_DIFF(after, before);
 		adamtx->updates++;
