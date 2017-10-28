@@ -740,7 +740,7 @@ static int adamtx_probe(struct platform_device* device)
 			goto iodata_out_mapped;
 		}
 
-		desc = container_of(dma_desc, struct bcm2835_desc, vd.tx);
+		desc = BCM2835_DESC_FROM_DMA_DESC(dma_desc);
 
 		printk(KERN_INFO "Got %u frames in chain\n", desc->frames);
 		for(i = 0; i < desc->frames; i++) {

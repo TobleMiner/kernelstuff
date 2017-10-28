@@ -162,9 +162,15 @@ struct bcm2835_desc {
 #define MAX_DMA_LEN SZ_1G
 #define MAX_LITE_DMA_LEN (SZ_64K - 4)
 
-#define BCM2835_FROM_DMA(dev) container_of((dev), struct bcm2835_dmadev, ddev)
-#define BCM2835_FROM_CHAN(chan) container_of((chan), struct bcm2835_chan, vc.chan)
-#define BCM2835_DESC_FROM_TX(tx) container_of((tx), struct bcm2835_desc, vd.tx)
+inline struct bcm2835_chan* BCM2835_CHAN_FROM_DMA_CHAN(struct dma_chan* chan)
+{
+	return container_of(chan, struct bcm2835_chan, vc.chan);
+}
+
+inline struct bcm2835_desc* BCM2835_DESC_FROM_DMA_DESC(struct dma_async_tx_descriptor* desc)
+{
+	return container_of(desc, struct bcm2835_desc, vd.tx);
+}
 
 //#define DMA_CB_TXFR_LEN_YLENGTH(y) (((y - 1) & 0x3fff) << 16)
 #define DMA_CB_TXFR_LEN_YLENGTH(y) (((y) & 0x3fff) << 16)
