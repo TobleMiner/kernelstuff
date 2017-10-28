@@ -36,4 +36,4 @@ IO access but reduces CPU load significantly. Take a look at ```adamtx_dma.dts``
 
 # Using it
 
-This driver uses dummyfb to prove a framebuffer device. Thus a lot of applications like mplayer and even Xorg can use this driver to output to the LED panel.
+This driver uses dummyfb to provide a framebuffer device. Thus a lot of applications like mplayer and even Xorg can use this driver to output to the LED panel.
