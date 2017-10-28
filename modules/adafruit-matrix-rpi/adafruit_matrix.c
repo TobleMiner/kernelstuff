@@ -489,7 +489,7 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 	adamtx->draw_thread_bind = !adamtx_of_get_int(&adamtx->draw_thread_cpu, dev_of_node, "adamtx-bind-draw");
 	adamtx->update_thread_bind = !adamtx_of_get_int(&adamtx->update_thread_cpu, dev_of_node, "adamtx-bind-update");
 
-	adamtx->enable_dma = !!adamtx_of_get_int_default(dev_of_node, "adamtx-dma", 1);
+	adamtx->enable_dma = !!adamtx_of_get_int_default(dev_of_node, "adamtx-dma", 0);
 
 	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz, DMA: %d\n", adamtx->rate, adamtx->fb_rate, adamtx->enable_dma);
 
