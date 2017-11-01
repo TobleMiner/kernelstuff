@@ -31,7 +31,7 @@
 #define ADAMTX_GPIO_SET(gpio, state) (state ? ADAMTX_GPIO_HI(gpio) : ADAMTX_GPIO_LO(gpio))
 
 #define ADAMTX_DMA_STEPS_PER_PIXEL 1
-#define ADAMTX_DMA_ADDRESS_STEPS 2
+#define ADAMTX_DMA_ADDRESS_STEPS 3
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
@@ -332,7 +332,9 @@ static int update_frame(void* arg)
 						adamtx->dma_iodata[pwm_dma_base++].clear = ADAMTX_GPIO_MASK_ADDRESS;
 						*((uint32_t*)&io_address) = (line << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
 						io_address.E = line >> 4;
-						adamtx->dma_iodata[pwm_dma_base].set = *((uint32_t*)&io_address) | BIT(ADAMTX_GPIO_STR);
+						adamtx->dma_iodata[pwm_dma_base].set = *((uint32_t*)&io_address);
+						adamtx->dma_iodata[pwm_dma_base++].clear = 0;
+						adamtx->dma_iodata[pwm_dma_base].set = BIT(ADAMTX_GPIO_STR);
 						adamtx->dma_iodata[pwm_dma_base++].clear = BIT(ADAMTX_GPIO_OE) | BIT(ADAMTX_GPIO_STR);
 						line_dma_base += ADAMTX_DMA_ADDRESS_STEPS;
 					}
