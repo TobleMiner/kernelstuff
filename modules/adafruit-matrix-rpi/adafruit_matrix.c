@@ -332,8 +332,8 @@ static int update_frame(void* arg)
 						adamtx->dma_iodata[pwm_dma_base++].clear = ADAMTX_GPIO_MASK_ADDRESS;
 						*((uint32_t*)&io_address) = (line << ADAMTX_GPIO_OFFSET_ADDRESS) & ADAMTX_GPIO_MASK_ADDRESS_HI;
 						io_address.E = line >> 4;
-						adamtx->dma_iodata[pwm_dma_base].set = *((uint32_t*)&io_address);
-						adamtx->dma_iodata[pwm_dma_base++].clear = BIT(ADAMTX_GPIO_OE);
+						adamtx->dma_iodata[pwm_dma_base].set = *((uint32_t*)&io_address) | BIT(ADAMTX_GPIO_STR);
+						adamtx->dma_iodata[pwm_dma_base++].clear = BIT(ADAMTX_GPIO_OE) | BIT(ADAMTX_GPIO_STR);
 						line_dma_base += ADAMTX_DMA_ADDRESS_STEPS;
 					}
 
@@ -346,7 +346,7 @@ static int update_frame(void* arg)
 						}
 
 						adamtx->dma_iodata[column_dma_base].set = (((uint32_t*)adamtx->paneldata)[column_base] & ADAMTX_VALID_GPIO_BITS & ~ADAMTX_GPIO_MASK_ADDRESS) | BIT(ADAMTX_GPIO_CLK);
-						if(column == (adamtx->virtual_size.width - 1))
+						if(column == (adamtx->virtual_size.width - 1) && pwm_step)
 							adamtx->dma_iodata[column_dma_base].set |= BIT(ADAMTX_GPIO_STR);
 						adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_STR) | adamtx->dma_iodata[column_dma_base].set;
 					}
