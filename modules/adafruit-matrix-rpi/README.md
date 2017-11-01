@@ -29,6 +29,11 @@ can be loaded at runtime by executing ```/opt/vc/bin/dtoverlay adamtx.dtbo```. T
 come with with the dtoverlay tool you can still load the overlay at boot. To do so move the compiled overlay to ```/boot/overlays/``` and add the line ```dtoverlay=adamtx``` to
 ```/boot/config.txt```. After the next reboot the driver should be loaded and configured.
 
+## DMA
+
+This module supports DMA to offload clocking out data to the DMA engine of the BCM2835 peripheral controller. This method is not as fast as the default, cpu intensive tight loop
+IO access but reduces CPU load significantly. Take a look at ```adamtx_dma.dts``` for an example configuration using DMA.
+
 # Using it
 
-This driver uses dummyfb to prove a framebuffer device. Thus a lot of applications like mplayer and even Xorg can use this driver to output to the LED panel.
+This driver uses dummyfb to provide a framebuffer device. Thus a lot of applications like mplayer and even Xorg can use this driver to output to the LED panel.
