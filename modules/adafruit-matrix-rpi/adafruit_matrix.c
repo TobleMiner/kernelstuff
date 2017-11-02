@@ -64,7 +64,7 @@ void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 		adamtx_gpio_write_bits(((uint32_t*)data)[length]);
 		ADAMTX_GPIO_HI(ADAMTX_GPIO_CLK);
 		ADAMTX_GPIO_HI(ADAMTX_GPIO_CLK);
-//		ADAMTX_GPIO_HI(ADAMTX_GPIO_CLK);
+		ADAMTX_GPIO_HI(ADAMTX_GPIO_CLK);
 	}
 }
 
@@ -195,6 +195,8 @@ void show_frame(struct adamtx* adamtx)
 			if(!j) {
 				adamtx_set_address(i);
 			}
+			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
+			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
 			ADAMTX_GPIO_HI(ADAMTX_GPIO_STR);
@@ -661,10 +663,13 @@ static int adamtx_probe(struct platform_device* device)
 	dev_info(&device->dev, "Calculated virtual (technical) size: (%d, %d)\n", adamtx->virtual_size.width, adamtx->virtual_size.height);
 
 	dummyfb_param = (struct dummyfb_param) {
-		.width = adamtx->real_size.width,
-		.height = adamtx->real_size.height,
-		.rate = adamtx->fb_rate,
-		.depth = ADAMTX_DEPTH,
+		.mode = {
+			.width = adamtx->real_size.width,
+			.height = adamtx->real_size.height,
+			.rate = adamtx->fb_rate,
+			.depth = ADAMTX_DEPTH,
+			.grayscale = false
+		},
 
 		.priv = adamtx,
 		.remove = NULL
