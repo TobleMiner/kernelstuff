@@ -34,6 +34,64 @@ static struct fb_ops dummyfb_fbops =
 	.fb_release =	dummyfb_release
 };
 
+static struct dummyfb_color_format dummyfb_color_16 = {
+	.red = {
+		.offset = 16,
+		.length = 5,
+		.msb_right = 0
+	},
+	.green = {
+		.offset = 8,
+		.length = 6,
+		.msb_right = 0
+	},
+	.blue = {
+		.offset = 0,
+		.length = 5,
+		.msb_right = 0
+	},
+	.grayscale = false
+};
+
+static struct dummyfb_color_format dummyfb_color_24 = {
+	.red = {
+		.offset = 16,
+		.length = 8,
+		.msb_right = 0
+	},
+	.green = {
+		.offset = 8,
+		.length = 8,
+		.msb_right = 0
+	},
+	.blue = {
+		.offset = 0,
+		.length = 8,
+		.msb_right = 0
+	},
+	.grayscale = false
+};
+
+static void dummyfb_color_format_grayscale(struct dummfb_color_format* fmt, unsigned int depth) {
+	fmt->red.offset = 0;
+	fmt->red.length = depth;
+	fmt->green.offset = 0;
+	fmt->green.length = depth;
+	fmt->blue.offset = 0;
+	fmt->blue.length = depth;
+}
+
+static void dummyfb_color_format_truecolor(struct dummfb_color_format* fmt, unsigned int depth) {
+	uint32_t bits_rb = DUMMYFB_DIV_ROUND_DOWN(depth, 3);
+	uint32_t bits_g = depth - 2 * bits_rb;
+	fmt->red.offset = bits_rb + bits_g;
+	fmt->red.length = bits_rb;
+	fmt->green.offset = bits_rb;
+	fmt->green.length = bits_g;
+	fmt->blue.offset = 0;
+	fmt->blue.length = bits_rb;
+}
+
 static int dummyfb_open(struct fb_info* fbinfo, int user) {
 	struct dummyfb* dummyfb = fbinfo->par;
 
@@ -58,11 +116,11 @@ static int dummyfb_check_var(struct fb_var_screeninfo* var, struct fb_info* info
 	struct dummyfb* dummyfb = info->par;
 	printk(KERN_INFO "dummyfb: check_var");
 	printk(KERN_INFO "dummyfb: size: %dx%d virtualsize:%dx%d bpp: %d", var->xres, var->yres, var->xres_virtual, var->yres_virtual, var->bits_per_pixel);
-	if(var->bits_per_pixel != dummyfb->param.depth) // Accept only fixed color depth
+	if(var->bits_per_pixel != dummyfb->param.mode.depth) // Accept only fixed color depth
 		return -EINVAL;
-	if(var->xres != dummyfb->param.width || var->yres != dummyfb->param.height)
+	if(var->xres != dummyfb->param.mode.width || var->yres != dummyfb->param.mode.height)
 		return -EINVAL;
-	if(var->xres_virtual != dummyfb->param.width || var->yres_virtual != dummyfb->param.height)
+	if(var->xres_virtual != dummyfb->param.mode.width || var->yres_virtual != dummyfb->param.mode.height)
 		return -EINVAL;
 	return 0;
 }
@@ -82,32 +140,44 @@ static int dummyfb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	return 0;
 }
 
+static void dummyfb_init_color_format(struct dummyfb* dummyfb) {
+	if(dummyfb->param.mode.grayscale)
+		dummyfb_color_format_grayscale(&dummyfb->color_format, dummyfb->param.mode.depth);
+	else
+		dummyfb_color_format_truecolor(&dummyfb->color_format, dummyfb->param.mode.depth);
+}
+
 static void dummyfb_init_fb_info(struct dummyfb* dummyfb)
 {
 	struct fb_info* fbinfo = dummyfb->fbinfo;
-	fbinfo->par = dummyfb;	
+	fbinfo->par = dummyfb;
 
 	fbinfo->fbops = &dummyfb_fbops;
 	fbinfo->flags = FBINFO_DEFAULT;
 	strcpy(fbinfo->fix.id, "Dummy");
+
 	fbinfo->fix.type = FB_TYPE_PACKED_PIXELS;
-	fbinfo->fix.visual = FB_VISUAL_TRUECOLOR;
-	fbinfo->fix.line_length = dummyfb->param.width * (dummyfb->param.depth >> 3); // Line length (in bytes!)
+	if(dummyfb->param.mode.depth > 1) {
+		fbinfo->fix.visual = FB_VISUAL_TRUECOLOR;
+	} else
+		fbinfo->fix.visual = FB_VISUAL_MONO01;
+	fbinfo->fix.grayscale = dummyfb->param.mode.grayscale;
+
+	fbinfo->fix.line_length = DIV_ROUND_UP(dummyfb->param.mode.width * dummyfb->param.mode.depth, 8); // Line length (in bytes!)
 	fbinfo->fix.accel = FB_ACCEL_NONE;
 	memset(&fbinfo->var, 0, sizeof(fbinfo->var));
-	fbinfo->var.xres = dummyfb->param.width;
-	fbinfo->var.yres = dummyfb->param.height;
-	fbinfo->var.xres_virtual = dummyfb->param.width;
-	fbinfo->var.yres_virtual = dummyfb->param.height;
-	fbinfo->var.pixclock = KHZ2PICOS(dummyfb->param.height * dummyfb->param.width * dummyfb->param.rate + 999UL) * 1000;
-	fbinfo->var.red.length = 8;
-	fbinfo->var.red.offset = 16;
-	fbinfo->var.green.length = 8;
-	fbinfo->var.green.offset = 8;
-	fbinfo->var.blue.length = 8;
-	fbinfo->var.blue.offset = 0;
-	fbinfo->var.bits_per_pixel = dummyfb->param.depth;
+	fbinfo->var.xres = dummyfb->param.mode.width;
+	fbinfo->var.yres = dummyfb->param.mode.height;
+	fbinfo->var.xres_virtual = dummyfb->param.mode.width;
+	fbinfo->var.yres_virtual = dummyfb->param.mode.height;
+	fbinfo->var.pixclock = KHZ2PICOS(dummyfb->param.mode.height * dummyfb->param.mode.width * dummyfb->param.mode.rate + 999UL) * 1000;
+
+	memcpy(&fbinfo->var.red, &dummyfb->color_format.red, sizeof(fbinfo->var.red));
+	memcpy(&fbinfo->var.green, &dummyfb->color_format.green, sizeof(fbinfo->var.green));
+	memcpy(&fbinfo->var.blue, &dummyfb->color_format.blue, sizeof(fbinfo->var.blue));
+
 	fbinfo->var.transp.length = 0;
+	fbinfo->var.bits_per_pixel = dummyfb->param.mode.depth;
 	fbinfo->var.activate = FB_ACTIVATE_NOW;
 	fbinfo->var.vmode = FB_VMODE_NONINTERLACED;
 	fbinfo->monspecs = dummyfb->monspecs;
@@ -122,12 +192,12 @@ void dummyfb_init_monspecs(struct dummyfb* dummyfb) {
 	struct fb_monspecs* monspecs = &dummyfb->monspecs;
 
 	*monspecs = (struct fb_monspecs) {
-		.input =	FB_DISP_RGB,
+		.input =	dummyfb->param.mode.grayscale ? FB_DISP_MONO : FB_DISP_RGB,
 		.signal =	FB_SIGNAL_NONE,
-		.vfmin =	dummyfb->param.rate,
-		.vfmax =	dummyfb->param.rate,
-		.hfmin =	dummyfb->param.rate * dummyfb->param.width,
-		.hfmax =	dummyfb->param.rate * dummyfb->param.width
+		.vfmin =	dummyfb->param.mode.rate,
+		.vfmax =	dummyfb->param.mode.rate,
+		.hfmin =	dummyfb->param.mode.rate * dummyfb->param.mode.width,
+		.hfmax =	dummyfb->param.mode.rate * dummyfb->param.mode.width
 	};
 }
 
@@ -144,9 +214,9 @@ int dummyfb_init_modedb(struct dummyfb* dummyfb) {
 		.name =		"DEFAULT",
 		.sync =		0,
 		.vmode =	FB_VMODE_NONINTERLACED,
-		.refresh =	dummyfb->param.rate,
-		.xres =		dummyfb->param.width,
-		.yres =		dummyfb->param.height
+		.refresh =	dummyfb->param.mode.rate,
+		.xres =		dummyfb->param.mode.width,
+		.yres =		dummyfb->param.mode.height
 	};
 
 	return 0;
@@ -157,9 +227,12 @@ void dummyfb_free_modedb(struct dummyfb* dummyfb) {
 }
 
 static int dummyfb_validate_param(struct dummyfb_param param) {
-	if(param.depth != 24) {
+	if(param.mode.grayscale && param.mode.depth > 8)
 		return -EINVAL;
-	}
+
+	if(!param.mode.grayscale && param.mode.depth > 24)
+		return -EINVAL;
+
 	return 0;
 }
 
@@ -185,7 +258,7 @@ int dummyfb_create(struct dummyfb** dummyfb_ptr, struct dummyfb_param param) {
 		goto dummyfb_alloced;
 	}
 
-	dummyfb->fbmem_size = param.width * param.height * (param.depth >> 3);
+	dummyfb->fbmem_size = param.mode.height * DIV_ROUND_UP(param.mode.width * dummyfb->param.mode.depth, 8);
 	dummyfb->fbmem = kzalloc(dummyfb->fbmem_size, GFP_KERNEL);
 	if(!dummyfb->fbmem) {
 		err = -ENOMEM;
@@ -197,6 +270,8 @@ int dummyfb_create(struct dummyfb** dummyfb_ptr, struct dummyfb_param param) {
 	}
 
 	dummyfb_init_monspecs(dummyfb);
+
+	dummyfb_init_color_format(dummyfb);
 
 	dummyfb_init_fb_info(dummyfb);
 

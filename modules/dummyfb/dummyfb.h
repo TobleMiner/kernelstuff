@@ -4,13 +4,26 @@
 #include <linux/types.h>
 #include <linux/fb.h>
 
+#define DUMMYFB_ROUND_DOWN(x, y) ((x - ((y) - 1)) / y)
+
 struct dummyfb;
 
+struct dummyfb_mode {
+	unsigned int	width;
+	unsigned int	height;
+	unsigned int	depth;
+	bool			grayscale;
+	unsigned int	rate;
+};
+
+struct dummyfb_color_format {
+	struct fb_bitfield red;
+	struct fb_bitfield green;
+	struct fb_bitfield blue;
+};
+
 struct dummyfb_param {
-	unsigned int width;
-	unsigned int height;
-	unsigned int depth;
-	unsigned int rate;
+	struct dummyfb_mode mode;
 
 	void* priv;
 	void (*remove)(struct dummyfb*);
@@ -24,6 +37,8 @@ struct dummyfb_modedb {
 struct dummyfb {
 	struct dummyfb_param param;
 	struct dummyfb_modedb modedb;
+
+	struct dummyfb_color_format color_format;
 
 	char* fbmem;
 	size_t fbmem_size;
