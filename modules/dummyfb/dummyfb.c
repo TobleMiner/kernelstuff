@@ -34,7 +34,7 @@ static struct fb_ops dummyfb_fbops =
 	.fb_release =	dummyfb_release
 };
 
-static void dummyfb_color_format_grayscale(struct dummfb_color_format* fmt, unsigned int depth) {
+static void dummyfb_color_format_grayscale(struct dummyfb_color_format* fmt, unsigned int depth) {
 	fmt->red.offset = 0;
 	fmt->red.length = depth;
 	fmt->green.offset = 0;
@@ -43,7 +43,7 @@ static void dummyfb_color_format_grayscale(struct dummfb_color_format* fmt, unsi
 	fmt->blue.length = depth;
 }
 
-static void dummyfb_color_format_truecolor(struct dummfb_color_format* fmt, unsigned int depth) {
+static void dummyfb_color_format_truecolor(struct dummyfb_color_format* fmt, unsigned int depth) {
 	uint32_t bits_rb = DUMMYFB_DIV_ROUND_DOWN(depth, 3);
 	uint32_t bits_g = depth - 2 * bits_rb;
 	fmt->red.offset = bits_rb + bits_g;
@@ -123,7 +123,7 @@ static void dummyfb_init_fb_info(struct dummyfb* dummyfb)
 		fbinfo->fix.visual = FB_VISUAL_TRUECOLOR;
 	} else
 		fbinfo->fix.visual = FB_VISUAL_MONO01;
-	fbinfo->fix.grayscale = dummyfb->param.mode.grayscale;
+	fbinfo->var.grayscale = dummyfb->param.mode.grayscale;
 
 	fbinfo->fix.line_length = DIV_ROUND_UP(dummyfb->param.mode.width * dummyfb->param.mode.depth, 8); // Line length (in bytes!)
 	fbinfo->fix.accel = FB_ACCEL_NONE;

@@ -4,7 +4,7 @@
 #include <linux/types.h>
 #include <linux/fb.h>
 
-#define DUMMYFB_ROUND_DOWN(x, y) ((x - ((y) - 1)) / y)
+#define DUMMYFB_DIV_ROUND_DOWN(x, y) ((x - ((y) - 1)) / y)
 
 struct dummyfb;
 
