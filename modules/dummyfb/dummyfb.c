@@ -34,44 +34,6 @@ static struct fb_ops dummyfb_fbops =
 	.fb_release =	dummyfb_release
 };
 
-static struct dummyfb_color_format dummyfb_color_16 = {
-	.red = {
-		.offset = 16,
-		.length = 5,
-		.msb_right = 0
-	},
-	.green = {
-		.offset = 8,
-		.length = 6,
-		.msb_right = 0
-	},
-	.blue = {
-		.offset = 0,
-		.length = 5,
-		.msb_right = 0
-	},
-	.grayscale = false
-};
-
-static struct dummyfb_color_format dummyfb_color_24 = {
-	.red = {
-		.offset = 16,
-		.length = 8,
-		.msb_right = 0
-	},
-	.green = {
-		.offset = 8,
-		.length = 8,
-		.msb_right = 0
-	},
-	.blue = {
-		.offset = 0,
-		.length = 8,
-		.msb_right = 0
-	},
-	.grayscale = false
-};
-
 static void dummyfb_color_format_grayscale(struct dummfb_color_format* fmt, unsigned int depth) {
 	fmt->red.offset = 0;
 	fmt->red.length = depth;
