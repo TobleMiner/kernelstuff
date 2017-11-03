@@ -119,9 +119,9 @@ static void dummyfb_init_fb_info(struct dummyfb* dummyfb)
 	strcpy(fbinfo->fix.id, "Dummy");
 
 	fbinfo->fix.type = FB_TYPE_PACKED_PIXELS;
-	if(dummyfb->param.mode.depth > 1) {
+	if(dummyfb->param.mode.depth > 1)
 		fbinfo->fix.visual = FB_VISUAL_TRUECOLOR;
-	} else
+	else
 		fbinfo->fix.visual = FB_VISUAL_MONO01;
 
 	fbinfo->fix.line_length = dummyfb->fbmem_line_length; // Line length (in bytes!)
