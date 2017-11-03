@@ -6,6 +6,8 @@
 
 #define DUMMYFB_DIV_ROUND_DOWN(x, y) ((x - ((y) - 1)) / y)
 
+#define DUMMYFB_MAX(x, y) ((x) > (y) ? (x) : (y))
+
 struct dummyfb;
 
 struct dummyfb_mode {
@@ -42,6 +44,7 @@ struct dummyfb {
 
 	char* fbmem;
 	size_t fbmem_size;
+	size_t fbmem_line_length;
 
 	struct fb_info* fbinfo;
 	struct fb_monspecs monspecs;
@@ -60,5 +63,10 @@ size_t dummyfb_get_fbsize(struct dummyfb* dummyfb);
 char* dummyfb_get_fbmem(struct dummyfb* dummyfb);
 void dummyfb_copy(void* buffer, struct dummyfb* dummyfb);
 void dummyfb_copy_chunk(void* buffer, size_t len, struct dummyfb* dummyfb);
+
+unsigned int dummyfb_get_max_color_depth(struct dummyfb* dummyfb);
+uint32_t dummyfb_color_get_max_red(struct dummyfb* dummyfb);
+uint32_t dummyfb_color_get_max_green(struct dummyfb* dummyfb);
+uint32_t dummyfb_color_get_max_blue(struct dummyfb* dummyfb);
 
 #endif
