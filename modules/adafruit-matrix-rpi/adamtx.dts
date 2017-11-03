@@ -18,6 +18,18 @@
                                 adamtx-bind-update = <2>;
                                 adamtx-peripheral-base = <0x3F000000>;
 
+                                right-panel@0 {
+                                        adamtx-xres = <64>;
+                                        adamtx-yres = <32>;
+                                        adamtx-virtual-x = <0>;
+                                        adamtx-virtual-y = <0>;
+                                        adamtx-real-x = <64>;
+                                        adamtx-real-y = <0>;
+                                        adamtx-flip-x = <1>;
+                                        adamtx-flip-y = <1>;
+                                        adamtx-rotate = <1>;
+                                        adamtx-chain = <2>;
+                                };
                                 upper-panel@0 {
                                         adamtx-xres = <64>;
                                         adamtx-yres = <32>;
