@@ -38,7 +38,7 @@ MODULE_AUTHOR("Tobas Schramm");
 MODULE_DESCRIPTION("Adafruit LED matrix driver");
 MODULE_VERSION("0.1");
 
-static uint8_t gamma_table_red[] = {
+static const uint8_t adamtx_gamma_table_template[ADAMTX_GAMMA_TABLE_SIZE] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
     1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
@@ -55,43 +55,6 @@ static uint8_t gamma_table_red[] = {
   144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
   177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
   215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
-
-static uint8_t gamma_table_green[] = {
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
-    2,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  5,  5,  5,
-    5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  9,  9,  9, 10,
-   10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
-   17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
-   25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
-   37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
-   51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
-   69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
-   90, 92, 93, 95, 96, 98, 99,101,102,104,105,107,109,110,112,114,
-  115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,
-  144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
-  177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
-  215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
-
-static uint8_t gamma_table_blue[] = {
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
-    2,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  5,  5,  5,
-    5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  9,  9,  9, 10,
-   10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
-   17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
-   25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
-   37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
-   51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
-   69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
-   90, 92, 93, 95, 96, 98, 99,101,102,104,105,107,109,110,112,114,
-  115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,
-  144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
-  177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
-  215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
-
 
 void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 {
@@ -129,11 +92,12 @@ void remap_frame(struct adamtx_remap_frame* frame)
 				continue;
 
 			matrix_panel_get_position(&pos, panel, column, line);
-			offset = line * real_size->width * 3 + column * 3; // TODO: Do NOT use fixed pixel size of 3 here!
+			offset = line * real_size->width * 3 + column * 3;
 			pixel = &frame->dst[pos.y * virtual_size->width + pos.x];
-			pixel->chains[panel->chain] = gamma_table_blue[(unsigned char)(frame->src[offset] * 255 / dummyfb_color_get_max_blue(adamtx->dummyfb))] |
-				gamma_table_green[(unsigned char)(frame->src[offset + 1] * 255 / dummyfb_color_get_max_green(adamtx->dummyfb))] << 8 |
-				gamma_table_red[(unsigned char)(frame->src[offset + 2] * 255 / dummyfb_color_get_max_red(adamtx->dummyfb))] << 16;
+			pixel->chains[panel->chain] =
+				adamtx->gamma_table_blue[(unsigned char)(frame->src[offset] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_blue(adamtx->dummyfb))] |
+				adamtx->gamma_table_green[(unsigned char)(frame->src[offset + 1] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_green(adamtx->dummyfb))] << 8 |
+				adamtx->gamma_table_red[(unsigned char)(frame->src[offset + 2] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_red(adamtx->dummyfb))] << 16;
 		}
 	}
 }
@@ -738,10 +702,10 @@ static int adamtx_probe(struct platform_device* device)
 	}
 
 	adamtx->pwm_bits = dummyfb_get_max_color_depth(adamtx->dummyfb);
-	for(i = 0; i < 256; i++) {
-		gamma_table_red[i] = gamma_table_red[i] * dummyfb_color_get_max_red(adamtx->dummyfb) / 255;
-		gamma_table_green[i] = gamma_table_green[i] * dummyfb_color_get_max_green(adamtx->dummyfb) / 255;
-		gamma_table_blue[i] = gamma_table_blue[i] * dummyfb_color_get_max_blue(adamtx->dummyfb) / 255;
+	for(i = 0; i < ADAMTX_GAMMA_TABLE_SIZE; i++) {
+		adamtx->gamma_table_red[i] = adamtx_gamma_table_template[i] * dummyfb_color_get_max_red(adamtx->dummyfb) / ADAMTX_GAMMA_TABLE_SCALE;
+		adamtx->gamma_table_green[i] = adamtx_gamma_table_template[i] * dummyfb_color_get_max_green(adamtx->dummyfb) / ADAMTX_GAMMA_TABLE_SCALE;
+		adamtx->gamma_table_blue[i] = adamtx_gamma_table_template[i] * dummyfb_color_get_max_blue(adamtx->dummyfb) / ADAMTX_GAMMA_TABLE_SCALE;
 	}
 	dev_info(&device->dev, "Using %d pwm bits\n", adamtx->pwm_bits);
 
