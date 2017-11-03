@@ -92,7 +92,7 @@ void remap_frame(struct adamtx_remap_frame* frame)
 				continue;
 
 			matrix_panel_get_position(&pos, panel, column, line);
-			offset = line * real_size->width * ADAMTX_PIX_LEN + column * ADAMTX_PIX_LEN;
+			offset = line * real_size->width * 3 + column * 3; // TODO: Do NOT use fixed pixel size of 3 here!
 			pixel = &frame->dst[pos.y * virtual_size->width + pos.x];
 			pixel->chains[panel->chain] = gamma_table[(unsigned char)frame->src[offset]] |
 				gamma_table[(unsigned char)frame->src[offset + 1]] << 8 |
@@ -157,7 +157,7 @@ void show_frame(struct adamtx* adamtx)
 {
 	int i, j, remap_line = 0, prerender_line = 0;
 	struct adamtx_panel_io* paneldata = adamtx->paneldata_out;
-	int pwm_steps = ADAMTX_PWM_BITS;
+	int pwm_steps = adamtx->pwm_bits;
 	int rows = adamtx->virtual_size.height;
 	int columns = adamtx->virtual_size.width;
 	struct timespec last, now;
@@ -289,7 +289,7 @@ static int update_frame(void* arg)
 		.virtual_size = &adamtx->virtual_size,
 		.offset = 0,
 		.rows = adamtx->real_size.height,
-		.pwm_bits = ADAMTX_PWM_BITS,
+		.pwm_bits = adamtx->pwm_bits,
 		.panels = &adamtx->panels,
 		.src = adamtx->framedata,
 		.dst = adamtx->intermediate_frame
@@ -299,7 +299,7 @@ static int update_frame(void* arg)
 		.virtual_size = &adamtx->virtual_size,
 		.offset = 0,
 		.rows = adamtx->virtual_size.height,
-		.pwm_bits = ADAMTX_PWM_BITS,
+		.pwm_bits = adamtx->pwm_bits,
 		.iodata = adamtx->paneldata,
 		.enabled_chains = &adamtx->enabled_chains,
 		.intermediate_frame = adamtx->intermediate_frame
@@ -322,10 +322,10 @@ static int update_frame(void* arg)
 			prerender_frame(&adamtx_prerender_frame);
 
 			for(line = adamtx->virtual_size.height / 2 - 1; line >= 0; line--) {
-				line_base = line * ADAMTX_PWM_BITS * adamtx->virtual_size.width;
-				line_dma_base = ADAMTX_DMA_STEPS_PER_PIXEL * line * BIT(ADAMTX_PWM_BITS) * adamtx->virtual_size.width + line * ADAMTX_DMA_ADDRESS_STEPS;
+				line_base = line * adamtx->pwm_bits * adamtx->virtual_size.width;
+				line_dma_base = ADAMTX_DMA_STEPS_PER_PIXEL * line * BIT(adamtx->pwm_bits) * adamtx->virtual_size.width + line * ADAMTX_DMA_ADDRESS_STEPS;
 
-				for(pwm_step = 0; pwm_step < ADAMTX_PWM_BITS; pwm_step++) {
+				for(pwm_step = 0; pwm_step < adamtx->pwm_bits; pwm_step++) {
 					pwm_base = line_base + pwm_step * adamtx->virtual_size.width;
 					pwm_dma_base = line_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * (BIT(pwm_step) - 1) * adamtx->virtual_size.width;
 
@@ -667,7 +667,7 @@ static int adamtx_probe(struct platform_device* device)
 			.width = adamtx->real_size.width,
 			.height = adamtx->real_size.height,
 			.rate = adamtx->fb_rate,
-			.depth = ADAMTX_DEPTH,
+			.depth = 24,
 			.grayscale = false
 		},
 
@@ -680,14 +680,16 @@ static int adamtx_probe(struct platform_device* device)
 		goto dma_alloced;
 	}
 
-	fbsize = adamtx->real_size.height * adamtx->real_size.width * ADAMTX_PIX_LEN;
+	adamtx->pwm_bits = dummyfb_get_max_color_depth(adamtx->dummyfb);
+
+	fbsize = dummyfb_get_fbsize(adamtx->dummyfb);
 	if(!(adamtx->framedata = vzalloc(fbsize))) {
 		ret = -ENOMEM;
 		dev_err(&device->dev, "Failed to allocate frame buffer buffer memory\n");
 		goto dummyfb_alloced;
 	}
 
-	iosize = ADAMTX_PWM_BITS * adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * sizeof(struct adamtx_panel_io);
+	iosize = adamtx->pwm_bits * adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * sizeof(struct adamtx_panel_io);
 	if(!(adamtx->paneldata = vzalloc(iosize))) {
 		ret = -ENOMEM;
 		dev_err(&device->dev, "Failed to allocate io memory\n");
@@ -703,7 +705,7 @@ static int adamtx_probe(struct platform_device* device)
 	if(adamtx->enable_dma) {
 		adamtx->dma_len =
 			// Actual image data
-			adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * (1 << ADAMTX_PWM_BITS) * ADAMTX_DMA_STEPS_PER_PIXEL +
+			adamtx->virtual_size.height / 2 * adamtx->virtual_size.width * BIT(adamtx->pwm_bits) * ADAMTX_DMA_STEPS_PER_PIXEL +
 			// Extra DMA transfers for address switching
 			adamtx->virtual_size.height / 2 * ADAMTX_DMA_ADDRESS_STEPS;
 		dev_info(&device->dev, "Allocating %lu kB DMA buffers\n", adamtx->dma_len * sizeof(struct adamtx_dma_block) / 1024UL);

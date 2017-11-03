@@ -55,8 +55,8 @@
 
 
 // Matrix parameters
-#define ADAMTX_PWM_BITS		8
-#define ADAMTX_DEPTH		ADAMTX_PWM_BITS * 3
+//#define ADAMTX_PWM_BITS		8
+//#define ADAMTX_DEPTH		ADAMTX_PWM_BITS * 3
 #define ADAMTX_BCD_TIME_NS	2000UL
 
 // Macros
@@ -152,7 +152,9 @@ struct adamtx {
 
 	int rate;
 	int fb_rate;
+	int bitdepth;
 
+	unsigned int pwm_bits;
 
 	struct hrtimer frametimer;
 	ktime_t frameperiod;
