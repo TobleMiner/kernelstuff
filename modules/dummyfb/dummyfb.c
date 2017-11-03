@@ -44,7 +44,7 @@ static void dummyfb_color_format_grayscale(struct dummyfb_color_format* fmt, uns
 }
 
 static void dummyfb_color_format_truecolor(struct dummyfb_color_format* fmt, unsigned int depth) {
-	uint32_t bits_rb = DUMMYFB_DIV_ROUND_DOWN(depth, 3);
+	uint32_t bits_rb = depth / 3;
 	uint32_t bits_g = depth - 2 * bits_rb;
 	fmt->red.offset = 16;
 	fmt->red.length = bits_rb;
