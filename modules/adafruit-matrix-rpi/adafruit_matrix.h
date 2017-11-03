@@ -154,6 +154,7 @@ struct adamtx {
 	int rate;
 	int fb_rate;
 	int bitdepth;
+	bool grayscale;
 
 	unsigned int pwm_bits;
 

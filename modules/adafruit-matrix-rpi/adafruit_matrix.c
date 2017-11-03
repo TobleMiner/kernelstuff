@@ -554,6 +554,9 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 
 	adamtx->enable_dma = !!adamtx_of_get_int_default(dev_of_node, "adamtx-dma", 0);
 
+	adamtx->bitdepth = adamtx_of_get_int_default(dev_of_node, "adamtx-color-depth", 24);
+	adamtx->grayscale = !!adamtx_of_get_int_default(dev_of_node, "adamtx-grayscale", 0);
+
 	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz, DMA: %d, Peripheral base address: 0x%x\n", adamtx->rate, adamtx->fb_rate, adamtx->enable_dma, adamtx->peripheral_base);
 
 	for(panel_node = of_get_next_child(dev_of_node, NULL); panel_node; panel_node = of_get_next_child(dev_of_node, panel_node)) {
@@ -721,8 +724,8 @@ static int adamtx_probe(struct platform_device* device)
 			.width = adamtx->real_size.width,
 			.height = adamtx->real_size.height,
 			.rate = adamtx->fb_rate,
-			.depth = 16,
-			.grayscale = false
+			.depth = adamtx->bitdepth,
+			.grayscale = adamtx->grayscale
 		},
 
 		.priv = adamtx,

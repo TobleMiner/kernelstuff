@@ -12,6 +12,8 @@
                                 compatible = "adafruit,adamtx";
                                 adamtx-rate = <120>;
                                 adamtx-fb-rate = <60>;
+                                adamtx-color-depth = <16>;
+                                adamtx-grayscale = <0>;
                                 adamtx-bind-draw = <3>;
                                 adamtx-bind-update = <2>;
                                 adamtx-peripheral-base = <0x3F000000>;
