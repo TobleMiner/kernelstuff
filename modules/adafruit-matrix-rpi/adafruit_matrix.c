@@ -474,8 +474,7 @@ static int show_perf(void* arg)
 		printk(KERN_INFO ADAMTX_NAME ": %ld updates/s\t%ld irqs/s\t%lu ns/update\n", perf_adamtx_updates, perf_adamtx_update_irqs, perf_adamtx_updates != 0 ? perf_adamtx_update_time / perf_adamtx_updates : 0);
 		printk(KERN_INFO ADAMTX_NAME ": %ld draws/s\t%ld irqs/s\t%lu ns/draw\n", perf_adamtx_draws, perf_adamtx_draw_irqs, perf_adamtx_draws != 0 ? perf_adamtx_draw_time / perf_adamtx_draws : 0);
 		printk(KERN_INFO ADAMTX_NAME ": update_remap_ns_per_line: %ld ns\tupdate_prerender_ns_per_line: %ld ns\n", adamtx->update_remap_ns_per_line, adamtx->update_prerender_ns_per_line);
-//		dummyfb_copy_as_bgr24(adamtx->framedata, adamtx->dummyfb);
-		printk(KERN_INFO "First pixel is (%u, %u, %u)\n", adamtx->framedata[0], adamtx->framedata[1], adamtx->framedata[2]);
+		printk(KERN_INFO ADAMTX_NAME ": Remapping and rendering offloaded to thread: %d\n", adamtx->remap_and_render_in_update_thread);
 
 		yield();
 	}
