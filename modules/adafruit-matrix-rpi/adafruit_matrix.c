@@ -370,21 +370,6 @@ static int update_frame(void* arg)
 
 		dummyfb_copy_as_bgr24(adamtx->framedata, adamtx->dummyfb);
 
-/*		int i,j,offset = 0;
-		for(i = 0; i < adamtx->real_size.height; i++) {
-			for(j = 0; j < adamtx->real_size.width; j++) {
-				if(i == j) {
-					adamtx->framedata[offset++] = 127;
-					adamtx->framedata[offset++] = 127;
-					adamtx->framedata[offset++] = 127;
-				} else {
-					adamtx->framedata[offset++] = 0;
-					adamtx->framedata[offset++] = 0;
-					adamtx->framedata[offset++] = 0;
-				}
-			}
-		}
-*/
 		if(adamtx->enable_dma || adamtx->remap_and_render_in_update_thread) {
 			remap_frame(&adamtx_remap_frame);
 			prerender_frame(&adamtx_prerender_frame);
@@ -415,10 +400,6 @@ static int update_frame(void* arg)
 					for(column = 0; column < adamtx->virtual_size.width; column++) {
 						column_base = pwm_base + column;
 						column_dma_base = pwm_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * column;
-						if(column_dma_base + 1 >= adamtx->dma_len) {
-							printk(KERN_WARNING "DMA index out of range! %zu > %zu\n", column_dma_base + 1, adamtx->dma_len - 1);
-							continue;
-						}
 
 						adamtx->dma_iodata[column_dma_base].set = (((uint32_t*)adamtx->paneldata)[column_base] & ADAMTX_VALID_GPIO_BITS & ~ADAMTX_GPIO_MASK_ADDRESS) | BIT(ADAMTX_GPIO_CLK);
 						if(column == (adamtx->virtual_size.width - 1) && pwm_step)
