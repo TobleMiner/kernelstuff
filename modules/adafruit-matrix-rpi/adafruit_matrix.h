@@ -55,13 +55,10 @@
 
 
 // Matrix parameters
-//#define ADAMTX_PWM_BITS		8
-//#define ADAMTX_DEPTH		ADAMTX_PWM_BITS * 3
 #define ADAMTX_BCD_TIME_NS	2000UL
 
 // Macros
 #define ADAMTX_BITS_TO_BYTES(bits) (bits >> 3)
-#define ADAMTX_PIX_LEN ADAMTX_BITS_TO_BYTES(ADAMTX_DEPTH)
 #define ADAMTX_TIMESPEC_DIFF(now, last) ((now).tv_sec - (last).tv_sec) * 1000000000UL + ((now).tv_nsec - (last).tv_nsec)
 
 // Typdedefs
