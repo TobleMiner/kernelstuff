@@ -198,7 +198,7 @@ void show_frame(struct adamtx* adamtx)
 	int rows = adamtx->virtual_size.height;
 	int columns = adamtx->virtual_size.width;
 	struct timespec last, now;
-	unsigned long rem_delay, clock_out_delay, last_delay, bcd_time = adamtx->current_bcd_base_time;
+	unsigned long rem_delay, clock_out_delay, last_delay, bcd_time = adamtx->current_bcd_base_time, est_remap_render_time;
 
 	struct adamtx_remap_frame adamtx_remap_frame = {
 		.real_size = &adamtx->real_size,
@@ -222,10 +222,13 @@ void show_frame(struct adamtx* adamtx)
 		.intermediate_frame = adamtx->intermediate_frame
 	};
 
-	if(adamtx->current_bcd_base_time * (BIT(pwm_steps) - 1) < (adamtx->update_remap_ns_per_line + adamtx->update_prerender_ns_per_line) * 3 / 2)
+	est_remap_render_time = adamtx->update_remap_ns_per_line * adamtx->real_size.height +
+							adamtx->update_prerender_ns_per_line * adamtx->virtual_size.height / 2;
+
+	if(bcd_time * (BIT(pwm_steps) - 1) < est_remap_render_time * 3 / 2)
 		adamtx->remap_and_render_in_update_thread = true;
-	else if(adamtx->current_bcd_base_time * (BIT(pwm_steps) - 1) > (adamtx->update_remap_ns_per_line + adamtx->update_prerender_ns_per_line) * 2)
-		adamtx->remap_and_render_in_update_thread = true;
+	else if(bcd_time * (BIT(pwm_steps) - 1) > est_remap_render_time * 2)
+		adamtx->remap_and_render_in_update_thread = false;
 
 
 	ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
@@ -258,28 +261,30 @@ void show_frame(struct adamtx* adamtx)
 
 				rem_delay -= clock_out_delay;
 
-				while(remap_line < adamtx_remap_frame.real_size->height && rem_delay > adamtx->update_remap_ns_per_line * 2) {
-					adamtx_remap_frame.offset = remap_line;
-					remap_frame(&adamtx_remap_frame);
-					remap_line++;
-					getnstimeofday(&now);
-					last_delay = ADAMTX_TIMESPEC_DIFF(now, last);
-					if(rem_delay >= last_delay)
-						rem_delay -= last_delay;
-					adamtx->update_remap_ns_per_line = adamtx->update_remap_ns_per_line / 2 + last_delay / 2;
-					getnstimeofday(&last);
-				}
-				if(remap_line >= adamtx_remap_frame.real_size->height) {
-					while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line * 2) {
-						adamtx_prerender_frame.offset = prerender_line;
-						prerender_frame(&adamtx_prerender_frame);
-						prerender_line += 2;
+				if(!adamtx->remap_and_render_in_update_thread){
+					while(remap_line < adamtx_remap_frame.real_size->height && rem_delay > adamtx->update_remap_ns_per_line * 2) {
+						adamtx_remap_frame.offset = remap_line;
+						remap_frame(&adamtx_remap_frame);
+						remap_line++;
 						getnstimeofday(&now);
 						last_delay = ADAMTX_TIMESPEC_DIFF(now, last);
 						if(rem_delay >= last_delay)
 							rem_delay -= last_delay;
-						adamtx->update_prerender_ns_per_line = adamtx->update_prerender_ns_per_line / 2 + last_delay / 2;
+						adamtx->update_remap_ns_per_line = adamtx->update_remap_ns_per_line / 2 + last_delay / 2;
 						getnstimeofday(&last);
+					}
+					if(remap_line >= adamtx_remap_frame.real_size->height) {
+						while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line * 2) {
+							adamtx_prerender_frame.offset = prerender_line;
+							prerender_frame(&adamtx_prerender_frame);
+							prerender_line += 2;
+							getnstimeofday(&now);
+							last_delay = ADAMTX_TIMESPEC_DIFF(now, last);
+							if(rem_delay >= last_delay)
+								rem_delay -= last_delay;
+							adamtx->update_prerender_ns_per_line = adamtx->update_prerender_ns_per_line / 2 + last_delay / 2;
+							getnstimeofday(&last);
+						}
 					}
 				}
 				ndelay(rem_delay);
