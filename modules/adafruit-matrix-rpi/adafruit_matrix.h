@@ -129,6 +129,7 @@ struct adamtx {
 	struct task_struct* update_thread;
 	bool update_thread_bind;
 	unsigned int update_thread_cpu;
+	bool remap_and_render_in_update_thread;
 
 	unsigned long update_remap_ns_per_line;
 	unsigned long update_prerender_ns_per_line;
@@ -200,6 +201,7 @@ struct adamtx_remap_frame {
 	struct list_head* panels;
 	char* src;
 	struct matrix_pixel* dst;
+	struct adamtx* adamtx;
 };
 
 struct adamtx_prerender_frame {

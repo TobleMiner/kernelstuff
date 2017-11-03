@@ -5,6 +5,7 @@
 #include <linux/fb.h>
 
 #define DUMMYFB_MAX(x, y) ((x) > (y) ? (x) : (y))
+#define DUMMYFB_MIN(x, y) ((x) < (y) ? (x) : (y))
 
 struct dummyfb;
 

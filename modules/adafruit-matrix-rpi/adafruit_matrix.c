@@ -38,7 +38,43 @@ MODULE_AUTHOR("Tobas Schramm");
 MODULE_DESCRIPTION("Adafruit LED matrix driver");
 MODULE_VERSION("0.1");
 
-static uint8_t gamma_table[] = {
+static uint8_t gamma_table_red[] = {
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
+    1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
+    2,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  5,  5,  5,
+    5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  9,  9,  9, 10,
+   10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
+   17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
+   25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
+   37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
+   51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
+   69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
+   90, 92, 93, 95, 96, 98, 99,101,102,104,105,107,109,110,112,114,
+  115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,
+  144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
+  177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
+  215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
+
+static uint8_t gamma_table_green[] = {
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
+    1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
+    2,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  5,  5,  5,
+    5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  9,  9,  9, 10,
+   10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
+   17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
+   25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
+   37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
+   51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
+   69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
+   90, 92, 93, 95, 96, 98, 99,101,102,104,105,107,109,110,112,114,
+  115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,
+  144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
+  177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
+  215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
+
+static uint8_t gamma_table_blue[] = {
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
     1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
@@ -85,6 +121,7 @@ void remap_frame(struct adamtx_remap_frame* frame)
 	struct matrix_pixel* pixel;
 	struct matrix_size* real_size = frame->real_size;
 	struct matrix_size* virtual_size = frame->virtual_size;
+	struct adamtx* adamtx = frame->adamtx;
 	for(line = frame->offset; line < frame->offset + frame->rows; line++) {
 		for(column = 0; column < real_size->width; column++) {
 			panel = matrix_get_panel_at_real(frame->panels, column, line);
@@ -94,9 +131,9 @@ void remap_frame(struct adamtx_remap_frame* frame)
 			matrix_panel_get_position(&pos, panel, column, line);
 			offset = line * real_size->width * 3 + column * 3; // TODO: Do NOT use fixed pixel size of 3 here!
 			pixel = &frame->dst[pos.y * virtual_size->width + pos.x];
-			pixel->chains[panel->chain] = gamma_table[(unsigned char)frame->src[offset]] |
-				gamma_table[(unsigned char)frame->src[offset + 1]] << 8 |
-				gamma_table[(unsigned char)frame->src[offset + 2]] << 16;
+			pixel->chains[panel->chain] = gamma_table_blue[(unsigned char)(frame->src[offset] * 255 / dummyfb_color_get_max_blue(adamtx->dummyfb))] |
+				gamma_table_green[(unsigned char)(frame->src[offset + 1] * 255 / dummyfb_color_get_max_green(adamtx->dummyfb))] << 8 |
+				gamma_table_red[(unsigned char)(frame->src[offset + 2] * 255 / dummyfb_color_get_max_red(adamtx->dummyfb))] << 16;
 		}
 	}
 }
@@ -171,7 +208,8 @@ void show_frame(struct adamtx* adamtx)
 		.pwm_bits = pwm_steps,
 		.panels = &adamtx->panels,
 		.src = adamtx->framedata,
-		.dst = adamtx->intermediate_frame
+		.dst = adamtx->intermediate_frame,
+		.adamtx = adamtx
 	};
 
 	struct adamtx_prerender_frame adamtx_prerender_frame = {
@@ -183,6 +221,12 @@ void show_frame(struct adamtx* adamtx)
 		.enabled_chains = &adamtx->enabled_chains,
 		.intermediate_frame = adamtx->intermediate_frame
 	};
+
+	if(adamtx->current_bcd_base_time * (BIT(pwm_steps) - 1) < (adamtx->update_remap_ns_per_line + adamtx->update_prerender_ns_per_line) * 3 / 2)
+		adamtx->remap_and_render_in_update_thread = true;
+	else if(adamtx->current_bcd_base_time * (BIT(pwm_steps) - 1) > (adamtx->update_remap_ns_per_line + adamtx->update_prerender_ns_per_line) * 2)
+		adamtx->remap_and_render_in_update_thread = true;
+
 
 	ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
 	for(i = rows / 2 - 1; i >= 0; i--)
@@ -292,7 +336,8 @@ static int update_frame(void* arg)
 		.pwm_bits = adamtx->pwm_bits,
 		.panels = &adamtx->panels,
 		.src = adamtx->framedata,
-		.dst = adamtx->intermediate_frame
+		.dst = adamtx->intermediate_frame,
+		.adamtx = adamtx
 	};
 
 	struct adamtx_prerender_frame adamtx_prerender_frame = {
@@ -320,10 +365,27 @@ static int update_frame(void* arg)
 
 		dummyfb_copy_as_bgr24(adamtx->framedata, adamtx->dummyfb);
 
-
-		if(adamtx->enable_dma) {
+/*		int i,j,offset = 0;
+		for(i = 0; i < adamtx->real_size.height; i++) {
+			for(j = 0; j < adamtx->real_size.width; j++) {
+				if(i == j) {
+					adamtx->framedata[offset++] = 127;
+					adamtx->framedata[offset++] = 127;
+					adamtx->framedata[offset++] = 127;
+				} else {
+					adamtx->framedata[offset++] = 0;
+					adamtx->framedata[offset++] = 0;
+					adamtx->framedata[offset++] = 0;
+				}
+			}
+		}
+*/
+		if(adamtx->enable_dma || adamtx->remap_and_render_in_update_thread) {
 			remap_frame(&adamtx_remap_frame);
 			prerender_frame(&adamtx_prerender_frame);
+		}
+
+		if(adamtx->enable_dma) {
 
 			for(line = adamtx->virtual_size.height / 2 - 1; line >= 0; line--) {
 				line_base = line * adamtx->pwm_bits * adamtx->virtual_size.width;
@@ -407,6 +469,9 @@ static int show_perf(void* arg)
 		printk(KERN_INFO ADAMTX_NAME ": %ld updates/s\t%ld irqs/s\t%lu ns/update\n", perf_adamtx_updates, perf_adamtx_update_irqs, perf_adamtx_updates != 0 ? perf_adamtx_update_time / perf_adamtx_updates : 0);
 		printk(KERN_INFO ADAMTX_NAME ": %ld draws/s\t%ld irqs/s\t%lu ns/draw\n", perf_adamtx_draws, perf_adamtx_draw_irqs, perf_adamtx_draws != 0 ? perf_adamtx_draw_time / perf_adamtx_draws : 0);
 		printk(KERN_INFO ADAMTX_NAME ": update_remap_ns_per_line: %ld ns\tupdate_prerender_ns_per_line: %ld ns\n", adamtx->update_remap_ns_per_line, adamtx->update_prerender_ns_per_line);
+//		dummyfb_copy_as_bgr24(adamtx->framedata, adamtx->dummyfb);
+		printk(KERN_INFO "First pixel is (%u, %u, %u)\n", adamtx->framedata[0], adamtx->framedata[1], adamtx->framedata[2]);
+
 		yield();
 	}
 
@@ -685,6 +750,11 @@ static int adamtx_probe(struct platform_device* device)
 	}
 
 	adamtx->pwm_bits = dummyfb_get_max_color_depth(adamtx->dummyfb);
+	for(i = 0; i < 256; i++) {
+		gamma_table_red[i] = gamma_table_red[i] * dummyfb_color_get_max_red(adamtx->dummyfb) / 255;
+		gamma_table_green[i] = gamma_table_green[i] * dummyfb_color_get_max_green(adamtx->dummyfb) / 255;
+		gamma_table_blue[i] = gamma_table_blue[i] * dummyfb_color_get_max_blue(adamtx->dummyfb) / 255;
+	}
 	dev_info(&device->dev, "Using %d pwm bits\n", adamtx->pwm_bits);
 
 	fbsize = adamtx->real_size.height * adamtx->real_size.width * 3;

@@ -366,10 +366,10 @@ static uint8_t dummyfb_get_byte_at_bit_offset(char* src, unsigned long* bit_offs
 {
 	off_t byte_offset = *bit_offset >> 3;
 	unsigned int intra_byte_offset = (*bit_offset & 0b111);
-	uint8_t val = (src[byte_offset] >> intra_byte_offset) & ((1 << len) - 1);
+	uint8_t val = (src[byte_offset] >> intra_byte_offset) & ((1 << DUMMYFB_MIN(len, 8 - intra_byte_offset)) - 1);
 	int remain_len = len - (8 - intra_byte_offset);
 	if(remain_len > 0)
-		val |= (src[++byte_offset] & ((1 << remain_len) - 1)) << intra_byte_offset;
+		val |= (src[++byte_offset] & ((1 << remain_len) - 1)) << (len - remain_len);
 	*bit_offset += len;
 	return val;
 }
@@ -389,13 +389,21 @@ void dummyfb_get_pixel_at_bit_offset(struct dummyfb_pixel* pixel, struct dummyfb
 void dummyfb_get_pixel_at_pos(struct dummyfb_pixel* pixel, struct dummyfb* dummyfb, unsigned int x, unsigned int y) {
 	char* fbmem_line = dummyfb->fbmem + dummyfb->fbmem_line_length * y;
 	unsigned long bit_offset = dummyfb->param.mode.depth * x;
-	dummyfb_get_pixel_at_bit_offset(pixel, dummyfb, fbmem_line, bit_offset);
+	dummyfb_get_pixel_at_bit_offset(pixel, dummyfb, fbmem_line, &bit_offset);
 }
 
 void dummyfb_copy_as_bgr24(char* dst, struct dummyfb* dummyfb) {
 	int line, column;
 	unsigned int offset = 0;
 	struct dummyfb_pixel pixel;
+	if(!dst) {
+		WARN_ONCE(1, "DST is NULL\n");
+		return;
+	}
+	if(!dummyfb) {
+		WARN_ONCE(1, "dummyfb is NULL\n");
+		return;
+	}
 	for(line = 0; line < dummyfb->param.mode.height; line++) {
 		for(column = 0; column < dummyfb->param.mode.width; column++) {
 			dummyfb_get_pixel_at_pos(&pixel, dummyfb, column, line);
