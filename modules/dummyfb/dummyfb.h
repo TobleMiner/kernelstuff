@@ -16,6 +16,12 @@ struct dummyfb_mode {
 	unsigned int	rate;
 };
 
+struct dummyfb_pixel {
+	uint32_t red;
+	uint32_t green;
+	uint32_t blue;
+};
+
 struct dummyfb_color_format {
 	struct fb_bitfield red;
 	struct fb_bitfield green;
@@ -66,5 +72,8 @@ unsigned int dummyfb_get_max_color_depth(struct dummyfb* dummyfb);
 uint32_t dummyfb_color_get_max_red(struct dummyfb* dummyfb);
 uint32_t dummyfb_color_get_max_green(struct dummyfb* dummyfb);
 uint32_t dummyfb_color_get_max_blue(struct dummyfb* dummyfb);
+
+void dummyfb_get_pixel_at_pos(struct dummyfb_pixel* pixel, struct dummyfb* dummyfb, unsigned int x, unsigned int y);
+void dummyfb_copy_as_bgr24(char* dst, struct dummyfb* dummyfb);
 
 #endif

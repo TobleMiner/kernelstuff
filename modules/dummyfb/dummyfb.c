@@ -46,9 +46,9 @@ static void dummyfb_color_format_grayscale(struct dummyfb_color_format* fmt, uns
 static void dummyfb_color_format_truecolor(struct dummyfb_color_format* fmt, unsigned int depth) {
 	uint32_t bits_rb = depth / 3;
 	uint32_t bits_g = depth - 2 * bits_rb;
-	fmt->red.offset = 16;
+	fmt->red.offset = bits_rb + bits_g;
 	fmt->red.length = bits_rb;
-	fmt->green.offset = 8;
+	fmt->green.offset = bits_rb;
 	fmt->green.length = bits_g;
 	fmt->blue.offset = 0;
 	fmt->blue.length = bits_rb;
@@ -223,10 +223,7 @@ int dummyfb_create(struct dummyfb** dummyfb_ptr, struct dummyfb_param param) {
 		goto dummyfb_alloced;
 	}
 
-	if(dummyfb->param.mode.grayscale)
-		dummyfb->fbmem_line_length = DIV_ROUND_UP(dummyfb->param.mode.width * dummyfb->param.mode.depth, 8);
-	else
-		dummyfb->fbmem_line_length = dummyfb->param.mode.width * 3;
+	dummyfb->fbmem_line_length = DIV_ROUND_UP(dummyfb->param.mode.width * dummyfb->param.mode.depth, 8);
 
 	dummyfb->fbmem_size = param.mode.height * dummyfb->fbmem_line_length;
 	dummyfb->fbmem = kzalloc(dummyfb->fbmem_size, GFP_KERNEL);
@@ -365,7 +362,53 @@ uint32_t dummyfb_color_get_max_blue(struct dummyfb* dummyfb)
 	return BIT(dummyfb->color_format.blue.length) - 1;
 }
 
+static uint8_t dummyfb_get_byte_at_bit_offset(char* src, unsigned long* bit_offset, unsigned int len)
+{
+	off_t byte_offset = *bit_offset >> 3;
+	unsigned int intra_byte_offset = (*bit_offset & 0b111);
+	uint8_t val = (src[byte_offset] >> intra_byte_offset) & ((1 << len) - 1);
+	int remain_len = len - (8 - intra_byte_offset);
+	if(remain_len > 0)
+		val |= (src[++byte_offset] & ((1 << remain_len) - 1)) << intra_byte_offset;
+	*bit_offset += len;
+	return val;
+}
+
+void dummyfb_get_pixel_at_bit_offset(struct dummyfb_pixel* pixel, struct dummyfb* dummyfb, char* src, unsigned long* bit_offset)
+{
+	unsigned long initial_offset = *bit_offset;
+	pixel->blue = dummyfb_get_byte_at_bit_offset(src, bit_offset, dummyfb->color_format.blue.length);
+	if(dummyfb->param.mode.grayscale)
+		*bit_offset = initial_offset;
+	pixel->green = dummyfb_get_byte_at_bit_offset(src, bit_offset, dummyfb->color_format.green.length);
+	if(dummyfb->param.mode.grayscale)
+		*bit_offset = initial_offset;
+	pixel->red = dummyfb_get_byte_at_bit_offset(src, bit_offset, dummyfb->color_format.red.length);
+}
+
+void dummyfb_get_pixel_at_pos(struct dummyfb_pixel* pixel, struct dummyfb* dummyfb, unsigned int x, unsigned int y) {
+	char* fbmem_line = dummyfb->fbmem + dummyfb->fbmem_line_length * y;
+	unsigned long bit_offset = dummyfb->param.mode.depth * x;
+	dummyfb_get_pixel_at_bit_offset(pixel, dummyfb, fbmem_line, bit_offset);
+}
+
+void dummyfb_copy_as_bgr24(char* dst, struct dummyfb* dummyfb) {
+	int line, column;
+	unsigned int offset = 0;
+	struct dummyfb_pixel pixel;
+	for(line = 0; line < dummyfb->param.mode.height; line++) {
+		for(column = 0; column < dummyfb->param.mode.width; column++) {
+			dummyfb_get_pixel_at_pos(&pixel, dummyfb, column, line);
+			dst[offset++] = pixel.blue;
+			dst[offset++] = pixel.green;
+			dst[offset++] = pixel.red;
+		}
+	}
+}
+
 EXPORT_SYMBOL(dummyfb_get_max_color_depth);
 EXPORT_SYMBOL(dummyfb_color_get_max_red);
 EXPORT_SYMBOL(dummyfb_color_get_max_green);
 EXPORT_SYMBOL(dummyfb_color_get_max_blue);
+EXPORT_SYMBOL(dummyfb_get_pixel_at_pos);
+EXPORT_SYMBOL(dummyfb_copy_as_bgr24);

@@ -316,7 +316,11 @@ static int update_frame(void* arg)
 		adamtx->do_update = false;
 
 		getnstimeofday(&before);
-		dummyfb_copy(adamtx->framedata, adamtx->dummyfb);
+
+
+		dummyfb_copy_as_bgr24(adamtx->framedata, adamtx->dummyfb);
+
+
 		if(adamtx->enable_dma) {
 			remap_frame(&adamtx_remap_frame);
 			prerender_frame(&adamtx_prerender_frame);
@@ -667,7 +671,7 @@ static int adamtx_probe(struct platform_device* device)
 			.width = adamtx->real_size.width,
 			.height = adamtx->real_size.height,
 			.rate = adamtx->fb_rate,
-			.depth = 24,
+			.depth = 16,
 			.grayscale = false
 		},
 
@@ -681,8 +685,9 @@ static int adamtx_probe(struct platform_device* device)
 	}
 
 	adamtx->pwm_bits = dummyfb_get_max_color_depth(adamtx->dummyfb);
+	dev_info(&device->dev, "Using %d pwm bits\n", adamtx->pwm_bits);
 
-	fbsize = dummyfb_get_fbsize(adamtx->dummyfb);
+	fbsize = adamtx->real_size.height * adamtx->real_size.width * 3;
 	if(!(adamtx->framedata = vzalloc(fbsize))) {
 		ret = -ENOMEM;
 		dev_err(&device->dev, "Failed to allocate frame buffer buffer memory\n");
