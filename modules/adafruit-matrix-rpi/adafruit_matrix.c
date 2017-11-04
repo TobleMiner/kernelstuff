@@ -79,10 +79,7 @@ void remap_frame(struct adamtx_remap_frame* frame)
 			offset = line * real_size->width * 3 + column * 3;
 			pixel = &frame->dst[pos.y * virtual_size->width + pos.x];
 			pixel->chains[panel->chain] = adamtx_gamma_apply_gbr24(gamma_table, frame->src[offset], frame->src[offset + 1], frame->src[offset + 2]);
-/*				adamtx->gamma_table_blue[(unsigned char)(frame->src[offset] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_blue(adamtx->dummyfb))] |
-				adamtx->gamma_table_green[(unsigned char)(frame->src[offset + 1] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_green(adamtx->dummyfb))] << 8 |
-				adamtx->gamma_table_red[(unsigned char)(frame->src[offset + 2] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_red(adamtx->dummyfb))] << 16;
-*/		}
+		}
 	}
 }
 
