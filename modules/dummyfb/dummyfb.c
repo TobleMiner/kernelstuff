@@ -396,14 +396,7 @@ void dummyfb_copy_as_bgr24(char* dst, struct dummyfb* dummyfb) {
 	int line, column;
 	unsigned int offset = 0;
 	struct dummyfb_pixel pixel;
-	if(!dst) {
-		WARN_ONCE(1, "DST is NULL\n");
-		return;
-	}
-	if(!dummyfb) {
-		WARN_ONCE(1, "dummyfb is NULL\n");
-		return;
-	}
+
 	for(line = 0; line < dummyfb->param.mode.height; line++) {
 		for(column = 0; column < dummyfb->param.mode.width; column++) {
 			dummyfb_get_pixel_at_pos(&pixel, dummyfb, column, line);
