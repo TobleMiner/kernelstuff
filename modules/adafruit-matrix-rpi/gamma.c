@@ -52,5 +52,5 @@ uint32_t adamtx_gamma_apply_gbr24(struct adamtx_gamma_table* table, uint32_t blu
 {
 	return adamtx_gamma_apply_blue(table, blue) |
 		(adamtx_gamma_apply_green(table, green) << 8) |
-		(adamtx_gamma_apply_green(table, red) << 16);
+		(adamtx_gamma_apply_red(table, red) << 16);
 }
