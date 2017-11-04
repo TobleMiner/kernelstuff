@@ -522,6 +522,7 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 	adamtx->grayscale = !!adamtx_of_get_int_default(dev_of_node, "adamtx-grayscale", 0);
 
 	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz, DMA: %d, Peripheral base address: 0x%x\n", adamtx->rate, adamtx->fb_rate, adamtx->enable_dma, adamtx->peripheral_base);
+	dev_info(dev, "Color depth: %d bit, grayscale: %d\n", adamtx->bitdepth, adamtx->grayscale);
 
 	for(panel_node = of_get_next_child(dev_of_node, NULL); panel_node; panel_node = of_get_next_child(dev_of_node, panel_node)) {
 		panel = vzalloc(sizeof(struct matrix_ledpanel));
@@ -621,8 +622,6 @@ static void adamtx_init_gpio(struct adamtx* adamtx)
 		gpios |= (1 << ADAMTX_GPIO_C2_R1) | (1 << ADAMTX_GPIO_C2_R2) | (1 << ADAMTX_GPIO_C2_G1) | (1 << ADAMTX_GPIO_C2_G2) | (1 << ADAMTX_GPIO_C2_B1) | (1 << ADAMTX_GPIO_C2_B2);
 	adamtx_gpio_set_outputs(gpios);
 }
-
-#define ADAMTX_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 static int adamtx_probe(struct platform_device* device)
 {
