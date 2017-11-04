@@ -33,6 +33,18 @@ void adamtx_gamma_setup_table(struct adamtx_gamma_table* table, struct adamtx_co
 	}
 }
 
+void adamtx_gamma_setup_table_fix_max(struct adamtx_gamma_table* table, struct adamtx_color_model* model, uint32_t max_val)
+{
+	int i;
+	table->color_model = model;
+
+	for(i = 0; i < ADAMTX_GAMMA_TABLE_SIZE; i++) {
+		table->red[i] = gamma_table_template[i] * max_val / ADAMTX_GAMMA_TABLE_SCALE;
+		table->green[i] = gamma_table_template[i] * max_val / ADAMTX_GAMMA_TABLE_SCALE;
+		table->blue[i] = gamma_table_template[i] * max_val / ADAMTX_GAMMA_TABLE_SCALE;
+	}
+}
+
 uint32_t adamtx_gamma_apply_red(struct adamtx_gamma_table* table, uint32_t val)
 {
 	return table->red[val * ADAMTX_GAMMA_TABLE_SCALE / adamtx_color_get_max_value_red(table->color_model)];

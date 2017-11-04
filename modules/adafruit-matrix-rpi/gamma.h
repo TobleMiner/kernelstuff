@@ -16,6 +16,7 @@ struct adamtx_gamma_table {
 };
 
 void adamtx_gamma_setup_table(struct adamtx_gamma_table* table, struct adamtx_color_model* model);
+void adamtx_gamma_setup_table_fix_max(struct adamtx_gamma_table* table, struct adamtx_color_model* model, uint32_t max_val);
 
 uint32_t adamtx_gamma_apply_red(struct adamtx_gamma_table* table, uint32_t val);
 uint32_t adamtx_gamma_apply_green(struct adamtx_gamma_table* table, uint32_t val);
