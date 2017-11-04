@@ -23,6 +23,8 @@
 #include "adafruit_matrix.h"
 #include "io.h"
 #include "bcm2835.h"
+#include "color.h"
+#include "gamma.h"
 
 #include "../dummyfb/dummyfb.h"
 
@@ -37,24 +39,6 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Tobas Schramm");
 MODULE_DESCRIPTION("Adafruit LED matrix driver");
 MODULE_VERSION("0.1");
-
-static const uint8_t adamtx_gamma_table_template[ADAMTX_GAMMA_TABLE_SIZE] = {
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
-    1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
-    2,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  5,  5,  5,
-    5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  9,  9,  9, 10,
-   10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
-   17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
-   25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
-   37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
-   51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
-   69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
-   90, 92, 93, 95, 96, 98, 99,101,102,104,105,107,109,110,112,114,
-  115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,
-  144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
-  177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
-  215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
 
 void adamtx_clock_out_row(struct adamtx_panel_io* data, int length)
 {
@@ -84,7 +68,7 @@ void remap_frame(struct adamtx_remap_frame* frame)
 	struct matrix_pixel* pixel;
 	struct matrix_size* real_size = frame->real_size;
 	struct matrix_size* virtual_size = frame->virtual_size;
-	struct adamtx* adamtx = frame->adamtx;
+	struct adamtx_gamma_table* gamma_table = frame->gamma_table;
 	for(line = frame->offset; line < frame->offset + frame->rows; line++) {
 		for(column = 0; column < real_size->width; column++) {
 			panel = matrix_get_panel_at_real(frame->panels, column, line);
@@ -94,11 +78,11 @@ void remap_frame(struct adamtx_remap_frame* frame)
 			matrix_panel_get_position(&pos, panel, column, line);
 			offset = line * real_size->width * 3 + column * 3;
 			pixel = &frame->dst[pos.y * virtual_size->width + pos.x];
-			pixel->chains[panel->chain] =
-				adamtx->gamma_table_blue[(unsigned char)(frame->src[offset] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_blue(adamtx->dummyfb))] |
+			pixel->chains[panel->chain] = adamtx_gamma_apply_gbr24(gamma_table, frame->src[offset], frame->src[offset + 1], frame->src[offset + 2]);
+/*				adamtx->gamma_table_blue[(unsigned char)(frame->src[offset] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_blue(adamtx->dummyfb))] |
 				adamtx->gamma_table_green[(unsigned char)(frame->src[offset + 1] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_green(adamtx->dummyfb))] << 8 |
 				adamtx->gamma_table_red[(unsigned char)(frame->src[offset + 2] * ADAMTX_GAMMA_TABLE_SCALE / dummyfb_color_get_max_red(adamtx->dummyfb))] << 16;
-		}
+*/		}
 	}
 }
 
@@ -173,7 +157,7 @@ void show_frame(struct adamtx* adamtx)
 		.panels = &adamtx->panels,
 		.src = adamtx->framedata,
 		.dst = adamtx->intermediate_frame,
-		.adamtx = adamtx
+		.gamma_table = &adamtx->gamma_table
 	};
 
 	struct adamtx_prerender_frame adamtx_prerender_frame = {
@@ -306,7 +290,7 @@ static int update_frame(void* arg)
 		.panels = &adamtx->panels,
 		.src = adamtx->framedata,
 		.dst = adamtx->intermediate_frame,
-		.adamtx = adamtx
+		.gamma_table = &adamtx->gamma_table
 	};
 
 	struct adamtx_prerender_frame adamtx_prerender_frame = {
@@ -518,11 +502,11 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 
 	adamtx->enable_dma = !!adamtx_of_get_int_default(dev_of_node, "adamtx-dma", 0);
 
-	adamtx->bitdepth = adamtx_of_get_int_default(dev_of_node, "adamtx-color-depth", 24);
-	adamtx->grayscale = !!adamtx_of_get_int_default(dev_of_node, "adamtx-grayscale", 0);
+	adamtx->color_model.bitdepth = adamtx_of_get_int_default(dev_of_node, "adamtx-color-depth", 24);
+	adamtx->color_model.grayscale = !!adamtx_of_get_int_default(dev_of_node, "adamtx-grayscale", 0);
 
 	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz, DMA: %d, Peripheral base address: 0x%x\n", adamtx->rate, adamtx->fb_rate, adamtx->enable_dma, adamtx->peripheral_base);
-	dev_info(dev, "Color depth: %d bit, grayscale: %d\n", adamtx->bitdepth, adamtx->grayscale);
+	dev_info(dev, "Color depth: %d bit, grayscale: %d\n", adamtx->color_model.bitdepth, adamtx->color_model.grayscale);
 
 	for(panel_node = of_get_next_child(dev_of_node, NULL); panel_node; panel_node = of_get_next_child(dev_of_node, panel_node)) {
 		panel = vzalloc(sizeof(struct matrix_ledpanel));
@@ -687,8 +671,8 @@ static int adamtx_probe(struct platform_device* device)
 			.width = adamtx->real_size.width,
 			.height = adamtx->real_size.height,
 			.rate = adamtx->fb_rate,
-			.depth = adamtx->bitdepth,
-			.grayscale = adamtx->grayscale
+			.depth = adamtx->color_model.bitdepth,
+			.grayscale = adamtx->color_model.grayscale
 		},
 
 		.priv = adamtx,
@@ -701,11 +685,12 @@ static int adamtx_probe(struct platform_device* device)
 	}
 
 	adamtx->pwm_bits = dummyfb_get_max_color_depth(adamtx->dummyfb);
-	for(i = 0; i < ADAMTX_GAMMA_TABLE_SIZE; i++) {
-		adamtx->gamma_table_red[i] = adamtx_gamma_table_template[i] * dummyfb_color_get_max_red(adamtx->dummyfb) / ADAMTX_GAMMA_TABLE_SCALE;
-		adamtx->gamma_table_green[i] = adamtx_gamma_table_template[i] * dummyfb_color_get_max_green(adamtx->dummyfb) / ADAMTX_GAMMA_TABLE_SCALE;
-		adamtx->gamma_table_blue[i] = adamtx_gamma_table_template[i] * dummyfb_color_get_max_blue(adamtx->dummyfb) / ADAMTX_GAMMA_TABLE_SCALE;
-	}
+
+	adamtx->color_model.depth_red = adamtx->dummyfb->color_format.red.length;
+	adamtx->color_model.depth_green = adamtx->dummyfb->color_format.green.length;
+	adamtx->color_model.depth_blue = adamtx->dummyfb->color_format.blue.length;
+	adamtx_gamma_setup_table(&adamtx->gamma_table, &adamtx->color_model);
+
 	dev_info(&device->dev, "Using %d pwm bits\n", adamtx->pwm_bits);
 
 	fbsize = adamtx->real_size.height * adamtx->real_size.width * 3;

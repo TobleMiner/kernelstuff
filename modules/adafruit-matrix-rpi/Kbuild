@@ -1,4 +1,4 @@
 obj-m := adamtx.o
 ccflags-y := -Ofast
-adamtx-y := adafruit_matrix.o matrix.o io.o
+adamtx-y := adafruit_matrix.o matrix.o io.o color.o gamma.o
 adamtx-obs := $(adamtx-y)

@@ -5,6 +5,9 @@
 #include <linux/dmaengine.h>
 
 #include "matrix.h"
+#include "color.h"
+#include "gamma.h"
+
 #include "../dummyfb/dummyfb.h"
 
 #define ADAMTX_NAME "adafruit-matrix"
@@ -52,10 +55,6 @@
 #define ADAMTX_GPIO_MASK_ADDRESS	0b0011110000001000000000000000
 #define ADAMTX_GPIO_MASK_ADDRESS_HI	0b0011110000000000000000000000
 #define ADAMTX_GPIO_MASK_DATA		0b1000000000000000111110000000
-
-// Gamma correction
-#define ADAMTX_GAMMA_TABLE_SIZE 256
-#define ADAMTX_GAMMA_TABLE_SCALE 255
 
 // Matrix parameters
 #define ADAMTX_BCD_TIME_NS	2000UL
@@ -153,8 +152,8 @@ struct adamtx {
 
 	int rate;
 	int fb_rate;
-	int bitdepth;
-	bool grayscale;
+	struct adamtx_color_model color_model;
+	struct adamtx_gamma_table gamma_table;
 
 	unsigned int pwm_bits;
 
@@ -191,10 +190,6 @@ struct adamtx {
 	dma_addr_t dma_mapping_gpio;
 
 	uint32_t peripheral_base;
-
-	uint8_t gamma_table_red[ADAMTX_GAMMA_TABLE_SIZE];
-	uint8_t gamma_table_green[ADAMTX_GAMMA_TABLE_SIZE];
-	uint8_t gamma_table_blue[ADAMTX_GAMMA_TABLE_SIZE];
 };
 
 struct adamtx_remap_frame {
@@ -206,7 +201,7 @@ struct adamtx_remap_frame {
 	struct list_head* panels;
 	char* src;
 	struct matrix_pixel* dst;
-	struct adamtx* adamtx;
+	struct adamtx_gamma_table* gamma_table;
 };
 
 struct adamtx_prerender_frame {
