@@ -689,7 +689,7 @@ static int adamtx_probe(struct platform_device* device)
 	adamtx->color_model.depth_red = adamtx->dummyfb->color_format.red.length;
 	adamtx->color_model.depth_green = adamtx->dummyfb->color_format.green.length;
 	adamtx->color_model.depth_blue = adamtx->dummyfb->color_format.blue.length;
-	adamtx_gamma_setup_table(&adamtx->gamma_table, &adamtx->color_model);
+	adamtx_gamma_setup_table_fix_max(&adamtx->gamma_table, &adamtx->color_model, BIT(adamtx->pwm_bits) - 1);
 
 	dev_info(&device->dev, "Using %d pwm bits\n", adamtx->pwm_bits);
 
