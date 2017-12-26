@@ -144,6 +144,7 @@ void show_frame(struct adamtx* adamtx)
 	int columns = adamtx->virtual_size.width;
 	struct timespec last, now;
 	unsigned long rem_delay, clock_out_delay, last_delay, bcd_time = adamtx->current_bcd_base_time, est_remap_render_time;
+	unsigned long led_off_time, total_delay;
 
 	struct adamtx_remap_frame adamtx_remap_frame = {
 		.real_size = &adamtx->real_size,
@@ -197,8 +198,11 @@ void show_frame(struct adamtx* adamtx)
 			ADAMTX_GPIO_LO(ADAMTX_GPIO_OE);
 
 			getnstimeofday(&now);
-			rem_delay = (1 << j) * bcd_time;
+			total_delay = (1 << j) * bcd_time;
+			rem_delay = total_delay;
 			clock_out_delay = ADAMTX_TIMESPEC_DIFF(now, last);
+			led_off_time = adamtx->brightness_ctrl * total_delay / 100;
+
 
 			if(clock_out_delay < rem_delay) {
 				if((clock_out_delay < rem_delay) && !j)
@@ -208,6 +212,9 @@ void show_frame(struct adamtx* adamtx)
 
 				if(!adamtx->remap_and_render_in_update_thread){
 					while(remap_line < adamtx_remap_frame.real_size->height && rem_delay > adamtx->update_remap_ns_per_line * 2) {
+						if(total_delay - rem_delay > led_off_time)
+							ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
+
 						adamtx_remap_frame.offset = remap_line;
 						remap_frame(&adamtx_remap_frame);
 						remap_line++;
@@ -220,6 +227,9 @@ void show_frame(struct adamtx* adamtx)
 					}
 					if(remap_line >= adamtx_remap_frame.real_size->height) {
 						while(prerender_line < adamtx_prerender_frame.virtual_size->height && rem_delay > adamtx->update_prerender_ns_per_line * 2) {
+							if(total_delay - rem_delay > led_off_time)
+								ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
+
 							adamtx_prerender_frame.offset = prerender_line;
 							prerender_frame(&adamtx_prerender_frame);
 							prerender_line += 2;
@@ -232,7 +242,16 @@ void show_frame(struct adamtx* adamtx)
 						}
 					}
 				}
-				ndelay(rem_delay);
+				if(total_delay - rem_delay > led_off_time)
+					ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
+					ndelay(rem_delay);
+				else {
+					ndelay(rem_delay - led_off_time);
+					ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
+					ndelay(led_off_time);
+				}
+
+
 
 
 			} else if(clock_out_delay > rem_delay) {
@@ -272,7 +291,7 @@ static int draw_frame(void* arg)
 
 static int update_frame(void* arg)
 {
-	int line, line_base, line_dma_base, pwm_step, pwm_base, pwm_dma_base, column, column_base, column_dma_base;
+	int line, line_base, line_dma_base, pwm_step, pwm_base, pwm_dma_base, column, column_base, column_dma_base, led_off_frame;
 	struct adamtx_panel_io io_address;
 	struct timespec before, after;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
@@ -351,6 +370,9 @@ static int update_frame(void* arg)
 							adamtx->dma_iodata[column_dma_base].set |= BIT(ADAMTX_GPIO_STR);
 						adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_STR) | adamtx->dma_iodata[column_dma_base].set;
 					}
+
+					led_off_frame = pwm_dma_base + adamtx->brightness_ctrl * ADAMTX_DMA_STEPS_PER_PIXEL * (adamtx->virtual_size.width - 1) / 100;
+					adamtx->dma_iodata[led_off_frame].set |= BIT(ADAMTX_GPIO_OE);
 				}
 			}
 		}
@@ -494,6 +516,11 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 		goto exit_err;
 	}
 
+	if((err = adamtx_of_get_int_range(&adamtx->brightness_ctrl, dev_of_node, "adamtx-brightness", 100, 0, 100))) {
+		dev_err(dev, "Invalid brightness\n");
+		goto exit_err;
+	}
+
 	adamtx->draw_thread_bind = !adamtx_of_get_int(&adamtx->draw_thread_cpu, dev_of_node, "adamtx-bind-draw");
 	adamtx->update_thread_bind = !adamtx_of_get_int(&adamtx->update_thread_cpu, dev_of_node, "adamtx-bind-update");
 
@@ -503,7 +530,7 @@ static int adamtx_parse_device_tree(struct device* dev, struct adamtx* adamtx) {
 	adamtx->color_model.grayscale = !!adamtx_of_get_int_default(dev_of_node, "adamtx-grayscale", 0);
 
 	dev_info(dev, "Refresh rate: %d Hz, FB poll rate %d Hz, DMA: %d, Peripheral base address: 0x%x\n", adamtx->rate, adamtx->fb_rate, adamtx->enable_dma, adamtx->peripheral_base);
-	dev_info(dev, "Color depth: %d bit, grayscale: %d\n", adamtx->color_model.bitdepth, adamtx->color_model.grayscale);
+	dev_info(dev, "Color depth: %d bit, grayscale: %d, brightness: %u%%\n", adamtx->color_model.bitdepth, adamtx->color_model.grayscale, adamtx->brightness_ctrl);
 
 	for(panel_node = of_get_next_child(dev_of_node, NULL); panel_node; panel_node = of_get_next_child(dev_of_node, panel_node)) {
 		panel = vzalloc(sizeof(struct matrix_ledpanel));

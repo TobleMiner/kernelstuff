@@ -190,6 +190,7 @@ struct adamtx {
 	dma_addr_t dma_mapping_gpio;
 
 	uint32_t peripheral_base;
+	uint32_t brightness_ctrl;
 };
 
 struct adamtx_remap_frame {
