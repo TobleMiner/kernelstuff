@@ -10,11 +10,13 @@
                         adamtx@0 {
                                 status = "okay";
                                 compatible = "adafruit,adamtx";
-                                adamtx-rate = <120>;
+                                adamtx-rate = <240>;
                                 adamtx-fb-rate = <60>;
-                                adamtx-bind-draw = <3>;
-                                adamtx-bind-update = <2>;
-                                adamtx-peripheral-base = <0x3F000000>;
+				adamtx-bitdepth = <24>;
+				adamtx-grayscale = <0>;
+//                                adamtx-bind-draw = <3>;
+//                                adamtx-bind-update = <2>;
+                                adamtx-peripheral-base = <0x20000000>;
 
                                 upper-panel@0 {
                                         adamtx-xres = <32>;

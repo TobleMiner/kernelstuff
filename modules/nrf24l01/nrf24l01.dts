@@ -37,7 +37,7 @@
                                 spi-max-frequency = <10000000>;
                                 reg = <1>;
                                 interrupts = <18 2>;
-                                interrupt-parent = <&gpio>;
+                                interrupt-parent = <0x9>;
                                 nrf-ce = <17>;
                                 nrf-mode = <2>;
                                 nrf-addr-be = <0>;

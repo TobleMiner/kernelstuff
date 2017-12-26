@@ -10,14 +10,17 @@
                         adamtx@0 {
                                 status = "okay";
                                 compatible = "adafruit,adamtx";
-                                dmas = <0xa 0x5>;
+                                dmas = <0x7 0x5>;
                                 dma-names = "gpio";
                                 adamtx-rate = <120>;
                                 adamtx-fb-rate = <60>;
-                                adamtx-bind-draw = <3>;
-                                adamtx-bind-update = <2>;
+				adamtx-color-depth = <24>;
+				adamtx-grayscale = <0>;
+//                                adamtx-bind-draw = <3>;
+//                                adamtx-bind-update = <2>;
                                 adamtx-dma = <1>;
-                                adamtx-peripheral-base = <0x3F000000>;
+                                adamtx-peripheral-base = <0x20000000>;
+				adamtx-brightness = <10>;
 
                                 upper-panel@0 {
                                         adamtx-xres = <32>;

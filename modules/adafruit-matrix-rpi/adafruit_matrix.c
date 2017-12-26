@@ -242,10 +242,10 @@ void show_frame(struct adamtx* adamtx)
 						}
 					}
 				}
-				if(total_delay - rem_delay > led_off_time)
+				if(total_delay - rem_delay > led_off_time) {
 					ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
 					ndelay(rem_delay);
-				else {
+				} else {
 					ndelay(rem_delay - led_off_time);
 					ADAMTX_GPIO_HI(ADAMTX_GPIO_OE);
 					ndelay(led_off_time);
@@ -291,7 +291,7 @@ static int draw_frame(void* arg)
 
 static int update_frame(void* arg)
 {
-	int line, line_base, line_dma_base, pwm_step, pwm_base, pwm_dma_base, column, column_base, column_dma_base, led_off_frame;
+	int line, line_base, line_dma_base, pwm_step, pwm_base, pwm_dma_base, next_pwm_dma_base, column, column_base, column_dma_base, led_off_frame;
 	struct adamtx_panel_io io_address;
 	struct timespec before, after;
 	struct adamtx_update_param* param = (struct adamtx_update_param*)arg;
@@ -348,6 +348,7 @@ static int update_frame(void* arg)
 				for(pwm_step = 0; pwm_step < adamtx->pwm_bits; pwm_step++) {
 					pwm_base = line_base + pwm_step * adamtx->virtual_size.width;
 					pwm_dma_base = line_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * (BIT(pwm_step) - 1) * adamtx->virtual_size.width;
+					next_pwm_dma_base = line_dma_base + ADAMTX_DMA_STEPS_PER_PIXEL * (BIT(pwm_step + 1) - 1) * adamtx->virtual_size.width;
 
 					if(pwm_step == 1) {
 						adamtx->dma_iodata[pwm_dma_base].set = BIT(ADAMTX_GPIO_OE);
@@ -369,9 +370,11 @@ static int update_frame(void* arg)
 						if(column == (adamtx->virtual_size.width - 1) && pwm_step)
 							adamtx->dma_iodata[column_dma_base].set |= BIT(ADAMTX_GPIO_STR);
 						adamtx->dma_iodata[column_dma_base].clear = BIT(ADAMTX_GPIO_STR) | adamtx->dma_iodata[column_dma_base].set;
+						if(column == 0)
+							adamtx->dma_iodata[pwm_dma_base].clear |= BIT(ADAMTX_GPIO_OE);
 					}
 
-					led_off_frame = pwm_dma_base + adamtx->brightness_ctrl * ADAMTX_DMA_STEPS_PER_PIXEL * (adamtx->virtual_size.width - 1) / 100;
+					led_off_frame = pwm_dma_base + ((next_pwm_dma_base - pwm_dma_base) * adamtx->brightness_ctrl) / 100;
 					adamtx->dma_iodata[led_off_frame].set |= BIT(ADAMTX_GPIO_OE);
 				}
 			}
