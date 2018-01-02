@@ -13,8 +13,8 @@ The function
 
 creates a new framebuffer device and populates the supplied dummyfb structure pointer. See dummyfb.h for details on ```dummyfb_param```.
 
+Grayscale and color modes with bit depths of up to 8 respectively 24 bit are supported.
 
-**NOTE: Do not try to set any bitdepth other than 24 bpp. The driver is not yet designed to handle anything but 24 bpp**
 
 ## Teardown
 
