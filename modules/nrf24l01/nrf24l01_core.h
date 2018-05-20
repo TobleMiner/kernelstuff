@@ -7,13 +7,39 @@
 #include <linux/mutex.h>
 #include <linux/wait.h>
 #include <linux/types.h>
+#include <linux/list.h>
+#include <linux/kfifo.h>
 
 #include "partregmap.h"
+
+#define NRF24L01_RX_QUEUE_MAX_LEN	1024
+
+struct nrf24l01_t;
+
+#include "nrf24l01_hw.h"
 #include "nrf24l01_chrdev.h"
 #include "nrf24l01_worker.h"
 
-#define NRF24L01_NUM_PIPES			6
-#define NRF24L01_PACKET_MAX_LENGTH	32
+struct nrf24l01_packet {
+	unsigned char data[NRF24L01_PACKET_MAX_LENGTH];
+	unsigned int len;
+};
+
+struct nrf24l01_pipe {
+	struct {
+		unsigned int reserved : 1;
+	} flags;
+
+	struct nrf24l01_packet rx_packet_buff[NRF24L01_RX_QUEUE_MAX_LEN];
+
+	DECLARE_KFIFO(rx_packet_fifo, struct nrf24l01_packet, NRF24L01_RX_QUEUE_MAX_LEN);
+//	DECLARE_KFIFO(rx_data_fifo, unsigned char, NRF24L01_RX_QUEUE_MAX_LEN * NRF24L01_PACKET_MAX_LENGTH);
+	struct mutex m_rx_fifo;
+
+	wait_queue_head_t rx_queue;
+
+	struct nrf24l01_chrdev_pipe chrdev;
+};
 
 typedef struct nrf24l01_t {
 	struct spi_device*		spi;
@@ -25,8 +51,8 @@ typedef struct nrf24l01_t {
 	struct mutex			m_rx_path;
 	struct mutex			m_tx_path;
 	struct mutex			m_state;
-	wait_queue_head_t		rx_queue;
 	wait_queue_head_t		tx_queue;
+	wait_queue_head_t		rx_queue;
 	unsigned int			num_readers;
 	unsigned int			mode_flags;
 	struct list_head		list;
@@ -34,7 +60,9 @@ typedef struct nrf24l01_t {
 	struct {
 		unsigned int addr_be : 1;
 		unsigned int auto_ack : 1;
+		unsigned int stream : 1;
 	} flags;
+	struct nrf24l01_pipe	pipes[NRF24L01_NUM_PIPES];
 } nrf24l01_t;
 
 // Don't idle in RX mode rxing all the time but do so only if there are readers active

@@ -1,0 +1,7 @@
+#ifndef _NRF24L01_HW_H_
+#define _NRF24L01_HW_H_
+
+#define NRF24L01_NUM_PIPES			6
+#define NRF24L01_PACKET_MAX_LENGTH	32
+
+#endif

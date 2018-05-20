@@ -5,21 +5,26 @@
 #include <linux/cdev.h>
 #include <linux/mutex.h>
 
-typedef struct nrf24l01_chrdev_session {
+#include "nrf24l01_pipe.h"
+#include "nrf24l01_hw.h"
+
+struct nrf24l01_chrdev_session {
 	struct nrf24l01_chrdev* chrdev;
 	unsigned int			read_offset;
-} nrf24l01_chrdev_session;
+};
 
-typedef struct nrf24l01_chrdev {
-	struct nrf24l01_t*	nrf;
+struct nrf24l01_chrdev {
 	struct device*		dev;
 	struct cdev			cdev;
-	dev_t				devt;	
+	dev_t				devt;
 	wait_queue_head_t	exit_queue;
 	unsigned int		num_sessions;
 	struct mutex		m_session;
 	bool				shutdown;
-} nrf24l01_chrdev;
+	struct nrf24l01_chrdev_pipe pipes[NRF24L01_NUM_PIPES];
+};
+
+#define NRF24L01_NRFCHR_TO_NRF(chr) (container_of((chr), struct nrf24l01_t, chrdev))
 
 int chrdev_alloc(struct nrf24l01_t* nrf);
 void chrdev_free(struct nrf24l01_t* nrf);

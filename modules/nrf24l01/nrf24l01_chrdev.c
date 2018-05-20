@@ -13,11 +13,13 @@
 #include "nrf24l01_functions.h"
 #include "nrf24l01_sysfs.h"
 #include "nrf24l01_reg.h"
+#include "nrf24l01_pipe.h"
 
 #define NRF24L01_CHRDEV_FORMAT "nrf24l0%lu"
 #define NRF24L01_CHRDEV_CLASS "nrf24"
+#define NRF24L01_CHRDEV_MINORS (NRF24L01_NUM_PIPES + 1)
 
-static struct class* chrdev_class = NULL;
+struct class* chrdev_class = NULL;
 
 static int dev_open(struct inode* inodep, struct file *filep)
 {
@@ -44,28 +46,44 @@ exit_err:
 	return err;
 }
 
+// Read incoming data on any pipe
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
 {
+	int i;
 	unsigned long lenoffset;
-	ssize_t err, readlen;
+	ssize_t err = -EAGAIN, readlen;
 	char* data;
 	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
-	struct nrf24l01_t* nrf = session->chrdev->nrf;
+	struct nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF(session->chrdev);
 	data = vmalloc(len);
-	if(!data)
-	{
+	if(!data) {
 		err = -ENOMEM;
 		goto exit_err;
 	}
-	if((readlen = nrf24l01_read_packet(nrf, !!(filep->f_flags & O_NONBLOCK), data, (unsigned int) len)) < 0)
-	{
-		err = readlen;
-		goto exit_dataalloc;
+tryagain:
+	for(i = 0; i < NRF24L01_NUM_PIPES; i++) {
+		if((readlen = nrf24l01_read_fifo(nrf, i, true, data, len)) >= 0) {
+			if((lenoffset = copy_to_user(buffer, data, readlen)))
+				dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to userspace\n", lenoffset, readlen);
+			session->read_offset += readlen;
+			err = readlen;
+			goto exit_dataalloc;
+		}
+		if(readlen == -EAGAIN) {
+			continue;
+		}
+		if(readlen < 0) {
+			err = readlen;
+			goto exit_dataalloc;
+		}
 	}
-	if((lenoffset = copy_to_user(buffer, data, len)))
-		dev_warn(nrf->chrdev.dev, "%lu of %zu bytes could not be copied to userspace\n", lenoffset, len);
-	session->read_offset += readlen;
-	err = readlen;
+	if(!(filep->f_flags & O_NONBLOCK)) {
+		if(wait_event_interruptible(nrf->rx_queue, nrf24l01_rx_fifo_available(nrf))) {
+			err = -EINTR;
+			goto exit_dataalloc;
+		}
+		goto tryagain;
+	}
 exit_dataalloc:
 	vfree(data);
 exit_err:
@@ -80,7 +98,7 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 	char* data;
 	loff_t readoffset = 0;
 	struct nrf24l01_chrdev_session* session = (struct nrf24l01_chrdev_session*)filep->private_data;
-	struct nrf24l01_t* nrf = session->chrdev->nrf;
+	struct nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF(session->chrdev);
 	data = vmalloc(len);
 	if(!data)
 	{
@@ -117,10 +135,10 @@ static int dev_release(struct inode *inodep, struct file *filep)
 
 static struct file_operations fops =
 {
-   .open = dev_open,
-   .read = dev_read,
-   .write = dev_write,
-   .release = dev_release	
+	.open = dev_open,
+	.read = dev_read,
+	.write = dev_write,
+	.release = dev_release
 };
 
 static DEVICE_ATTR(txpower, 0644, nrf24l01_sysfs_show_tx_pwr, nrf24l01_sysfs_store_tx_pwr);
@@ -542,16 +560,14 @@ static const struct attribute_group* attribute_groups[] = {
 
 int chrdev_alloc(struct nrf24l01_t* nrf)
 {
-	int err;
-	dev_t devnum;
+	int err, minors = 0;
 	char dev_name[25];
 	struct nrf24l01_chrdev* nrfchr = &nrf->chrdev;
-	nrfchr->nrf = nrf;
 	init_waitqueue_head(&nrfchr->exit_queue);
 	mutex_init(&nrfchr->m_session);
 	mutex_lock(&nrfchr->m_session);
 	snprintf(dev_name, sizeof(dev_name), NRF24L01_CHRDEV_FORMAT, ((unsigned long) nrf->id) + 1);
-	if((err = alloc_chrdev_region(&nrfchr->devt, 0, 1, dev_name)))
+	if((err = alloc_chrdev_region(&nrfchr->devt, 0, NRF24L01_CHRDEV_MINORS, dev_name)))
 		goto exit_noalloc;
 	if(!chrdev_class)
 	{
@@ -563,27 +579,38 @@ int chrdev_alloc(struct nrf24l01_t* nrf)
 		}
 	}
 	cdev_init(&nrfchr->cdev, &fops);
-	devnum = MKDEV(MAJOR(nrfchr->devt), MINOR(nrfchr->devt));
-	nrfchr->dev = device_create_with_groups(chrdev_class, NULL, devnum, nrfchr, attribute_groups, dev_name);
+	nrfchr->dev = device_create_with_groups(chrdev_class, NULL, nrfchr->devt, nrfchr, attribute_groups, dev_name);
 	if(IS_ERR(nrfchr->dev))
 	{
 		err = PTR_ERR(nrfchr->dev);
 		goto exit_unregclass;
 	}
-	if((err = cdev_add(&nrfchr->cdev, devnum, 1)))
-		goto exit_destroydev;
+
+	for(minors = 0; minors < NRF24L01_NUM_PIPES; minors++) {
+		if((err = chrdev_pipe_alloc(nrf, minors))) {
+			dev_err(&nrf->spi->dev, "Failed to allocate device for pipe %d: %d\n", minors, err);
+			goto exit_minors;
+		}
+	}
+
+	if((err = cdev_add(&nrfchr->cdev, nrfchr->devt, 1)))
+		goto exit_minors;
 	goto exit_noalloc;
 
-exit_destroydev:
-	device_destroy(chrdev_class, devnum);
-exit_unregclass:	
+exit_minors:
+	while(minors-- > 0) {
+		chrdev_pipe_free(&nrf->pipes[minors].chrdev);
+	}
+//exit_destroydev:
+	device_destroy(chrdev_class, nrfchr->devt);
+exit_unregclass:
 	if(!nrf24l01_nrf_registered())
 	{
 		class_unregister(chrdev_class);
 		class_destroy(chrdev_class);
 	}
 exit_unregchrdev:
-	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
+	unregister_chrdev_region(MAJOR(nrfchr->devt), NRF24L01_CHRDEV_MINORS);
 exit_noalloc:
 	mutex_unlock(&nrfchr->m_session);
 	return err;
@@ -591,6 +618,7 @@ exit_noalloc:
 
 void chrdev_free(struct nrf24l01_t* nrf)
 {
+	int i;
 	struct nrf24l01_chrdev* nrfchr = &nrf->chrdev;
 	mutex_lock(&nrfchr->m_session);
 	nrfchr->shutdown = true;
@@ -601,6 +629,11 @@ void chrdev_free(struct nrf24l01_t* nrf)
 		wait_event(nrfchr->exit_queue, nrfchr->num_sessions == 0);
 	}
 	cdev_del(&nrfchr->cdev);
+
+	for(i = 0; i < NRF24L01_NUM_PIPES; i++) {
+		chrdev_pipe_free(&nrf->pipes[i].chrdev);
+	}
+
 	device_destroy(chrdev_class, nrfchr->devt);
 	if(!nrf24l01_nrf_registered())
 	{
@@ -608,5 +641,5 @@ void chrdev_free(struct nrf24l01_t* nrf)
 		class_destroy(chrdev_class);
 		chrdev_class = NULL;
 	}
-	unregister_chrdev_region(MAJOR(nrfchr->devt), 1);
+	unregister_chrdev_region(MAJOR(nrfchr->devt), NRF24L01_CHRDEV_MINORS);
 }

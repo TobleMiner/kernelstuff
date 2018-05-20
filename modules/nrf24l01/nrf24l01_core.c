@@ -8,6 +8,7 @@
 #include <linux/of.h>
 #include <linux/wait.h>
 #include <linux/semaphore.h>
+#include <linux/log2.h>
 
 #include "nrf24l01_core.h"
 #include "nrf24l01_reg.h"
@@ -35,7 +36,7 @@ static const struct regmap_access_table regmap_wr_table_short = {
 	.n_no_ranges = 2,
 };
 
-static const struct regmap_range regmap_rd_table_short_yes[] = { regmap_reg_range(0x00, 0x09), regmap_reg_range(0x0C, 0x0F), 
+static const struct regmap_range regmap_rd_table_short_yes[] = { regmap_reg_range(0x00, 0x09), regmap_reg_range(0x0C, 0x0F),
 	regmap_reg_range(0x11, 0x17), regmap_reg_range(0x1C, 0x1D) };
 static const struct regmap_range regmap_rd_table_short_no[] = { regmap_reg_range(0x0A, 0x0B), regmap_reg_range(0x10, 0x10) };
 
@@ -123,7 +124,7 @@ static int nrf24l01_get_free_id(struct list_head* nrf_list, unsigned int* id)
 
 static int nrf24l01_probe(struct spi_device* spi)
 {
-	int err = 0;
+	int err = 0, i;
 	unsigned int irq_trigger;
 	const void *of_gpio_ce, *of_nrf_mode, *of_nrf_addr_be;
 	struct nrf24l01_t* nrf;
@@ -147,6 +148,8 @@ static int nrf24l01_probe(struct spi_device* spi)
 	mutex_init(&nrf->m_rx_path);
 	mutex_init(&nrf->m_tx_path);
 	mutex_init(&nrf->m_state);
+	init_waitqueue_head(&nrf->tx_queue);
+	init_waitqueue_head(&nrf->rx_queue);
 	nrf->regmap_short = regmap_init(&spi->dev, NULL, nrf, &nrf24l01_regmap_short);
 	if(IS_ERR(nrf->regmap_short))
 	{
@@ -157,6 +160,13 @@ static int nrf24l01_probe(struct spi_device* spi)
 	{
 		goto exit_regmapalloc;
 	}
+	for(i = 0; i < NRF24L01_NUM_PIPES; i++) {
+		struct nrf24l01_pipe* pipe = &nrf->pipes[i];
+		mutex_init(&pipe->m_rx_fifo);
+		init_waitqueue_head(&pipe->rx_queue);
+		INIT_KFIFO(pipe->rx_packet_fifo);
+	}
+
 	if((err = chrdev_alloc(nrf)) < 0)
 	{
 		goto exit_partregalloc;
@@ -181,8 +191,6 @@ static int nrf24l01_probe(struct spi_device* spi)
 		nrf->flags.addr_be = !!be32_to_cpup(of_nrf_addr_be);
 	}
 	dev_info(&spi->dev, "Address endianess: %s\n", nrf->flags.addr_be ? "BE" : "LE");
-	init_waitqueue_head(&nrf->rx_queue);
-	init_waitqueue_head(&nrf->tx_queue);
 	if((err = nrf24l01_create_worker(nrf)))
 	{
 		dev_err(&spi->dev, "Failed to create worker thread\n");
@@ -218,7 +226,7 @@ static int nrf24l01_probe(struct spi_device* spi)
 	NRF24L01_CE_LO(nrf);
 	nrf24l01_pwr_down(nrf);
 	nrf24l01_flush(nrf);
-	nrf24l01_set_status_max_rt(nrf, 1);	
+	nrf24l01_set_status_max_rt(nrf, 1);
 	nrf24l01_set_status_rx_dr(nrf, 1);
 	nrf24l01_set_status_tx_ds(nrf, 1);
 	if(!nrf24l01_get_mode_low_pwr(nrf))

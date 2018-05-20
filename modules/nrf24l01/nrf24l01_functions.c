@@ -7,6 +7,7 @@
 #include "nrf24l01_spi.h"
 #include "nrf24l01_functions.h"
 #include "nrf24l01_util.h"
+#include "nrf24l01_chrdev.h"
 #include "partregmap.h"
 
 int nrf24l01_get_mode(struct nrf24l01_t* nrf, unsigned int mode)
@@ -198,7 +199,7 @@ int nrf24l01_get_address_width(struct nrf24l01_t* nrf, unsigned int* width)
 	if(err < 0)
 		return err;
 	if(*width < 1 || *width > 3)
-		return -EINVAL; 
+		return -EINVAL;
 	*width += 2;
 	return 0;
 }
@@ -383,7 +384,7 @@ int nrf24l01_get_pwr_up(struct nrf24l01_t* nrf, unsigned int* state)
 	mutex_lock(&nrf->m_state);
 	err = nrf24l01_get_pwr_up_(nrf, state);
 	mutex_unlock(&nrf->m_state);
-	return err;	
+	return err;
 }
 
 int nrf24l01_set_prim_rx_(struct nrf24l01_t* nrf, unsigned int state)
@@ -416,7 +417,7 @@ int nrf24l01_get_prim_rx(struct nrf24l01_t* nrf, unsigned int* state)
 
 int nrf24l01_set_pipe_pld_width(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int width)
 {
-	if(pipe > 5)
+	if(pipe >= NRF24L01_NUM_PIPES)
 		return -EINVAL;
 	if(width > NRF24L01_PACKET_MAX_LENGTH)
 		return -EINVAL;
@@ -437,28 +438,28 @@ int nrf24l01_get_dyn_pld_width(struct nrf24l01_t* nrf, unsigned int* width)
 
 int nrf24l01_set_rx_addr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned char* addr, unsigned int len)
 {
-	if(pipe > 5)
+	if(pipe >= NRF24L01_NUM_PIPES)
 		return -EINVAL;
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_RX_ADDR_P0 + pipe, (unsigned int*)addr, len);
 }
 
 int nrf24l01_get_rx_addr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned char* addr, unsigned int len)
 {
-	if(pipe > 5)
+	if(pipe >= NRF24L01_NUM_PIPES)
 		return -EINVAL;
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_RX_ADDR_P0 + pipe, (unsigned int*)addr, len);
 }
 
-int nrf24l01_set_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int state)
+static int nrf24l01_set_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int state)
 {
-	if(pipe > 5)
+	if(pipe >= NRF24L01_NUM_PIPES)
 		return -EINVAL;
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_EN_RXADDR_ERX_P0 + pipe, &state, 1);
 }
 
 int nrf24l01_get_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* state)
 {
-	if(pipe > 5)
+	if(pipe >= NRF24L01_NUM_PIPES)
 		return -EINVAL;
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_EN_RXADDR_ERX_P0 + pipe, state, 1);
 }
@@ -500,7 +501,7 @@ int nrf24l01_get_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* 
 	if(!en_dpl || !en_aa)
 	{
 		*state = 0;
-		goto exit_err;		
+		goto exit_err;
 	}
 	err = partreg_table_read(nrf->reg_table, NRF24L01_VREG_DYNPD_DPL_P0 + pipe, state, 1);
 exit_err:
@@ -509,14 +510,14 @@ exit_err:
 
 int nrf24l01_set_enaa(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int autoack)
 {
-	if(pipe > 5)
+	if(pipe >= NRF24L01_NUM_PIPES)
 		return -EINVAL;
 	return partreg_table_write(nrf->reg_table, NRF24L01_VREG_EN_AA_ENAA_P0 + pipe, &autoack, 1);
 }
 
 int nrf24l01_get_enaa(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* autoack)
 {
-	if(pipe > 5)
+	if(pipe >= NRF24L01_NUM_PIPES)
 		return -EINVAL;
 	return partreg_table_read(nrf->reg_table, NRF24L01_VREG_EN_AA_ENAA_P0 + pipe, autoack, 1);
 }
@@ -644,6 +645,11 @@ int nrf24l01_get_tx_full_or_fail(struct nrf24l01_t* nrf)
 	return nrf24l01_get_vreg_or_fail_short(nrf, NRF24L01_VREG_STATUS_TX_FULL, NRF24L01_VREG_TRIES);
 }
 
+int nrf24l01_get_pipe_enabled_or_fail(struct nrf24l01_t* nrf, unsigned int pipe_no)
+{
+	return nrf24l01_get_vreg_or_fail_short(nrf, NRF24L01_VREG_EN_RXADDR_ERX_P0 + pipe_no, NRF24L01_VREG_TRIES);
+}
+
 int nrf24l01_get_rxtx_(struct nrf24l01_t* nrf, int* state)
 {
 	return nrf24l01_get_prim_rx_(nrf, state);
@@ -685,14 +691,31 @@ exit_err_mutex:
 	return err;
 }
 
-int nrf24l01_set_rx(struct nrf24l01_t* nrf)
-{
+int nrf24l01_set_rx(struct nrf24l01_t* nrf) {
 	return nrf24l01_set_rxtx(nrf, 1);
 }
 
-int nrf24l01_set_tx(struct nrf24l01_t* nrf)
-{
+int nrf24l01_set_tx(struct nrf24l01_t* nrf) {
 	return nrf24l01_set_rxtx(nrf, 0);
+}
+
+int nrf24l01_set_pipe_enable(struct nrf24l01_t* nrf, unsigned int pipe_no, int enable) {
+	struct nrf24l01_pipe* pipe = nrf24l01_get_pipe(nrf, pipe_no);
+	if(!pipe) {
+		return -ENOENT;
+	}
+	if(pipe->flags.reserved) {
+		return -EACCES;
+	}
+	return nrf24l01_set_en_rxaddr(nrf, pipe_no, enable);
+}
+
+int nrf24l01_enable_pipe(struct nrf24l01_t* nrf, unsigned int pipe_no) {
+	return nrf24l01_set_pipe_enable(nrf, pipe_no, 1);
+}
+
+int nrf24l01_disable_pipe(struct nrf24l01_t* nrf, unsigned int pipe_no) {
+	return nrf24l01_set_pipe_enable(nrf, pipe_no, 0);
 }
 
 static void nrf24l01_reader_inc(struct nrf24l01_t* nrf)
@@ -723,141 +746,150 @@ static int nrf24l01_reader_dec(struct nrf24l01_t* nrf)
 			}
 		}
 exit_mutex_tx:
-		mutex_unlock(&nrf->m_tx_path);			
+		mutex_unlock(&nrf->m_tx_path);
 	}
 	mutex_unlock(&nrf->m_rx_path);
 	return err;
 }
 
-ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* data, unsigned int len)
-{
-	size_t err, cleanup_err;
-	unsigned int pipe_no, payload_width, dyn_pld, fifo_status;
-	// Keep track of active readers for power saving
-	if(nrf24l01_get_mode_low_pwr(nrf))
-	{
-		nrf24l01_reader_inc(nrf);
-		mutex_lock(&nrf->m_tx_path);
-		if((err = nrf24l01_get_fifo_tx_empty(nrf, &fifo_status)))
-		{
-			mutex_unlock(&nrf->m_tx_path);
-			goto exit_err;
+bool nrf24l01_rx_fifo_available(struct nrf24l01_t* nrf) {
+	int i;
+	for(i = 0; i < NRF24L01_NUM_PIPES; i++) {
+		if(!kfifo_is_empty(&nrf->pipes[i].rx_packet_fifo)) {
+			return true;
 		}
-		if(fifo_status)
-		{
-			if((err = nrf24l01_set_rx(nrf)))
-			{
-				mutex_unlock(&nrf->m_tx_path);
-				goto exit_err;
-			}
-		}
-		mutex_unlock(&nrf->m_tx_path);
 	}
+	return false;
+}
 
-	// This block does the actual receiving
+ssize_t nrf24l01_read_fifo(struct nrf24l01_t* nrf, unsigned int pipe_no, bool non_block, unsigned char* buff, size_t bufflen) {
+	ssize_t err;
+	struct nrf24l01_pipe* pipe = &nrf->pipes[pipe_no];
+	struct nrf24l01_packet packet;
 tryagain:
-	// We can't enter the event queue if we are not allowed to block
-	if(noblock)
-	{
-		// Check if there is any data ...
-		if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
-		{
-			goto exit_err;
+	mutex_lock(&pipe->m_rx_fifo);
+	// Try reading from fifo
+	if(kfifo_peek(&pipe->rx_packet_fifo, &packet)) {
+		if(packet.len > bufflen) {
+			err = -EINVAL;
+			goto exit_mutex;
 		}
-		// ... and exit if there is none
-		if(pipe_no == NRF24L01_RX_P_NO_EMPTY)
-		{
-			err = -EAGAIN;
-			goto exit_err;
-		}
+		err = packet.len;
+		memcpy(buff, packet.data, packet.len);
+		// Length is ok, actually consume elment (TODO: Am I missing something or is there no more elegant way?)
+		BUG_ON(!kfifo_out(&pipe->rx_packet_fifo, &packet, 1));
+		goto exit_mutex;
 	}
-	else
-	{
-		// Wait for the nrf worker to wake us up
-		if((err = wait_event_interruptible(nrf->rx_queue, nrf24l01_get_rx_p_no_or_fail(nrf) != NRF24L01_RX_P_NO_EMPTY)))
-		{
-			goto exit_err;
-		}
+	// Exit if we may not block
+	if(non_block) {
+		err = -EAGAIN;
+		goto exit_mutex;
 	}
-	// Make sure we are the only one retreiving packets
-	mutex_lock(&nrf->m_rx_path);
-	// Check if another worker already fetched our packet
-	if((err = nrf24l01_get_status_rx_p_no(nrf, &pipe_no)))
-	{
-		goto exit_err_mutex;
+	// Unlock fifo so all threads can race for the next entry
+	mutex_unlock(&pipe->m_rx_fifo);
+	// Wait for data in rx fifo
+	if((err = wait_event_interruptible(pipe->rx_queue, !kfifo_is_empty(&pipe->rx_packet_fifo)))) {
+		goto exit_err;
 	}
-	if(pipe_no == NRF24L01_RX_P_NO_EMPTY)
-	{
-		// Fail if there was no packet
-		if(noblock)
-		{
-			err = -EAGAIN;
-			goto exit_err_mutex;
-		}
-		// Try again if we are supposed to block
-		mutex_unlock(&nrf->m_rx_path);
-		goto tryagain;
-	}
-	dev_dbg(&nrf->spi->dev, "Got payload in pipe %u\n", pipe_no);
-	// Check wether our payload has dynamic length
-	if((err = nrf24l01_get_dynpd(nrf, pipe_no, &dyn_pld)))
-	{
+	goto tryagain;
+
+exit_mutex:
+	mutex_unlock(&pipe->m_rx_fifo);
+exit_err:
+	return err;
+}
+
+// rx mutex must be held while calling, else result is undefined
+static ssize_t nrf24l01_get_payload_width(struct nrf24l01_t* nrf, unsigned int pipe_no) {
+	int err;
+	unsigned int payload_width, dyn_pld;
+	if((err = nrf24l01_get_dynpd(nrf, pipe_no, &dyn_pld))) {
 		dev_err(&nrf->spi->dev, "Failed to determine pipe payload type (dynamic/fixed size): %zd\n", err);
-		goto exit_err_mutex;
+		goto exit_err;
 	}
-	if(dyn_pld)
-	{
+	if(dyn_pld) {
 		// Get payload width
-		if((err = nrf24l01_get_dyn_pld_width(nrf, &payload_width)))
-		{
+		if((err = nrf24l01_get_dyn_pld_width(nrf, &payload_width))) {
 			dev_err(&nrf->spi->dev, "Payload size read failed: %zd\n", err);
-			goto exit_err_mutex;
+			goto exit_err;
 		}
 		// Flush rx fifo if payload size is invalid
-		if(payload_width > NRF24L01_PACKET_MAX_LENGTH)
-		{
+		if(payload_width > NRF24L01_PACKET_MAX_LENGTH) {
 			dev_err(&nrf->spi->dev, "Payload size is > %d, flushing rx fifo\n", NRF24L01_PACKET_MAX_LENGTH);
-			if((err = nrf24l01_flush_rx_(nrf)))
-			{
+			if((err = nrf24l01_flush_rx_(nrf))) {
 				dev_err(&nrf->spi->dev, "Failed to flush rx fifo: %zu\n", err);
-				goto exit_err_mutex;
+				goto exit_err;
 			}
 			err = -EIO;
-			goto exit_err_mutex;
+			goto exit_err;
 		}
 	}
-	else
-	{
+	else {
 		// Get static payload width from pipe
-		if((err = nrf24l01_get_pipe_pld_width(nrf, pipe_no, &payload_width)))
-		{
-			goto exit_err_mutex;
+		if((err = nrf24l01_get_pipe_pld_width(nrf, pipe_no, &payload_width))) {
+			goto exit_err;
 		}
 	}
-	// Fail if supplied buffer is too short
-	if(len < payload_width)
-	{
-		dev_err(&nrf->spi->dev, "Packet read buffer too short. Should be >= %u, is %u\n", payload_width, len);
-		err = -EINVAL;
-		goto exit_err_mutex;
-	}
-	// And (finally!) read packet to buffer
-	if((err = nrf24l01_spi_read_rx_pld(nrf, data, payload_width)))
-	{
-		goto exit_err_mutex;
-	}
-	err = payload_width;
-exit_err_mutex:
-	mutex_unlock(&nrf->m_rx_path);
+	return payload_width;
 exit_err:
-	// Decrement reader count if in low power mode
-	if(nrf24l01_get_mode_low_pwr(nrf))
-	{
-		if((cleanup_err = nrf24l01_reader_dec(nrf)))
-		{
-			err = cleanup_err;
+	return err;
+}
+
+ssize_t nrf24l01_rx_pending_packets(struct nrf24l01_t* nrf) {
+	ssize_t err;
+	unsigned int pipe_no;
+	struct nrf24l01_pipe* pipe;
+	struct nrf24l01_packet packet;
+
+	mutex_lock(&nrf->m_rx_path);
+	// TODO: Is it a good idea to do this in a loop?
+	while((err = nrf24l01_get_rx_p_no_or_fail(nrf)) != NRF24L01_RX_P_NO_EMPTY) {
+		// Check if pipeno is error
+		if(err < 0) {
+			dev_err(&nrf->spi->dev, "Failed to get pipe of current payload: %zd\n", err);
+			goto exit_err;
 		}
+		pipe_no = err;
+		// Ensure pipe_no is in range
+		if(pipe_no >= NRF24L01_NUM_PIPES) {
+			dev_err(&nrf->spi->dev, "Invalid pipe for current payload: %u\n", pipe_no);
+			err = -EFAULT;
+			goto exit_err;
+		}
+		pipe = &nrf->pipes[pipe_no];
+		// Read size of payload
+		if((err = nrf24l01_get_payload_width(nrf, pipe_no)) < 0) {
+			dev_err(&nrf->spi->dev, "Failed to get payload width for pipe%u\n", pipe_no);
+			goto exit_err;
+		}
+		packet.len = err;
+		// Read payload
+		if((err = nrf24l01_spi_read_rx_pld(nrf, packet.data, packet.len))) {
+			dev_err(&nrf->spi->dev, "Failed to read rx payload\n");
+			goto exit_err;
+		}
+		// Fetch data for disabled pipes but do not enqueue it
+		if(!(err = nrf24l01_get_pipe_enabled_or_fail(nrf, pipe_no))) {
+			dev_err(&nrf->spi->dev, "Got packet on disabled pipe%u\n", pipe_no);
+			err = -EINVAL;
+			goto exit_err;
+		}
+		if(err < 0) {
+			dev_err(&nrf->spi->dev, "Failed to get status of pipe%u\n", pipe_no);
+			goto exit_err;
+		}
+		mutex_lock(&pipe->m_rx_fifo);
+		// Write packet to fifo
+		if(kfifo_in(&pipe->rx_packet_fifo, &packet, 1)) {
+			// We got some! Wake up readers
+			wake_up_interruptible(&pipe->rx_queue);
+			wake_up_interruptible(&nrf->rx_queue);
+		}
+		mutex_unlock(&pipe->m_rx_fifo);
+		err = 0;
 	}
+exit_err:
+	mutex_unlock(&nrf->m_rx_path);
 	return err;
 }
 

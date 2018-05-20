@@ -4,6 +4,8 @@
 #include <linux/kthread.h>
 #include <linux/semaphore.h>
 
+#include "nrf24l01_core.h"
+
 typedef struct nrf24l01_worker {
 	struct semaphore	sema;
 	struct task_struct*	thread;

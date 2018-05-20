@@ -30,8 +30,10 @@ static int nrf24l01_worker_do_work(void* ctx)
 //				do_exit(err);
 			}
 			// Prevent queues from sticking due to missed events
-			wake_up_interruptible(&nrf->rx_queue);
-			wake_up_interruptible(&nrf->tx_queue);
+			nrf24l01_rx_pending_packets(nrf);
+
+//			wake_up_interruptible(&nrf->rx_queue);
+//			wake_up_interruptible(&nrf->tx_queue);
 			// Continue to IRQ flag check in case we somehow missed an interrupt
 		}
 		dev_dbg(&nrf->spi->dev, "Event!\n");
@@ -49,7 +51,8 @@ static int nrf24l01_worker_do_work(void* ctx)
 				dev_err(&nrf->spi->dev, "Failed to clear rx_dr flag: %d\n", err);
 			}
 			// Wake up rx queue if data has been received
-			wake_up_interruptible(&nrf->rx_queue);
+			nrf24l01_rx_pending_packets(nrf);
+//			wake_up_interruptible(&nrf->rx_queue);
 		}
 
 		// Check tx data sent flag

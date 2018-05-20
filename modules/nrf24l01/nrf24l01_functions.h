@@ -46,7 +46,6 @@ int nrf24l01_send_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* da
 ssize_t nrf24l01_read_packet(struct nrf24l01_t* nrf, bool noblock, unsigned char* data, unsigned int len);
 int nrf24l01_set_address_u64(struct nrf24l01_t* nrf, u64 addr, unsigned int pipe);
 int nrf24l01_get_address_u64(struct nrf24l01_t* nrf, u64* addr, unsigned int pipe);
-int nrf24l01_set_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int state);
 int nrf24l01_get_en_rxaddr(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* state);
 int nrf24l01_set_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int state);
 int nrf24l01_get_dynpd(struct nrf24l01_t* nrf, unsigned int pipe, unsigned int* state);
@@ -80,11 +79,16 @@ int nrf24l01_get_fifo_rx_full(struct nrf24l01_t* nrf, unsigned int* status);
 int nrf24l01_get_fifo_rx_empty(struct nrf24l01_t* nrf, unsigned int* status);
 void nrf24l01_store_ce_(struct nrf24l01_t* nrf, unsigned int *state);
 void nrf24l01_load_ce_(struct nrf24l01_t* nrf, unsigned int state);
-
+ssize_t nrf24l01_rx_pending_packets(struct nrf24l01_t* nrf);
+int nrf24l01_enable_pipe(struct nrf24l01_t* nrf, unsigned int pipe_no);
+int nrf24l01_disable_pipe(struct nrf24l01_t* nrf, unsigned int pipe_no);
+int nrf24l01_set_pipe_enable(struct nrf24l01_t* nrf, unsigned int pipe_no, int enable);
+ssize_t nrf24l01_read_fifo(struct nrf24l01_t* nrf, unsigned int pipe_no, bool non_block, unsigned char* buff, size_t bufflen);
+bool nrf24l01_rx_fifo_available(struct nrf24l01_t* nrf);
 
 #define NRF24L01_CE_HI_(nrf) nrf24l01_set_ce_(nrf, 1)
 #define NRF24L01_CE_LO_(nrf) nrf24l01_set_ce_(nrf, 0)
-	
+
 #define NRF24L01_CE_HI(nrf) nrf24l01_set_ce(nrf, 1)
 #define NRF24L01_CE_LO(nrf) nrf24l01_set_ce(nrf, 0)
 

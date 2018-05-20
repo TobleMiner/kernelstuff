@@ -6,6 +6,7 @@
 #include "nrf24l01_core.h"
 #include "nrf24l01_functions.h"
 #include "nrf24l01_sysfs.h"
+#include "nrf24l01_chrdev.h"
 
 static char* nrf24l01_sanitize_string(const char* data, size_t len)
 {
@@ -20,7 +21,7 @@ ssize_t nrf24l01_sysfs_show_channel(struct device* dev, struct device_attribute*
 {
 	unsigned int channel;
 	int err;
-	if((err = nrf24l01_get_channel(((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf, &channel)))
+	if((err = nrf24l01_get_channel(NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev)), &channel)))
 		return err;
 	return sprintf(buf, "%d\n", channel);
 }
@@ -34,7 +35,7 @@ ssize_t nrf24l01_sysfs_store_channel(struct device* dev, struct device_attribute
 		return -ENOMEM;
 	if((err = kstrtouint(buff, 10, &channel)))
 		goto exit_buffalloc;
-	err = nrf24l01_set_channel(((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf, channel);	
+	err = nrf24l01_set_channel(NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev)), channel);
 	if(err)
 		goto exit_buffalloc;
 	return count;
@@ -49,7 +50,7 @@ static ssize_t nrf24l01_sysfs_show_address(struct device* dev, char* buf, unsign
 	unsigned int addr_width;
 	u64 addr = 0;
 	char fmt[10];
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_address_u64(nrf, &addr, pipe)))
 		return err;
 	if(pipe <= 1)
@@ -97,7 +98,7 @@ static ssize_t nrf24l01_sysfs_store_address(struct device* dev, const char* buf,
 {
 	ssize_t err;
 	u64 addr;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -149,7 +150,7 @@ static ssize_t nrf24l01_sysfs_show_payload_width(struct device* dev, char* buf, 
 {
 	ssize_t err;
 	unsigned int width;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_pipe_pld_width(nrf, pipe, &width)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", width);
@@ -191,7 +192,7 @@ static ssize_t nrf24l01_sysfs_store_payload_width(struct device* dev, const char
 {
 	ssize_t err;
 	unsigned int width;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -243,7 +244,7 @@ static ssize_t nrf24l01_sysfs_show_enable(struct device* dev, char* buf, unsigne
 {
 	ssize_t err;
 	unsigned int state;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_en_rxaddr(nrf, pipe, &state)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", state);
@@ -285,7 +286,7 @@ static ssize_t nrf24l01_sysfs_store_enable(struct device* dev, const char* buf, 
 {
 	ssize_t err;
 	unsigned int state;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -294,7 +295,7 @@ static ssize_t nrf24l01_sysfs_store_enable(struct device* dev, const char* buf, 
 	}
 	if((err = kstrtouint(str, 10, &state)))
 		goto exit_stralloc;
-	if((err = nrf24l01_set_en_rxaddr(nrf, pipe, state)))
+	if((err = nrf24l01_set_pipe_enable(nrf, pipe, !!state)))
 		goto exit_stralloc;
 	err = count;
 exit_stralloc:
@@ -337,7 +338,7 @@ static ssize_t nrf24l01_sysfs_show_dynpd(struct device* dev, char* buf, unsigned
 {
 	ssize_t err;
 	unsigned int state;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_dynpd(nrf, pipe, &state)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", state);
@@ -379,7 +380,7 @@ static ssize_t nrf24l01_sysfs_store_dynpd(struct device* dev, const char* buf, s
 {
 	ssize_t err;
 	unsigned int state;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -431,7 +432,7 @@ static ssize_t nrf24l01_sysfs_show_enaa(struct device* dev, char* buf, unsigned 
 {
 	ssize_t err;
 	unsigned int state;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_enaa(nrf, pipe, &state)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", state);
@@ -473,7 +474,7 @@ static ssize_t nrf24l01_sysfs_store_enaa(struct device* dev, const char* buf, si
 {
 	ssize_t err;
 	unsigned int state;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -525,7 +526,7 @@ ssize_t nrf24l01_sysfs_show_addr_width(struct device* dev, struct device_attribu
 {
 	ssize_t err;
 	unsigned int width;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_address_width(nrf, &width)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", width);
@@ -537,7 +538,7 @@ ssize_t nrf24l01_sysfs_store_addr_width(struct device* dev, struct device_attrib
 {
 	ssize_t err;
 	unsigned int width;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -559,7 +560,7 @@ ssize_t nrf24l01_sysfs_show_pwr_up(struct device* dev, struct device_attribute* 
 {
 	ssize_t err;
 	unsigned int pwr_up;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_pwr_up(nrf, &pwr_up)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", pwr_up);
@@ -571,7 +572,7 @@ ssize_t nrf24l01_sysfs_store_pwr_up(struct device* dev, struct device_attribute*
 {
 	ssize_t err;
 	unsigned int pwr_up;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -593,7 +594,7 @@ ssize_t nrf24l01_sysfs_show_dr(struct device* dev, struct device_attribute* attr
 {
 	ssize_t err;
 	unsigned int dr;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_dr(nrf, &dr)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", dr);
@@ -605,7 +606,7 @@ ssize_t nrf24l01_sysfs_store_dr(struct device* dev, struct device_attribute* att
 {
 	ssize_t err;
 	unsigned int dr;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -626,7 +627,7 @@ exit_err:
 ssize_t nrf24l01_sysfs_show_ce(struct device* dev, struct device_attribute* attr, char* buf)
 {
 	unsigned int state;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	state = nrf24l01_get_ce(nrf);
 	return sprintf(buf, "%u\n", state);
 }
@@ -635,7 +636,7 @@ ssize_t nrf24l01_sysfs_store_ce(struct device* dev, struct device_attribute* att
 {
 	ssize_t err;
 	unsigned int ce;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -669,7 +670,7 @@ ssize_t nrf24l01_sysfs_show_crc(struct device* dev, struct device_attribute* att
 {
 	ssize_t err;
 	unsigned int crc;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_crc(nrf, &crc)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", crc);
@@ -681,7 +682,7 @@ ssize_t nrf24l01_sysfs_store_crc(struct device* dev, struct device_attribute* at
 {
 	ssize_t err;
 	unsigned int crc;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -705,7 +706,7 @@ ssize_t nrf24l01_sysfs_show_tx_address(struct device* dev, struct device_attribu
 	unsigned int addr_width;
 	u64 addr = 0;
 	char fmt[10];
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_tx_address_u64(nrf, &addr)))
 		return err;
 	if((err = nrf24l01_get_address_width(nrf, &addr_width)))
@@ -718,7 +719,7 @@ ssize_t nrf24l01_sysfs_store_tx_address(struct device* dev, struct device_attrib
 {
 	ssize_t err;
 	u64 addr;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -740,7 +741,7 @@ ssize_t nrf24l01_sysfs_show_retr_ard(struct device* dev, struct device_attribute
 {
 	ssize_t err;
 	unsigned int ard;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_retr_ard(nrf, &ard)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", ard);
@@ -752,7 +753,7 @@ ssize_t nrf24l01_sysfs_store_retr_ard(struct device* dev, struct device_attribut
 {
 	ssize_t err;
 	unsigned int ard;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -774,7 +775,7 @@ ssize_t nrf24l01_sysfs_show_retr_arc(struct device* dev, struct device_attribute
 {
 	ssize_t err;
 	unsigned int arc;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_retr_arc(nrf, &arc)))
 		goto exit_err;
 	return sprintf(buf, "%u\n", arc);
@@ -786,7 +787,7 @@ ssize_t nrf24l01_sysfs_store_retr_arc(struct device* dev, struct device_attribut
 {
 	ssize_t err;
 	unsigned int arc;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{
@@ -808,7 +809,7 @@ ssize_t nrf24l01_sysfs_show_tx_pwr(struct device* dev, struct device_attribute* 
 {
 	ssize_t err;
 	int pwr;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	if((err = nrf24l01_get_tx_power(nrf, &pwr)))
 		goto exit_err;
 	return sprintf(buf, "%d\n", pwr);
@@ -820,7 +821,7 @@ ssize_t nrf24l01_sysfs_store_tx_pwr(struct device* dev, struct device_attribute*
 {
 	ssize_t err;
 	int pwr;
-	nrf24l01_t* nrf = ((nrf24l01_chrdev*)dev_get_drvdata(dev))->nrf;
+	nrf24l01_t* nrf = NRF24L01_NRFCHR_TO_NRF((struct nrf24l01_chrdev*)dev_get_drvdata(dev));
 	char* str = nrf24l01_sanitize_string(buf, count);
 	if(!str)
 	{

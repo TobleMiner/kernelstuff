@@ -30,3 +30,11 @@ u64 nrf24l01_addr_nrf_to_addr_host(struct nrf24l01_t* nrf, u64 addr, unsigned in
 	}
 	return addr;
 }
+
+struct nrf24l01_pipe* nrf24l01_get_pipe(struct nrf24l01_t* nrf, unsigned int pipe_no) {
+	struct nrf24l01_pipe* pipe = NULL;
+	if(pipe_no < NRF24L01_NUM_PIPES) {
+		pipe = &nrf->pipes[pipe_no];
+	}
+	return pipe;
+}
