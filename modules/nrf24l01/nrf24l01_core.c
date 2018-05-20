@@ -225,10 +225,12 @@ static int nrf24l01_probe(struct spi_device* spi)
 		nrf24l01_set_rx(nrf);
 
 	err = nrf24l01_test_unflushable_fifo(nrf);
-	if(err < 0)
+	if(err) {
+		if(err > 0) {
+			dev_err(&spi->dev, "Faulty nrf module detected! TX FIFO stuck full\n");
+		}
 		goto exit_gpioalloc;
-	if(err)
-		dev_err(&spi->dev, "Faulty nrf module detected! TX FIFO stuck full\n");
+	}
 
 	goto exit_err;
 
