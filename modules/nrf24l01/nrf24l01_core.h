@@ -12,7 +12,8 @@
 #include "nrf24l01_chrdev.h"
 #include "nrf24l01_worker.h"
 
-#define NRF24L01_PACKET_MAX_LENGTH 32
+#define NRF24L01_NUM_PIPES			6
+#define NRF24L01_PACKET_MAX_LENGTH	32
 
 typedef struct nrf24l01_t {
 	struct spi_device*		spi;
@@ -28,9 +29,12 @@ typedef struct nrf24l01_t {
 	wait_queue_head_t		tx_queue;
 	unsigned int			num_readers;
 	unsigned int			mode_flags;
-	bool					addr_be;
 	struct list_head		list;
 	unsigned int 			id;
+	struct {
+		unsigned int addr_be : 1;
+		unsigned int auto_ack : 1;
+	} flags;
 } nrf24l01_t;
 
 // Don't idle in RX mode rxing all the time but do so only if there are readers active

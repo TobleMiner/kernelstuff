@@ -178,9 +178,9 @@ static int nrf24l01_probe(struct spi_device* spi)
 	}
 	else
 	{
-		nrf->addr_be = !!be32_to_cpup(of_nrf_addr_be);
+		nrf->flags.addr_be = !!be32_to_cpup(of_nrf_addr_be);
 	}
-	dev_info(&spi->dev, "Address endianess: %s\n", nrf->addr_be ? "BE" : "LE");
+	dev_info(&spi->dev, "Address endianess: %s\n", nrf->flags.addr_be ? "BE" : "LE");
 	init_waitqueue_head(&nrf->rx_queue);
 	init_waitqueue_head(&nrf->tx_queue);
 	if((err = nrf24l01_create_worker(nrf)))

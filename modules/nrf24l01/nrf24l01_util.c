@@ -5,7 +5,7 @@
 
 u64 nrf24l01_addr_host_to_addr_nrf(struct nrf24l01_t* nrf, u64 addr, unsigned int addr_width)
 {
-	if(nrf->addr_be)
+	if(nrf->flags.addr_be)
 	{
 		addr = cpu_to_be64(addr);
 		addr >>= 8 * (sizeof(addr) - addr_width);
@@ -19,7 +19,7 @@ u64 nrf24l01_addr_host_to_addr_nrf(struct nrf24l01_t* nrf, u64 addr, unsigned in
 
 u64 nrf24l01_addr_nrf_to_addr_host(struct nrf24l01_t* nrf, u64 addr, unsigned int addr_width)
 {
-	if(nrf->addr_be)
+	if(nrf->flags.addr_be)
 	{
 		addr <<= 8 * (sizeof(addr) - addr_width);
 		addr = be64_to_cpu(addr);
