@@ -30,7 +30,7 @@ typedef struct nrf24l01_t {
 	unsigned int			num_readers;
 	unsigned int			mode_flags;
 	struct list_head		list;
-	unsigned int 			id;
+	unsigned int			id;
 	struct {
 		unsigned int addr_be : 1;
 		unsigned int auto_ack : 1;
