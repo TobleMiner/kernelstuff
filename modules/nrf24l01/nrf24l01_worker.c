@@ -32,8 +32,6 @@ static int nrf24l01_worker_do_work(void* ctx)
 			// Prevent queues from sticking due to missed events
 			nrf24l01_rx_pending_packets(nrf);
 
-//			wake_up_interruptible(&nrf->rx_queue);
-//			wake_up_interruptible(&nrf->tx_queue);
 			// Continue to IRQ flag check in case we somehow missed an interrupt
 		}
 		dev_dbg(&nrf->spi->dev, "Event!\n");
@@ -52,7 +50,6 @@ static int nrf24l01_worker_do_work(void* ctx)
 			}
 			// Wake up rx queue if data has been received
 			nrf24l01_rx_pending_packets(nrf);
-//			wake_up_interruptible(&nrf->rx_queue);
 		}
 
 		// Check tx data sent flag
