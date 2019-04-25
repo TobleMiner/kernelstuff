@@ -8,7 +8,7 @@
 #include "dummyfb.h"
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Tobas Schramm");
+MODULE_AUTHOR("Tobias Schramm");
 MODULE_DESCRIPTION("Memory only dummy fb module");
 MODULE_VERSION("0.1");
 
