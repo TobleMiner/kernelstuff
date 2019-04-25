@@ -7,7 +7,7 @@ Some kernel modules I have written.
 A fast kernel module for driving HUB75 LED panels from Raspberry PI GPIO. Depends on dummyfb.
 
 # adafruit-matrix
-A fist try at writing a generic, hardware idependent driver for HUB75 displays. Discarded due to bad kernel GPIO subsystem performance.
+A first try at writing a generic, hardware idependent driver for HUB75 displays. Discarded due to bad kernel GPIO subsystem performance.
 
 # blink
 A very simple kernel GPIO subsystem example with hrtimers
