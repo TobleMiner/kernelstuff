@@ -14,7 +14,7 @@ MODULE_PARM_DESC(name, "Name of the symbol to set");
 
 static int type = -1;
 module_param(type, int, S_IRUGO);
-MODULE_PARM_DESC(name, "Type of the symbol, byte = 0, short = 1, int = 2, long = 3, must be specified");
+MODULE_PARM_DESC(type, "Type of the symbol, byte = 0, short = 1, int = 2, long = 3, must be specified");
 
 static unsigned long val = 0;
 module_param(val, ulong, S_IRUGO);
