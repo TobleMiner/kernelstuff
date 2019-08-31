@@ -30,11 +30,11 @@ enum {
 
 static int __init setsym_init(void) {
   unsigned long symaddr;
-	printk(KERN_INFO "Setting value of symbol %s to 0x%lx\n", name, val);
+  printk(KERN_INFO "Setting value of symbol %s to 0x%lx\n", name, val);
 
   symaddr = kallsyms_lookup_name(name);
   if(symaddr == 0) {
-  	printk(KERN_WARNING "Symbol %s not found :(\n", name);
+    printk(KERN_WARNING "Symbol %s not found :(\n", name);
     return -2;
   }
 
@@ -52,16 +52,16 @@ static int __init setsym_init(void) {
       *((unsigned long*)(symaddr)) = (unsigned long)val;
       break;
     case -1:
-    	printk(KERN_WARNING "Symbol data type not specified\n");
+      printk(KERN_WARNING "Symbol data type not specified\n");
       return -3;
     default:
-    	printk(KERN_WARNING "Invalid symbol data type\n");
+      printk(KERN_WARNING "Invalid symbol data type\n");
       return -4;
   }
 
-	printk(KERN_INFO "Set value of symbol %s to 0x%lx sucessfully\n", name, val);
+  printk(KERN_INFO "Set value of symbol %s to 0x%lx sucessfully\n", name, val);
 
-	return -1;
+  return -1;
 }
 
 static void __exit setsym_exit(void) {
